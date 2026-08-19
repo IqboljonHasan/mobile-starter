@@ -1,0 +1,157 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+/* ─────────────────────────────────────────────
+   1. PRIMITIVE PALETTE  (static, numbered scale)
+   ───────────────────────────────────────────── */
+@theme {
+  /* Primary — orange */
+  --color-primary-50: #fff7f0;
+  --color-primary-100: #ffe8d6;
+  --color-primary-200: #ffcfa0;
+  --color-primary-300: #ffb070;
+  --color-primary-400: #ff9245;
+  --color-primary-500: #ff6a00;
+  --color-primary-600: #e55e0c;
+  --color-primary-700: #be4b09;
+  --color-primary-800: #8f3807;
+  --color-primary-900: #602504;
+  --color-primary-950: #301202;
+
+  /* Success — green */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+  --color-success-800: #166534;
+  --color-success-900: #14532d;
+  --color-success-950: #052e16;
+
+  /* Danger — red */
+  --color-danger-50: #fff5f5;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
+  --color-danger-950: #450a0a;
+
+  /* Warning — amber */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+  --color-warning-950: #451a03;
+}
+
+/* ─────────────────────────────────────────────
+   2. SEMANTIC TOKENS  (resolved at runtime via var())
+      These auto-switch between light & dark.
+   ───────────────────────────────────────────── */
+@theme inline {
+  /* Surfaces */
+  --color-background: var(--background);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+
+  /* Text */
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  /* Borders & inputs */
+  --color-border: var(--border);
+  --color-input: var(--input);
+
+  /* Disabled / placeholder */
+  --color-disabled: var(--disabled);
+  --color-placeholder: var(--placeholder);
+
+  /* Accent highlight backgrounds */
+  --color-primary-highlight: var(--primary-highlight);
+
+  /* Brand aliases (keep in sync with lib/theme.ts) */
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-success: var(--success);
+  --color-success-fg: var(--success-fg);
+  --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
+  --color-warning: var(--warning);
+  --color-warning-fg: var(--warning-fg);
+}
+
+/* ─────────────────────────────────────────────
+   3. LIGHT MODE  (default)
+   ───────────────────────────────────────────── */
+:root {
+  --background: #f8f3f1;
+  --card: #ffffff;
+  --muted: #e4e0de;
+
+  --foreground: #111827;
+  --muted-foreground: #6b7280;
+  --secondary-foreground: #1f2937;
+
+  --border: #e5e7eb;
+  --input: #f3f4f6;
+
+  --disabled: #d1d5db;
+  --placeholder: #9ca3af;
+  --primary-highlight: #ffe4cc;
+
+  --primary: #ff6a00;
+  --primary-fg: #ffffff;
+  --success: #22c55e;
+  --success-fg: #ffffff;
+  --danger: #ef4444;
+  --danger-fg: #ffffff;
+  --warning: #f59e0b;
+  --warning-fg: #ffffff;
+}
+
+/* ─────────────────────────────────────────────
+   4. DARK MODE
+   ───────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #030712;
+    --card: #111827;
+    --muted: #1f2937;
+
+    --foreground: #f9fafb;
+    --muted-foreground: #9ca3af;
+    --secondary-foreground: #e5e7eb;
+
+    --border: #1f2937;
+    --input: #1f2937;
+
+    --disabled: #374151;
+    --placeholder: #6b7280;
+    --primary-highlight: #4a2010;
+
+    --primary: #ff6a00;
+    --primary-fg: #ffffff;
+    --success: #22c55e;
+    --success-fg: #ffffff;
+    --danger: #ef4444;
+    --danger-fg: #ffffff;
+    --warning: #f59e0b;
+    --warning-fg: #ffffff;
+  }
+}

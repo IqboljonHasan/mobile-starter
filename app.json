@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Mobile Starter",
+    "slug": "mobile-starter",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "mobilestarter",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.iqboljonhasan.mobilestarter"
+    },
+    "android": {
+      "package": "com.iqboljonhasan.mobilestarter",
+      "predictiveBackGestureEnabled": false,
+      "allowBackup": false
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
