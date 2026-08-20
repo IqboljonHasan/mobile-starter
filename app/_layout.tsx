@@ -54,6 +54,9 @@ function AppContent() {
 					options={{ headerShown: false, animation: "none" }}
 				/>
 				<Stack.Screen name="details" options={{ title: "Details" }} />
+				{/* Title is set from inside the screen — it depends on whether an
+				    existing schedule is being edited. */}
+				<Stack.Screen name="schedule" options={{ title: "New schedule" }} />
 			</Stack>
 		</View>
 	);

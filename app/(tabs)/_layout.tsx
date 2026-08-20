@@ -22,6 +22,7 @@ import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
 import ComponentsScreen from "./components";
 import HomeScreen from "./index";
+import MessagesScreen from "./messages";
 import SettingsScreen from "./settings";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -38,7 +39,7 @@ type TabRoute = {
 
 /**
  * Tabs are rendered through a `PagerView` rather than a tab navigator, so they
- * are swipeable and all three stay mounted (no re-mount cost or lost scroll
+ * are swipeable and all of them stay mounted (no re-mount cost or lost scroll
  * position when switching). Add a tab by dropping a screen file in this folder
  * and adding an entry here.
  */
@@ -48,6 +49,12 @@ const TABS: TabRoute[] = [
 		title: "Home",
 		icon: { active: "home", inactive: "home-outline" },
 		screen: HomeScreen,
+	},
+	{
+		key: "messages",
+		title: "Messages",
+		icon: { active: "chatbubbles", inactive: "chatbubbles-outline" },
+		screen: MessagesScreen,
 	},
 	{
 		key: "components",

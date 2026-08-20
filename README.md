@@ -2,7 +2,8 @@
 
 React Native (Expo) starter template: expo-router, NativeWind 5 with semantic
 color tokens, a light/dark/system theme switcher, and an app-wide text-scale
-setting, wired through a small UI kit and three example tabs.
+setting, wired through a small UI kit and four example tabs — one of which
+sends SMS on a schedule, in the background, on Android.
 
 ## Run it
 
@@ -27,11 +28,15 @@ bun run ios
 app/
   _layout.tsx            root Stack + providers (theme, font size)
   details.tsx            pushed stack route, reads route params
+  schedule.tsx           Create/edit a scheduled SMS
   (tabs)/
     _layout.tsx          PagerView + custom bottom tab bar
     index.tsx            Home
+    messages.tsx         Scheduled SMS — list, status, readiness checks
     components.tsx       Live gallery of every UI component
     settings.tsx         Theme mode + text size
+modules/
+  sms-scheduler/         Local Expo module — the native Android scheduler
 components/
   TabHeader.tsx          Shared top bar, raises a shadow on scroll
   ui/                    The component library (import from "@/components/ui")
@@ -43,9 +48,11 @@ contexts/
 hooks/
   useTheme.ts            isDark, tc (runtime colors), mode, setMode
   useFont.ts             tf — font sizes scaled by the user's setting
+  useSmsScheduler.ts     Schedules, send log, and permission state
 lib/
   theme.ts               Runtime color values mirroring global.css
   storage.ts             AsyncStorage wrapper for preferences
+  sms.ts                 Formatting + SMS segment counting
 global.css               Tailwind theme + semantic tokens (light & dark)
 ```
 
@@ -94,6 +101,38 @@ const { tf } = useFont();
 
 Keys: `xs`, `sm`, `base`, `lg`, `xl`, `xxl`, `xxxl`. Every component in
 `components/ui` already does this, so the Settings control reaches all of them.
+
+## Scheduled SMS
+
+The Messages tab sends real SMS through the device's SIM at a chosen time, with
+no user tap and with the app closed. That needs `SmsManager` + `AlarmManager`,
+neither of which Expo wraps, so it lives in a local Expo module at
+[`modules/sms-scheduler`](modules/sms-scheduler/README.md) — read that before
+changing anything there.
+
+Three things worth knowing up front:
+
+- **Android only, native build only.** `bun run android` once; it is not in
+  Expo Go, and iOS has no equivalent API. The tab explains itself on other
+  platforms rather than crashing.
+- **Android 14+ withholds exact alarms** until the user grants "Alarms &
+  reminders". Without it a send still happens, just a few minutes late.
+- **Play restricts `SEND_SMS`.** Shipping this on Play needs a Permissions
+  Declaration and a qualifying use case. Sideloaded and enterprise builds are
+  unaffected.
+
+```ts
+import { saveSchedule } from "@/modules/sms-scheduler";
+
+await saveSchedule({
+  recipients: ["+998901234567"],
+  body: "Standup in 10 minutes.",
+  repeat: "weekly",
+  hour: 9,
+  minute: 50,
+  daysOfWeek: [2, 3, 4, 5, 6], // 1 = Sunday … 7 = Saturday
+});
+```
 
 ## Adding a tab
 

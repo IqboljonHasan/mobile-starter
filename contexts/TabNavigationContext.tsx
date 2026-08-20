@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useMemo } from "react";
 
-export type TabKey = "home" | "components" | "settings";
+export type TabKey = "home" | "messages" | "components" | "settings";
 
 type TabNavigationContextType = {
 	/** Move the pager to the given tab. */
