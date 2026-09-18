@@ -35,3 +35,26 @@ export async function removeSetting(key: string): Promise<void> {
 		console.warn(`[storage] failed to remove "${key}"`, e);
 	}
 }
+
+/**
+ * JSON-valued counterparts for the ledger's own data.
+ *
+ * Unlike preferences, this is the user's records — a *write* failure is not
+ * cosmetic, so `setJSON` reports it to the caller instead of swallowing it.
+ * Reads stay forgiving: unparseable stored data falls back to the default
+ * rather than leaving the app with no screen to show.
+ */
+export async function getJSON<T>(key: string, fallback: T): Promise<T> {
+	try {
+		const raw = await AsyncStorage.getItem(PREFIX + key);
+		if (raw == null) return fallback;
+		return JSON.parse(raw) as T;
+	} catch (e) {
+		console.warn(`[storage] failed to read "${key}"`, e);
+		return fallback;
+	}
+}
+
+export async function setJSON<T>(key: string, value: T): Promise<void> {
+	await AsyncStorage.setItem(PREFIX + key, JSON.stringify(value));
+}

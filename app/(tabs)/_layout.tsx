@@ -20,9 +20,9 @@ import {
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
-import ComponentsScreen from "./components";
-import HomeScreen from "./index";
-import SettingsScreen from "./settings";
+import ExpenseScreen from "./expense";
+import IncomeScreen from "./income";
+import DashboardScreen from "./index";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -47,19 +47,19 @@ const TABS: TabRoute[] = [
 		key: "home",
 		title: "Home",
 		icon: { active: "home", inactive: "home-outline" },
-		screen: HomeScreen,
+		screen: DashboardScreen,
 	},
 	{
-		key: "components",
-		title: "Components",
-		icon: { active: "cube", inactive: "cube-outline" },
-		screen: ComponentsScreen,
+		key: "income",
+		title: "Income",
+		icon: { active: "arrow-down-circle", inactive: "arrow-down-circle-outline" },
+		screen: IncomeScreen,
 	},
 	{
-		key: "settings",
-		title: "Settings",
-		icon: { active: "settings", inactive: "settings-outline" },
-		screen: SettingsScreen,
+		key: "expense",
+		title: "Expense",
+		icon: { active: "arrow-up-circle", inactive: "arrow-up-circle-outline" },
+		screen: ExpenseScreen,
 	},
 ];
 

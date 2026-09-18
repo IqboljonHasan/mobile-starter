@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "Mobile Starter",
-    "slug": "mobile-starter",
+    "name": "Kirciq",
+    "slug": "kirciq",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "mobilestarter",
+    "scheme": "kirciq",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.iqboljonhasan.mobilestarter"
+      "bundleIdentifier": "com.iqboljonhasan.kirciq"
     },
     "android": {
-      "package": "com.iqboljonhasan.mobilestarter",
+      "package": "com.iqboljonhasan.kirciq",
       "predictiveBackGestureEnabled": false,
       "allowBackup": false
     },

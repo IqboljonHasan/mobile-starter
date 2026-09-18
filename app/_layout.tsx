@@ -9,6 +9,7 @@ import {
 	useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { FontSizeProvider } from "@/contexts/FontSizeContext";
+import { LedgerProvider } from "@/contexts/LedgerContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useTheme } from "@/hooks/useTheme";
 import "../global.css";
@@ -53,7 +54,9 @@ function AppContent() {
 					name="(tabs)"
 					options={{ headerShown: false, animation: "none" }}
 				/>
-				<Stack.Screen name="details" options={{ title: "Details" }} />
+				<Stack.Screen name="transaction" options={{ title: "Entry" }} />
+				<Stack.Screen name="categories" options={{ title: "Categories" }} />
+				<Stack.Screen name="settings" options={{ title: "Settings" }} />
 			</Stack>
 		</View>
 	);
@@ -63,11 +66,14 @@ export default function RootLayout() {
 	return (
 		<GestureHandlerRootView className="flex-1">
 			<SafeAreaProvider>
-				{/* ThemeProvider sits outermost of the two: FontSizeProvider's
-				    consumers read colors, not the other way round. */}
+				{/* ThemeProvider sits outermost: FontSizeProvider's consumers read
+				    colors, not the other way round, and LedgerProvider's screens read
+				    both. */}
 				<ThemeProvider>
 					<FontSizeProvider>
-						<AppContent />
+						<LedgerProvider>
+							<AppContent />
+						</LedgerProvider>
 					</FontSizeProvider>
 				</ThemeProvider>
 			</SafeAreaProvider>
