@@ -110,16 +110,14 @@ export default function CategoriesScreen() {
 	const confirmDeleteCategory = (category: Category) => {
 		const used = countUsage(transactions, category.id);
 		Alert.alert(
-			`Delete "${category.name}"?`,
+			`"${category.name}" o'chirilsinmi?`,
 			used > 0
-				? `${used} ${used === 1 ? "entry uses" : "entries use"} this category. ${
-						used === 1 ? "It" : "They"
-					} will be kept and shown as uncategorized.`
-				: "Its subcategories will be deleted too.",
+				? `${used} ta yozuv bu kategoriyada. Ular saqlanadi va "Kategoriyasiz" bo'lib ko'rinadi.`
+				: "Ichki kategoriyalari ham o'chiriladi.",
 			[
-				{ text: "Cancel", style: "cancel" },
+				{ text: "Bekor qilish", style: "cancel" },
 				{
-					text: "Delete",
+					text: "O'chirish",
 					style: "destructive",
 					onPress: () => deleteCategory(category.id),
 				},
@@ -146,14 +144,14 @@ export default function CategoriesScreen() {
 	const confirmDeleteSubcategory = (category: Category, subcategoryId: string, name: string) => {
 		const used = countSubUsage(transactions, subcategoryId);
 		Alert.alert(
-			`Delete "${name}"?`,
+			`"${name}" o'chirilsinmi?`,
 			used > 0
-				? `${used} ${used === 1 ? "entry keeps" : "entries keep"} the "${category.name}" category and lose just this label.`
-				: "This can't be undone.",
+				? `${used} ta yozuv "${category.name}" kategoriyasida qoladi, faqat shu belgini yo'qotadi.`
+				: "Buni qaytarib bo'lmaydi.",
 			[
-				{ text: "Cancel", style: "cancel" },
+				{ text: "Bekor qilish", style: "cancel" },
 				{
-					text: "Delete",
+					text: "O'chirish",
 					style: "destructive",
 					onPress: () => deleteSubcategory(category.id, subcategoryId),
 				},
@@ -163,7 +161,7 @@ export default function CategoriesScreen() {
 
 	return (
 		<>
-			<Stack.Screen options={{ title: "Categories" }} />
+			<Stack.Screen options={{ title: "Kategoriyalar" }} />
 			<View className="flex-1 bg-background">
 				<ScrollView
 					contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
@@ -171,8 +169,8 @@ export default function CategoriesScreen() {
 				>
 					<SegmentedControl
 						items={[
-							{ key: "expense", label: "Expense" },
-							{ key: "income", label: "Income" },
+							{ key: "expense", label: "Chiqim" },
+							{ key: "income", label: "Kirim" },
 						]}
 						value={type}
 						onChange={(key) => setType(key as TxType)}
@@ -182,9 +180,9 @@ export default function CategoriesScreen() {
 						<Card>
 							<EmptyState
 								icon="pricetags-outline"
-								title={`No ${type} categories`}
-								message="Categories group your entries and give the dashboard something to break down."
-								actionLabel="New category"
+								title={`${type === "income" ? "Kirim" : "Chiqim"} kategoriyalari yo'q`}
+								message="Kategoriyalar yozuvlaringizni guruhlaydi va asosiy sahifadagi taqsimotni hosil qiladi."
+								actionLabel="Yangi kategoriya"
 								onAction={openNewCategory}
 							/>
 						</Card>
@@ -207,16 +205,13 @@ export default function CategoriesScreen() {
 												className="text-muted-foreground"
 												style={{ fontSize: tf.sm }}
 											>
-												{category.subcategories.length}{" "}
-												{category.subcategories.length === 1
-													? "subcategory"
-													: "subcategories"}{" "}
-												· {countUsage(transactions, category.id)} entries
+												{category.subcategories.length} ta ichki kategoriya ·{" "}
+												{countUsage(transactions, category.id)} ta yozuv
 											</Text>
 										</View>
 										<Pressable
 											accessibilityRole="button"
-											accessibilityLabel={`Edit ${category.name}`}
+											accessibilityLabel={`${category.name} — tahrirlash`}
 											onPress={() => openEditCategory(category)}
 											hitSlop={6}
 											className="w-10 h-10 items-center justify-center rounded-full active:opacity-60"
@@ -225,7 +220,7 @@ export default function CategoriesScreen() {
 										</Pressable>
 										<Pressable
 											accessibilityRole="button"
-											accessibilityLabel={`Delete ${category.name}`}
+											accessibilityLabel={`${category.name} — o'chirish`}
 											onPress={() => confirmDeleteCategory(category)}
 											hitSlop={6}
 											className="w-10 h-10 items-center justify-center rounded-full active:opacity-60"
@@ -243,7 +238,7 @@ export default function CategoriesScreen() {
 												<Pressable
 													key={subcategory.id}
 													accessibilityRole="button"
-													accessibilityLabel={`Edit ${subcategory.name}`}
+													accessibilityLabel={`${subcategory.name} — tahrirlash`}
 													onPress={() =>
 														setSubDraft({
 															categoryId: category.id,
@@ -284,7 +279,7 @@ export default function CategoriesScreen() {
 
 										<Pressable
 											accessibilityRole="button"
-											accessibilityLabel={`Add subcategory to ${category.name}`}
+											accessibilityLabel={`${category.name} uchun ichki kategoriya qo'shish`}
 											onPress={() =>
 												setSubDraft({
 													categoryId: category.id,
@@ -301,7 +296,7 @@ export default function CategoriesScreen() {
 												className="font-medium text-muted-foreground"
 												style={{ fontSize: tf.sm }}
 											>
-												Subcategory
+												Ichki kategoriya
 											</Text>
 										</Pressable>
 									</View>
@@ -312,7 +307,7 @@ export default function CategoriesScreen() {
 
 					{visible.length > 0 && (
 						<Button
-							label="New category"
+							label="Yangi kategoriya"
 							variant="soft"
 							fullWidth
 							onPress={openNewCategory}
@@ -324,7 +319,7 @@ export default function CategoriesScreen() {
 						className="text-muted-foreground text-center px-4 pt-1"
 						style={{ fontSize: tf.xs }}
 					>
-						Tap a subcategory to edit it, long-press to delete it.
+						{"Tahrirlash uchun ichki kategoriyaga bosing, o'chirish uchun uzoq bosing."}
 					</Text>
 				</ScrollView>
 			</View>
@@ -341,7 +336,9 @@ export default function CategoriesScreen() {
 						keyboardShouldPersistTaps="handled"
 					>
 						<Text className="font-bold text-foreground" style={{ fontSize: tf.xl }}>
-							{categoryDraft.id ? "Edit category" : `New ${type} category`}
+							{categoryDraft.id
+								? "Kategoriyani tahrirlash"
+								: `Yangi ${type === "income" ? "kirim" : "chiqim"} kategoriyasi`}
 						</Text>
 
 						<View className="items-center">
@@ -353,18 +350,18 @@ export default function CategoriesScreen() {
 						</View>
 
 						<InputField
-							label="Name"
+							label="Nomi"
 							required
 							value={categoryDraft.name}
 							onChangeText={(name) =>
 								setCategoryDraft((draft) => (draft ? { ...draft, name } : draft))
 							}
-							placeholder="e.g. Groceries"
+							placeholder="masalan, Oziq-ovqat"
 							autoFocus={!categoryDraft.id}
 						/>
 
 						<ColorPicker
-							label="Color"
+							label="Rang"
 							value={categoryDraft.color}
 							onChange={(color) =>
 								setCategoryDraft((draft) => (draft ? { ...draft, color } : draft))
@@ -372,7 +369,7 @@ export default function CategoriesScreen() {
 						/>
 
 						<IconPicker
-							label="Icon"
+							label="Ikonka"
 							value={categoryDraft.icon}
 							tint={categoryColorValue(categoryDraft.color, isDark)}
 							onChange={(icon) =>
@@ -383,7 +380,7 @@ export default function CategoriesScreen() {
 						<View className="flex-row gap-3">
 							<View className="flex-1">
 								<Button
-									label="Cancel"
+									label="Bekor qilish"
 									variant="outline"
 									color="secondary"
 									fullWidth
@@ -392,7 +389,7 @@ export default function CategoriesScreen() {
 							</View>
 							<View className="flex-1">
 								<Button
-									label="Save"
+									label="Saqlash"
 									fullWidth
 									disabled={!categoryDraft.name.trim()}
 									onPress={saveCategory}
@@ -415,22 +412,24 @@ export default function CategoriesScreen() {
 						keyboardShouldPersistTaps="handled"
 					>
 						<Text className="font-bold text-foreground" style={{ fontSize: tf.xl }}>
-							{subDraft.id ? "Edit subcategory" : "New subcategory"}
+							{subDraft.id
+								? "Ichki kategoriyani tahrirlash"
+								: "Yangi ichki kategoriya"}
 						</Text>
 
 						<InputField
-							label="Name"
+							label="Nomi"
 							required
 							value={subDraft.name}
 							onChangeText={(name) =>
 								setSubDraft((draft) => (draft ? { ...draft, name } : draft))
 							}
-							placeholder="e.g. Coffee"
+							placeholder="masalan, Kofe"
 							autoFocus={!subDraft.id}
 						/>
 
 						<ColorPicker
-							label="Color"
+							label="Rang"
 							value={subDraft.color}
 							onChange={(color) =>
 								setSubDraft((draft) => (draft ? { ...draft, color } : draft))
@@ -440,7 +439,7 @@ export default function CategoriesScreen() {
 						<View className="flex-row gap-3">
 							<View className="flex-1">
 								<Button
-									label="Cancel"
+									label="Bekor qilish"
 									variant="outline"
 									color="secondary"
 									fullWidth
@@ -449,7 +448,7 @@ export default function CategoriesScreen() {
 							</View>
 							<View className="flex-1">
 								<Button
-									label="Save"
+									label="Saqlash"
 									fullWidth
 									disabled={!subDraft.name.trim()}
 									onPress={saveSubcategory}
@@ -459,7 +458,7 @@ export default function CategoriesScreen() {
 
 						{subDraft.id && (
 							<Button
-								label="Delete subcategory"
+								label="Ichki kategoriyani o'chirish"
 								variant="text"
 								color="danger"
 								fullWidth

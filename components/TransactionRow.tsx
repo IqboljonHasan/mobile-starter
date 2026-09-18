@@ -50,7 +50,7 @@ export default function TransactionRow({
 						style={{ fontSize: tf.base }}
 						numberOfLines={1}
 					>
-						{category?.name ?? "Uncategorized"}
+						{category?.name ?? "Kategoriyasiz"}
 						{subcategory ? (
 							<Text className="text-muted-foreground">
 								{"  ·  "}

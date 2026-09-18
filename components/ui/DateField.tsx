@@ -60,8 +60,8 @@ export function DateField({
 	};
 
 	const quickPicks = [
-		{ label: "Today", iso: today },
-		{ label: "Yesterday", iso: addDaysISO(today, -1) },
+		{ label: "Bugun", iso: today },
+		{ label: "Kecha", iso: addDaysISO(today, -1) },
 	];
 
 	return (
@@ -78,7 +78,7 @@ export function DateField({
 
 			<Pressable
 				accessibilityRole="button"
-				accessibilityLabel={`Date: ${formatDayLabel(value)}`}
+				accessibilityLabel={`Sana: ${formatDayLabel(value)}`}
 				onPress={openSheet}
 				className="flex-row items-center gap-3 rounded-xl px-5 active:opacity-70"
 				style={{
@@ -104,7 +104,7 @@ export function DateField({
 					<View className="flex-row items-center justify-between py-2">
 						<Pressable
 							accessibilityRole="button"
-							accessibilityLabel="Previous month"
+							accessibilityLabel="Oldingi oy"
 							onPress={() => setMonth((m) => shiftMonth(m, -1))}
 							hitSlop={8}
 							className="w-10 h-10 items-center justify-center rounded-full active:opacity-60"
@@ -119,7 +119,7 @@ export function DateField({
 						</Text>
 						<Pressable
 							accessibilityRole="button"
-							accessibilityLabel="Next month"
+							accessibilityLabel="Keyingi oy"
 							onPress={() => setMonth((m) => shiftMonth(m, 1))}
 							hitSlop={8}
 							className="w-10 h-10 items-center justify-center rounded-full active:opacity-60"

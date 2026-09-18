@@ -12,9 +12,9 @@ import { getSetting, setSetting } from "@/lib/storage";
 export type ThemeMode = "light" | "dark" | "system";
 
 export const THEME_MODE_LABELS: Record<ThemeMode, string> = {
-	light: "Light",
-	dark: "Dark",
-	system: "System",
+	light: "Yorug'",
+	dark: "Qorong'i",
+	system: "Tizim",
 };
 
 const SETTING_KEY = "theme_mode";

@@ -46,7 +46,7 @@ export default function TransactionScreen() {
 	if (!ready) {
 		return (
 			<>
-				<Stack.Screen options={{ title: "Entry" }} />
+				<Stack.Screen options={{ title: "Yozuv" }} />
 				<View className="flex-1 bg-background items-center justify-center">
 					<ActivityIndicator color={tc.primary} />
 				</View>
@@ -57,13 +57,13 @@ export default function TransactionScreen() {
 	if (params.id && !existing) {
 		return (
 			<>
-				<Stack.Screen options={{ title: "Entry" }} />
+				<Stack.Screen options={{ title: "Yozuv" }} />
 				<View className="flex-1 bg-background items-center justify-center px-8">
 					<Text
 						className="text-muted-foreground text-center"
 						style={{ fontSize: tf.base }}
 					>
-						This entry no longer exists.
+						{"Bu yozuv endi mavjud emas."}
 					</Text>
 				</View>
 			</>
@@ -125,11 +125,11 @@ function TransactionForm({
 	const amount = parseAmount(amountText);
 	const amountError =
 		!amountText.trim()
-			? "Enter an amount"
+			? "Summani kiriting"
 			: !Number.isFinite(amount) || amount <= 0
-				? "Amount must be greater than zero"
+				? "Summa noldan katta bo'lishi kerak"
 				: undefined;
-	const categoryError = categoryId ? undefined : "Pick a category";
+	const categoryError = categoryId ? undefined : "Kategoriyani tanlang";
 
 	const changeType = (next: TxType) => {
 		if (next === type) return;
@@ -162,12 +162,12 @@ function TransactionForm({
 	const confirmDelete = () => {
 		if (!existing) return;
 		Alert.alert(
-			"Delete entry?",
-			`${formatAmount(existing.amount, existing.unit)} on ${formatDayLabel(existing.date)}. This can't be undone.`,
+			"Yozuv o'chirilsinmi?",
+			`${formatAmount(existing.amount, existing.unit)} · ${formatDayLabel(existing.date)}. Buni qaytarib bo'lmaydi.`,
 			[
-				{ text: "Cancel", style: "cancel" },
+				{ text: "Bekor qilish", style: "cancel" },
 				{
-					text: "Delete",
+					text: "O'chirish",
 					style: "destructive",
 					onPress: () => {
 						deleteTransaction(existing.id);
@@ -183,10 +183,12 @@ function TransactionForm({
 			<Stack.Screen
 				options={{
 					title: existing
-						? `Edit ${type}`
+						? type === "income"
+							? "Kirimni tahrirlash"
+							: "Chiqimni tahrirlash"
 						: type === "income"
-							? "New income"
-							: "New expense",
+							? "Yangi kirim"
+							: "Yangi chiqim",
 				}}
 			/>
 			<ScrollView
@@ -227,7 +229,7 @@ function TransactionForm({
 										color: active ? "#fff" : tc.foreground,
 									}}
 								>
-									{income ? "Income" : "Expense"}
+									{income ? "Kirim" : "Chiqim"}
 								</Text>
 							</Pressable>
 						);
@@ -238,7 +240,7 @@ function TransactionForm({
 				<View className="flex-row items-start gap-3">
 					<View className="flex-1">
 						<InputField
-							label="Amount"
+							label="Summa"
 							required
 							value={amountText}
 							onChangeText={setAmountText}
@@ -253,10 +255,10 @@ function TransactionForm({
 							className="font-medium text-foreground mb-1.5"
 							style={{ fontSize: tf.base }}
 						>
-							Unit
+							Valyuta
 						</Text>
 						<Select
-							label="Unit"
+							label="Valyuta"
 							value={unit}
 							onChange={(next) => next && setUnit(next)}
 							toggleOff={false}
@@ -267,7 +269,7 @@ function TransactionForm({
 							trigger={({ open }) => (
 								<Pressable
 									accessibilityRole="button"
-									accessibilityLabel={`Unit: ${unit}`}
+									accessibilityLabel={`Valyuta: ${unit}`}
 									onPress={open}
 									className="flex-row items-center justify-between rounded-xl px-4 active:opacity-70"
 									style={{
@@ -306,11 +308,11 @@ function TransactionForm({
 						className="font-medium text-foreground mb-1.5"
 						style={{ fontSize: tf.base }}
 					>
-						Category
+						Kategoriya
 						<Text className="text-danger"> *</Text>
 					</Text>
 					<Select
-						label="Category"
+						label="Kategoriya"
 						value={categoryId}
 						toggleOff={false}
 						onChange={(next) => {
@@ -318,7 +320,7 @@ function TransactionForm({
 							setSubcategoryId(null);
 						}}
 						options={typeCategories.map((c) => ({ key: c.id, label: c.name }))}
-						emptyMessage={`No ${type} categories yet — add one first.`}
+						emptyMessage={`Hali ${type === "income" ? "kirim" : "chiqim"} kategoriyasi yo'q — avval qo'shing.`}
 						headerRight={
 							<Pressable
 								accessibilityRole="button"
@@ -329,7 +331,7 @@ function TransactionForm({
 									className="font-medium text-muted-foreground"
 									style={{ fontSize: tf.sm }}
 								>
-									Manage
+									Boshqarish
 								</Text>
 							</Pressable>
 						}
@@ -384,7 +386,7 @@ function TransactionForm({
 									}}
 									numberOfLines={1}
 								>
-									{category?.name ?? "Choose a category"}
+									{category?.name ?? "Kategoriyani tanlang"}
 								</Text>
 								<Ionicons name="chevron-down" size={16} color={tc.mutedForeground} />
 							</Pressable>
@@ -403,10 +405,10 @@ function TransactionForm({
 						className="font-medium text-foreground mb-1.5"
 						style={{ fontSize: tf.base }}
 					>
-						Subcategory
+						Ichki kategoriya
 					</Text>
 					<Select
-						label="Subcategory"
+						label="Ichki kategoriya"
 						value={subcategoryId}
 						onChange={setSubcategoryId}
 						clearable
@@ -415,7 +417,7 @@ function TransactionForm({
 							key: s.id,
 							label: s.name,
 						}))}
-						emptyMessage="This category has no subcategories yet."
+						emptyMessage="Bu kategoriyada hali ichki kategoriya yo'q."
 						trigger={({ open }) => {
 							const subcategory =
 								category?.subcategories.find((s) => s.id === subcategoryId) ?? null;
@@ -456,9 +458,9 @@ function TransactionForm({
 										{subcategory?.name ??
 											(category
 												? category.subcategories.length
-													? "Optional"
-													: "No subcategories"
-												: "Pick a category first")}
+													? "Ixtiyoriy"
+													: "Ichki kategoriya yo'q"
+												: "Avval kategoriyani tanlang")}
 									</Text>
 									<Ionicons
 										name="chevron-down"
@@ -473,18 +475,18 @@ function TransactionForm({
 
 				{/* Description and date ----------------------------------------- */}
 				<Textarea
-					label="Description"
+					label="Izoh"
 					rows={3}
 					value={description}
 					onChangeText={setDescription}
-					placeholder="What was it for?"
+					placeholder="Nima uchun?"
 				/>
 
-				<DateField label="Date" required value={date} onChange={setDate} maxDate={todayISO()} />
+				<DateField label="Sana" required value={date} onChange={setDate} maxDate={todayISO()} />
 
 				<View className="gap-3 mt-2">
 					<Button
-						label={existing ? "Save changes" : "Add entry"}
+						label={existing ? "O'zgarishlarni saqlash" : "Qo'shish"}
 						fullWidth
 						size="lg"
 						onPress={save}
@@ -498,7 +500,7 @@ function TransactionForm({
 					/>
 					{existing ? (
 						<Button
-							label="Delete"
+							label="O'chirish"
 							variant="soft"
 							color="danger"
 							fullWidth

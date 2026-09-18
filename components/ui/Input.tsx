@@ -125,7 +125,7 @@ export function PasswordField({
 			rightElement={
 				<Pressable
 					accessibilityRole="button"
-					accessibilityLabel={visible ? "Hide password" : "Show password"}
+					accessibilityLabel={visible ? "Parolni yashirish" : "Parolni ko'rsatish"}
 					onPress={() => setVisible((v) => !v)}
 					hitSlop={8}
 					className="pl-2 py-3"

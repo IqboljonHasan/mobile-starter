@@ -18,9 +18,9 @@ export interface SelectProps<T extends string | number> {
 	options?: SelectOption<T>[];
 	/** Grouped option list, rendered under a heading per section. */
 	sections?: SelectSection<T>[];
-	/** Shows a "Clear" button in the sheet header once something is selected. */
+	/** Shows a "Tozalash" (clear) button in the sheet header once something is selected. */
 	clearable?: boolean;
-	/** Replaces the header's "Clear" slot with custom content. */
+	/** Replaces the header's clear slot with custom content. */
 	headerRight?: ReactNode;
 	/**
 	 * Tapping the already-selected row clears the selection (`onChange(null)`).
@@ -168,7 +168,7 @@ export function Select<T extends string | number>({
 										className="font-medium text-muted-foreground"
 										style={{ fontSize: tf.sm }}
 									>
-										Clear
+										Tozalash
 									</Text>
 								</Pressable>
 							))}

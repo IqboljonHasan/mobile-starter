@@ -17,14 +17,14 @@ export type Unit = {
 };
 
 export const UNITS: Unit[] = [
-	{ code: "UZS", symbol: "so'm", name: "Uzbek som", position: "after", decimals: 0 },
-	{ code: "USD", symbol: "$", name: "US dollar", position: "before", decimals: 2 },
-	{ code: "EUR", symbol: "€", name: "Euro", position: "before", decimals: 2 },
-	{ code: "RUB", symbol: "₽", name: "Russian ruble", position: "after", decimals: 2 },
-	{ code: "GBP", symbol: "£", name: "Pound sterling", position: "before", decimals: 2 },
-	{ code: "KZT", symbol: "₸", name: "Kazakh tenge", position: "after", decimals: 0 },
-	{ code: "TRY", symbol: "₺", name: "Turkish lira", position: "before", decimals: 2 },
-	{ code: "AED", symbol: "AED", name: "UAE dirham", position: "after", decimals: 2 },
+	{ code: "UZS", symbol: "so'm", name: "O'zbek so'mi", position: "after", decimals: 0 },
+	{ code: "USD", symbol: "$", name: "AQSh dollari", position: "before", decimals: 2 },
+	{ code: "EUR", symbol: "€", name: "Yevro", position: "before", decimals: 2 },
+	{ code: "RUB", symbol: "₽", name: "Rossiya rubli", position: "after", decimals: 2 },
+	{ code: "GBP", symbol: "£", name: "Funt sterling", position: "before", decimals: 2 },
+	{ code: "KZT", symbol: "₸", name: "Qozog'iston tengesi", position: "after", decimals: 0 },
+	{ code: "TRY", symbol: "₺", name: "Turk lirasi", position: "before", decimals: 2 },
+	{ code: "AED", symbol: "AED", name: "BAA dirhami", position: "after", decimals: 2 },
 ];
 
 export const DEFAULT_UNIT = "UZS";

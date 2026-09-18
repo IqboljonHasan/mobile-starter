@@ -25,7 +25,7 @@ export default function MonthSwitcher({
 		<View className="flex-row items-center justify-between">
 			<Pressable
 				accessibilityRole="button"
-				accessibilityLabel="Previous month"
+				accessibilityLabel="Oldingi oy"
 				onPress={() => onChange(shiftMonth(value, -1))}
 				hitSlop={8}
 				className="w-10 h-10 items-center justify-center rounded-full active:opacity-60"
@@ -35,7 +35,7 @@ export default function MonthSwitcher({
 
 			<Pressable
 				accessibilityRole="button"
-				accessibilityLabel="Jump to this month"
+				accessibilityLabel="Shu oyga o'tish"
 				onPress={() => onChange(now)}
 				className="flex-1 items-center active:opacity-60"
 			>
@@ -49,7 +49,7 @@ export default function MonthSwitcher({
 
 			<Pressable
 				accessibilityRole="button"
-				accessibilityLabel="Next month"
+				accessibilityLabel="Keyingi oy"
 				disabled={atCurrent}
 				onPress={() => onChange(shiftMonth(value, 1))}
 				hitSlop={8}

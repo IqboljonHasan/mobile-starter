@@ -39,7 +39,7 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
 	const income = type === "income";
-	const title = income ? "Income" : "Expense";
+	const title = income ? "Kirim" : "Chiqim";
 
 	const monthly = useMemo(
 		() => ofType(inMonth(transactions, month), type),
@@ -66,7 +66,7 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 
 	const subtitle = totals.length
 		? totals.map((t) => formatAmount(t.amount, t.unit)).join("  ·  ")
-		: "Nothing recorded";
+		: "Yozuv yo'q";
 
 	const addHref = `/transaction?type=${type}` as const;
 
@@ -104,7 +104,7 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 								contentContainerStyle={{ gap: 8, paddingRight: 8 }}
 							>
 								<FilterChip
-									label="All"
+									label="Hammasi"
 									active={categoryFilter === null}
 									onPress={() => setCategoryFilter(null)}
 								/>
@@ -161,15 +161,15 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 				ListEmptyComponent={
 					<EmptyState
 						icon={income ? "trending-up-outline" : "trending-down-outline"}
-						title={`No ${title.toLowerCase()} this month`}
+						title={`Bu oyda ${income ? "kirim" : "chiqim"} yo'q`}
 						message={
 							categoryFilter
-								? "No entries in this category. Try clearing the filter."
+								? "Bu kategoriyada yozuv yo'q. Filtrni tozalab ko'ring."
 								: income
-									? "Add what came in and it will show up here."
-									: "Add what went out and it will show up here."
+									? "Tushgan pulni qo'shing va u shu yerda ko'rinadi."
+									: "Sarflangan pulni qo'shing va u shu yerda ko'rinadi."
 						}
-						actionLabel={`Add ${title.toLowerCase()}`}
+						actionLabel={income ? "Kirim qo'shish" : "Chiqim qo'shish"}
 						onAction={() => router.push(addHref)}
 					/>
 				}
@@ -177,12 +177,12 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 
 			<View className="absolute right-4 bottom-4">
 				<Button
-					label="Add"
+					label="Qo'shish"
 					shape="pill"
 					color={income ? "success" : "danger"}
 					startIcon={<Ionicons name="add" size={20} color="#fff" />}
 					onPress={() => router.push(addHref)}
-					accessibilityLabel={`Add ${title.toLowerCase()}`}
+					accessibilityLabel={income ? "Kirim qo'shish" : "Chiqim qo'shish"}
 				/>
 			</View>
 		</View>

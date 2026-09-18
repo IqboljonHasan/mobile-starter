@@ -45,19 +45,19 @@ type TabRoute = {
 const TABS: TabRoute[] = [
 	{
 		key: "home",
-		title: "Home",
+		title: "Asosiy",
 		icon: { active: "home", inactive: "home-outline" },
 		screen: DashboardScreen,
 	},
 	{
 		key: "income",
-		title: "Income",
+		title: "Kirim",
 		icon: { active: "arrow-down-circle", inactive: "arrow-down-circle-outline" },
 		screen: IncomeScreen,
 	},
 	{
 		key: "expense",
-		title: "Expense",
+		title: "Chiqim",
 		icon: { active: "arrow-up-circle", inactive: "arrow-up-circle-outline" },
 		screen: ExpenseScreen,
 	},

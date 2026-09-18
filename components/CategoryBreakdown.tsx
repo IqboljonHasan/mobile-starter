@@ -37,7 +37,7 @@ export default function CategoryBreakdown({
 				...head,
 				{
 					categoryId: "__other__",
-					name: `Other (${tail.length})`,
+					name: `Boshqa (${tail.length})`,
 					color: "blue",
 					amount: tail.reduce((acc, s) => acc + s.amount, 0),
 					share: tail.reduce((acc, s) => acc + s.share, 0),

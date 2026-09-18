@@ -8,14 +8,19 @@
  */
 
 const MONTHS_LONG = [
-	"January", "February", "March", "April", "May", "June",
-	"July", "August", "September", "October", "November", "December",
+	"Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+	"Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
 ];
-const MONTHS_SHORT = MONTHS_LONG.map((m) => m.slice(0, 3));
-const WEEKDAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// Written out rather than sliced from the long names: "iyun" and "iyul" are the
+// same three letters, and the short form is what dates are printed with.
+const MONTHS_SHORT = [
+	"yan", "fev", "mar", "apr", "may", "iyn",
+	"iyl", "avg", "sen", "okt", "noy", "dek",
+];
+const WEEKDAYS_SHORT = ["Yak", "Dush", "Sesh", "Chor", "Pay", "Jum", "Shan"];
 
 /** Monday-first column headers for the calendar grid. */
-export const WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"];
+export const WEEKDAY_INITIALS = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"];
 
 export function toISODate(date: Date): string {
 	const y = date.getFullYear();
@@ -54,35 +59,27 @@ export function shiftMonth(monthKey: string, delta: number): string {
 	return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, "0")}`;
 }
 
-export function monthLabel(monthKey: string, long = false): string {
-	const [y, m] = monthKey.split("-").map(Number);
-	const names = long ? MONTHS_LONG : MONTHS_SHORT;
-	const name = names[m - 1] ?? "";
-	// The year is only worth the space when it isn't the current one.
-	return y === new Date().getFullYear() ? name : `${name} ${y}`;
-}
-
-/** "September 2026" — always spelled out with the year, for a calendar header. */
+/** "Sentabr 2026" — always spelled out with the year, for a calendar header. */
 export function monthTitle(monthKey: string): string {
 	const [y, m] = monthKey.split("-").map(Number);
 	return `${MONTHS_LONG[m - 1] ?? ""} ${y}`;
 }
 
-/** "18 Sep 2026" — the year is dropped inside the current year. */
+/** "18-sen" — the year is only added outside the current year. */
 export function formatDate(iso: string): string {
 	const date = fromISODate(iso);
-	const base = `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}`;
+	const base = `${date.getDate()}-${MONTHS_SHORT[date.getMonth()]}`;
 	return date.getFullYear() === new Date().getFullYear()
 		? base
 		: `${base} ${date.getFullYear()}`;
 }
 
-/** "Today", "Yesterday", or "Fri, 18 Sep" — for a date field and list headers. */
+/** "Bugun", "Kecha", or "Jum, 18-sen" — for a date field and list headers. */
 export function formatDayLabel(iso: string): string {
 	const today = todayISO();
-	if (iso === today) return "Today";
-	if (iso === addDaysISO(today, -1)) return "Yesterday";
-	if (iso === addDaysISO(today, 1)) return "Tomorrow";
+	if (iso === today) return "Bugun";
+	if (iso === addDaysISO(today, -1)) return "Kecha";
+	if (iso === addDaysISO(today, 1)) return "Ertaga";
 	const date = fromISODate(iso);
 	return `${WEEKDAYS_SHORT[date.getDay()]}, ${formatDate(iso)}`;
 }

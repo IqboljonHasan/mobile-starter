@@ -79,7 +79,7 @@ export default function DashboardScreen() {
 	if (!ready) {
 		return (
 			<View className="flex-1 bg-background">
-				<TabHeader title="Dashboard" />
+				<TabHeader title="Asosiy" />
 				<View className="flex-1 items-center justify-center">
 					<ActivityIndicator color={tc.primary} />
 				</View>
@@ -90,12 +90,12 @@ export default function DashboardScreen() {
 	return (
 		<View className="flex-1 bg-background">
 			<TabHeader
-				title="Dashboard"
-				subtitle="Income and spending at a glance"
+				title="Asosiy"
+				subtitle="Kirim va chiqim bir qarashda"
 				headerRight={
 					<IconButton
 						icon="settings-outline"
-						accessibilityLabel="Settings"
+						accessibilityLabel="Sozlamalar"
 						onPress={() => router.push("/settings")}
 					/>
 				}
@@ -142,7 +142,7 @@ export default function DashboardScreen() {
 							className="text-muted-foreground"
 							style={{ fontSize: tf.sm }}
 						>
-							Net this month
+							Oylik sof qoldiq
 						</Text>
 						<Text
 							className={`font-bold mt-1 ${
@@ -184,10 +184,10 @@ export default function DashboardScreen() {
 							</View>
 							<View className="flex-row justify-between mt-2">
 								<Text className="text-success font-semibold" style={{ fontSize: tf.sm }}>
-									In {Math.round((incomeTotal / flow) * 100)}%
+									Kirim {Math.round((incomeTotal / flow) * 100)}%
 								</Text>
 								<Text className="text-danger font-semibold" style={{ fontSize: tf.sm }}>
-									Out {Math.round((expenseTotal / flow) * 100)}%
+									Chiqim {Math.round((expenseTotal / flow) * 100)}%
 								</Text>
 							</View>
 						</>
@@ -200,7 +200,7 @@ export default function DashboardScreen() {
 						<View className="flex-row items-center gap-2">
 							<Ionicons name="arrow-down-circle" size={18} color={tc.success} />
 							<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
-								Income
+								Kirim
 							</Text>
 						</View>
 						<Text
@@ -212,14 +212,14 @@ export default function DashboardScreen() {
 							{formatAmount(incomeTotal, unit)}
 						</Text>
 						<Text className="text-muted-foreground" style={{ fontSize: tf.xs }}>
-							{income.length} {income.length === 1 ? "entry" : "entries"}
+							{income.length} ta yozuv
 						</Text>
 					</Card>
 					<Card className="flex-1" onPress={() => goToTab("expense")}>
 						<View className="flex-row items-center gap-2">
 							<Ionicons name="arrow-up-circle" size={18} color={tc.danger} />
 							<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
-								Expense
+								Chiqim
 							</Text>
 						</View>
 						<Text
@@ -231,7 +231,7 @@ export default function DashboardScreen() {
 							{formatAmount(expenseTotal, unit)}
 						</Text>
 						<Text className="text-muted-foreground" style={{ fontSize: tf.xs }}>
-							{expense.length} {expense.length === 1 ? "entry" : "entries"}
+							{expense.length} ta yozuv
 						</Text>
 					</Card>
 				</View>
@@ -240,7 +240,7 @@ export default function DashboardScreen() {
 				<View className="flex-row gap-3">
 					<View className="flex-1">
 						<Button
-							label="Add income"
+							label="Kirim qo'shish"
 							color="success"
 							fullWidth
 							startIcon={<Ionicons name="add" size={18} color="#fff" />}
@@ -249,7 +249,7 @@ export default function DashboardScreen() {
 					</View>
 					<View className="flex-1">
 						<Button
-							label="Add expense"
+							label="Chiqim qo'shish"
 							color="danger"
 							fullWidth
 							startIcon={<Ionicons name="add" size={18} color="#fff" />}
@@ -259,11 +259,11 @@ export default function DashboardScreen() {
 				</View>
 
 				{/* Breakdown --------------------------------------------------- */}
-				<Card title="By category">
+				<Card title="Kategoriyalar bo'yicha">
 					<SegmentedControl
 						items={[
-							{ key: "expense", label: "Expense" },
-							{ key: "income", label: "Income" },
+							{ key: "expense", label: "Chiqim" },
+							{ key: "income", label: "Kirim" },
 						]}
 						value={breakdownType}
 						onChange={(key) => setBreakdownType(key as TxType)}
@@ -274,7 +274,7 @@ export default function DashboardScreen() {
 							className="text-muted-foreground text-center py-6"
 							style={{ fontSize: tf.base }}
 						>
-							Nothing recorded this month.
+							{"Bu oyda yozuv yo'q."}
 						</Text>
 					) : (
 						<CategoryBreakdown slices={slices} unit={unit} />
@@ -284,7 +284,7 @@ export default function DashboardScreen() {
 				{/* Recent ------------------------------------------------------ */}
 				<Card
 					flush
-					title="Recent"
+					title="So'nggi yozuvlar"
 					headerRight={
 						recent.length > 0 ? (
 							<Pressable
@@ -296,7 +296,7 @@ export default function DashboardScreen() {
 									className="font-medium text-muted-foreground"
 									style={{ fontSize: tf.sm }}
 								>
-									See all
+									Barchasi
 								</Text>
 							</Pressable>
 						) : undefined
@@ -305,9 +305,9 @@ export default function DashboardScreen() {
 					{recent.length === 0 ? (
 						<EmptyState
 							icon="receipt-outline"
-							title="No entries yet"
-							message="Record what you earn and spend, and this month will fill in."
-							actionLabel="Add an expense"
+							title="Hozircha yozuv yo'q"
+							message="Kirim va chiqimni yozib boring — bu oy shu yerda to'ladi."
+							actionLabel="Chiqim qo'shish"
 							onAction={() => router.push("/transaction?type=expense")}
 						/>
 					) : (
@@ -338,15 +338,15 @@ export default function DashboardScreen() {
 								className="font-medium text-foreground"
 								style={{ fontSize: tf.base }}
 							>
-								Categories
+								Kategoriyalar
 							</Text>
 							<Text
 								className="text-muted-foreground"
 								style={{ fontSize: tf.sm }}
 							>
-								{categories.length} categories ·{" "}
-								{categories.reduce((n, c) => n + c.subcategories.length, 0)}{" "}
-								subcategories
+								{categories.length} ta kategoriya ·{" "}
+								{categories.reduce((n, c) => n + c.subcategories.length, 0)} ta
+								ichki kategoriya
 							</Text>
 						</View>
 						<Ionicons name="chevron-forward" size={18} color={tc.mutedForeground} />

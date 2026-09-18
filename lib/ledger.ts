@@ -56,7 +56,7 @@ export type CategorySlice = {
 
 /**
  * Spend (or income) per category, largest first. Transactions whose category
- * has since been deleted fall into one "Uncategorized" slice rather than
+ * has since been deleted fall into one "Kategoriyasiz" slice rather than
  * disappearing from the total.
  */
 export function categoryBreakdown(
@@ -80,7 +80,7 @@ export function categoryBreakdown(
 			const category = byId.get(categoryId);
 			return {
 				categoryId,
-				name: category?.name ?? "Uncategorized",
+				name: category?.name ?? "Kategoriyasiz",
 				color: category?.color ?? "blue",
 				amount,
 				share: total > 0 ? amount / total : 0,

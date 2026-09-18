@@ -158,7 +158,7 @@ export default function BottomSheet({
 					<View className="flex-1 justify-end">
 						<Pressable
 							className="flex-1"
-							accessibilityLabel="Close"
+							accessibilityLabel="Yopish"
 							onPress={onClose}
 						/>
 						{/* The transform lives on the card itself rather than a wrapper:

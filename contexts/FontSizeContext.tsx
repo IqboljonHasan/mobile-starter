@@ -18,10 +18,10 @@ export const FONT_SCALE_VALUES: Record<FontSizeScale, number> = {
 };
 
 export const FONT_SCALE_LABELS: Record<FontSizeScale, string> = {
-	small: "Small",
-	normal: "Normal",
-	large: "Large",
-	xlarge: "Huge",
+	small: "Kichik",
+	normal: "Oddiy",
+	large: "Katta",
+	xlarge: "Juda katta",
 };
 
 const SETTING_KEY = "font_size_scale";
