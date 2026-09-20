@@ -35,6 +35,18 @@ export const CATEGORY_COLORS: CategoryColor[] = [
 	"red",
 ];
 
+/** Spoken name of each hue — a swatch has no text, so screen readers announce this. */
+export const CATEGORY_COLOR_LABELS: Record<CategoryColor, string> = {
+	blue: "Ko'k",
+	orange: "To'q sariq",
+	aqua: "Firuza",
+	yellow: "Sariq",
+	magenta: "Pushti",
+	green: "Yashil",
+	violet: "Binafsha",
+	red: "Qizil",
+};
+
 const VALUES: Record<CategoryColor, { light: string; dark: string }> = {
 	blue: { light: "#2a78d6", dark: "#3987e5" },
 	orange: { light: "#eb6834", dark: "#d95926" },

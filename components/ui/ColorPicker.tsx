@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 import {
+	CATEGORY_COLOR_LABELS,
 	CATEGORY_COLORS,
 	type CategoryColor,
 	categoryColorValue,
@@ -41,7 +42,7 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
 						<Pressable
 							key={color}
 							accessibilityRole="button"
-							accessibilityLabel={color}
+							accessibilityLabel={CATEGORY_COLOR_LABELS[color]}
 							accessibilityState={{ selected }}
 							onPress={() => onChange(color)}
 							hitSlop={4}

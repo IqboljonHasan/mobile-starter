@@ -54,9 +54,9 @@ function AppContent() {
 					name="(tabs)"
 					options={{ headerShown: false, animation: "none" }}
 				/>
-				<Stack.Screen name="transaction" options={{ title: "Entry" }} />
-				<Stack.Screen name="categories" options={{ title: "Categories" }} />
-				<Stack.Screen name="settings" options={{ title: "Settings" }} />
+				<Stack.Screen name="transaction" options={{ title: "Yozuv" }} />
+				<Stack.Screen name="categories" options={{ title: "Kategoriyalar" }} />
+				<Stack.Screen name="settings" options={{ title: "Sozlamalar" }} />
 			</Stack>
 		</View>
 	);

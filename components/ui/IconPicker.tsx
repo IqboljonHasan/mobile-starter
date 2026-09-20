@@ -41,6 +41,40 @@ export const CATEGORY_ICONS: IconName[] = [
 	"ellipsis-horizontal-circle-outline",
 ];
 
+/** Spoken name of each icon — the glyph names above mean nothing read aloud. */
+const ICON_LABELS: Partial<Record<IconName, string>> = {
+	"pricetag-outline": "Yorliq",
+	"cart-outline": "Savat",
+	"restaurant-outline": "Restoran",
+	"cafe-outline": "Kafe",
+	"car-outline": "Avtomobil",
+	"bus-outline": "Avtobus",
+	"home-outline": "Uy",
+	"bulb-outline": "Lampochka",
+	"wifi-outline": "Wi-Fi",
+	"phone-portrait-outline": "Telefon",
+	"bag-handle-outline": "Sumka",
+	"shirt-outline": "Kiyim",
+	"medkit-outline": "Tibbiyot",
+	"fitness-outline": "Fitnes",
+	"school-outline": "Ta'lim",
+	"book-outline": "Kitob",
+	"game-controller-outline": "O'yin",
+	"musical-notes-outline": "Musiqa",
+	"airplane-outline": "Samolyot",
+	"gift-outline": "Sovg'a",
+	"paw-outline": "Uy hayvoni",
+	"construct-outline": "Ta'mirlash",
+	"briefcase-outline": "Portfel",
+	"wallet-outline": "Hamyon",
+	"card-outline": "Bank kartasi",
+	"cash-outline": "Naqd pul",
+	"trending-up-outline": "O'sish",
+	"people-outline": "Odamlar",
+	"heart-outline": "Yurak",
+	"ellipsis-horizontal-circle-outline": "Boshqa",
+};
+
 export interface IconPickerProps {
 	value: IconName;
 	onChange: (icon: IconName) => void;
@@ -75,7 +109,7 @@ export function IconPicker({ value, onChange, label, tint }: IconPickerProps) {
 						<Pressable
 							key={icon}
 							accessibilityRole="button"
-							accessibilityLabel={icon}
+							accessibilityLabel={ICON_LABELS[icon] ?? icon}
 							accessibilityState={{ selected }}
 							onPress={() => onChange(icon)}
 							className="w-12 h-12 rounded-full items-center justify-center active:opacity-70"

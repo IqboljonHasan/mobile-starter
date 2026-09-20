@@ -49,33 +49,31 @@ export default function SettingsScreen() {
 
 	const confirmReset = () => {
 		Alert.alert(
-			"Erase all data?",
-			`${transactions.length} ${
-				transactions.length === 1 ? "entry" : "entries"
-			} will be deleted and the starter categories restored. This can't be undone.`,
+			"Barcha ma'lumotlar o'chirilsinmi?",
+			`${transactions.length} ta yozuv o'chiriladi va boshlang'ich kategoriyalar tiklanadi. Buni qaytarib bo'lmaydi.`,
 			[
-				{ text: "Cancel", style: "cancel" },
-				{ text: "Erase", style: "destructive", onPress: resetLedger },
+				{ text: "Bekor qilish", style: "cancel" },
+				{ text: "O'chirish", style: "destructive", onPress: resetLedger },
 			],
 		);
 	};
 
 	return (
 		<>
-			<Stack.Screen options={{ title: "Settings" }} />
+			<Stack.Screen options={{ title: "Sozlamalar" }} />
 			<ScrollView
 				className="flex-1 bg-background"
 				contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
 				showsVerticalScrollIndicator={false}
 			>
 				{/* Ledger ------------------------------------------------------ */}
-				<Card flush title="Ledger">
+				<Card flush title="Hisob-kitob">
 					<ListRow
-						title="Categories"
-						subtitle={`${categories.length} categories · ${categories.reduce(
+						title="Kategoriyalar"
+						subtitle={`${categories.length} ta kategoriya · ${categories.reduce(
 							(n, c) => n + c.subcategories.length,
 							0,
-						)} subcategories`}
+						)} ta ichki kategoriya`}
 						icon="pricetags-outline"
 						onPress={() => router.push("/categories")}
 					/>
@@ -89,18 +87,18 @@ export default function SettingsScreen() {
 									className="font-medium text-foreground"
 									style={{ fontSize: tf.base }}
 								>
-									Default unit
+									Standart valyuta
 								</Text>
 								<Text
 									className="text-muted-foreground"
 									style={{ fontSize: tf.sm }}
 								>
-									What a new entry starts with — each entry keeps its own
+									{"Yangi yozuv shu valyuta bilan boshlanadi — har bir yozuv o'zinikini saqlaydi"}
 								</Text>
 							</View>
 						</View>
 						<Select
-							label="Default unit"
+							label="Standart valyuta"
 							value={defaultUnit}
 							toggleOff={false}
 							onChange={(unit) => unit && setDefaultUnit(unit)}
@@ -133,11 +131,11 @@ export default function SettingsScreen() {
 
 				{/* Theme ------------------------------------------------------- */}
 				<Card
-					title="Theme"
+					title="Mavzu"
 					subtitle={
 						mode === "system"
-							? `Following the system — currently ${isDark ? "dark" : "light"}`
-							: `Always ${mode}`
+							? `Tizimga mos — hozir ${THEME_MODE_LABELS[isDark ? "dark" : "light"].toLowerCase()}`
+							: `Doim ${THEME_MODE_LABELS[mode].toLowerCase()}`
 					}
 				>
 					<SegmentedControl
@@ -150,8 +148,8 @@ export default function SettingsScreen() {
 
 				{/* Font size --------------------------------------------------- */}
 				<Card
-					title="Text size"
-					subtitle={`Currently ${FONT_SCALE_LABELS[scale].toLowerCase()} — every screen follows this`}
+					title="Matn o'lchami"
+					subtitle={`Hozir: ${FONT_SCALE_LABELS[scale].toLowerCase()} — barcha ekranlarga qo'llanadi`}
 				>
 					<View className="flex-row gap-2">
 						{FONT_SCALES.map((s) => {
@@ -184,21 +182,21 @@ export default function SettingsScreen() {
 				</Card>
 
 				{/* About ------------------------------------------------------- */}
-				<Card flush title="About">
+				<Card flush title="Ilova haqida">
 					<ListRow
-						title="Version"
+						title="Versiya"
 						icon="information-circle-outline"
 						trailing={<Badge label={appVersion} />}
 					/>
 					<ListRow
-						title="Entries recorded"
+						title="Kiritilgan yozuvlar"
 						icon="receipt-outline"
 						divider
 						trailing={<Badge label={String(transactions.length)} tone="primary" />}
 					/>
 					<ListRow
-						title="Erase all data"
-						subtitle="Delete every entry and restore the starter categories"
+						title="Barcha ma'lumotlarni o'chirish"
+						subtitle="Barcha yozuvlarni o'chirish va boshlang'ich kategoriyalarni tiklash"
 						icon="trash-outline"
 						danger
 						divider
@@ -210,7 +208,7 @@ export default function SettingsScreen() {
 					className="text-muted-foreground text-center px-6 pt-1"
 					style={{ fontSize: tf.xs }}
 				>
-					Everything is stored on this device only.
+					Hammasi faqat shu qurilmada saqlanadi.
 				</Text>
 			</ScrollView>
 		</>
