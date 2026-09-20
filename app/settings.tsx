@@ -1,7 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { Stack, useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import {
+	ActivityIndicator,
+	Alert,
+	Pressable,
+	ScrollView,
+	Text,
+	View,
+} from "react-native";
 import { Badge, Card, ListRow, SegmentedControl, Select } from "@/components/ui";
 import {
 	FONT_SCALE_LABELS,
@@ -13,6 +21,7 @@ import { useLedger } from "@/contexts/LedgerContext";
 import { THEME_MODE_LABELS, type ThemeMode } from "@/contexts/ThemeContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
+import { loadBackup, saveBackup } from "@/lib/backupFile";
 import { UNITS, unitByCode } from "@/lib/money";
 import "../global.css";
 
@@ -43,9 +52,69 @@ export default function SettingsScreen() {
 		defaultUnit,
 		setDefaultUnit,
 		resetLedger,
+		replaceLedger,
 	} = useLedger();
 
+	// Both rows open a system picker, which leaves the app in the background for
+	// as long as the user browses. Tracking which one is in flight keeps a second
+	// picker from being opened on top of the first.
+	const [busy, setBusy] = useState<"save" | "load" | null>(null);
+
 	const appVersion = Constants.expoConfig?.version ?? "0.1.0";
+
+	const runSave = async () => {
+		if (busy) return;
+		setBusy("save");
+		try {
+			const result = await saveBackup({ categories, transactions, defaultUnit });
+			// A cancelled picker is a decision, not a failure — say nothing.
+			if (result.status === "saved") {
+				Alert.alert("Saqlandi", `Zaxira nusxa "${result.fileName}" fayliga yozildi.`);
+			}
+		} catch (e) {
+			console.warn("[backup] failed to save", e);
+			Alert.alert(
+				"Saqlanmadi",
+				"Zaxira nusxani yozib bo'lmadi. Boshqa papkani tanlab ko'ring.",
+			);
+		} finally {
+			setBusy(null);
+		}
+	};
+
+	const runLoad = async () => {
+		if (busy) return;
+		setBusy("load");
+		try {
+			const result = await loadBackup();
+			if (result.status === "canceled") return;
+			if (result.status === "invalid") {
+				Alert.alert("Tiklanmadi", result.error);
+				return;
+			}
+
+			const { payload, skipped } = result;
+			Alert.alert(
+				"Zaxiradan tiklansinmi?",
+				`Fayldan ${payload.transactions.length} ta yozuv va ${payload.categories.length} ta kategoriya tiklanadi.` +
+					(skipped > 0 ? ` ${skipped} ta buzuq yozuv o'tkazib yuborildi.` : "") +
+					` Hozirgi ${transactions.length} ta yozuv o'chadi. Buni qaytarib bo'lmaydi.`,
+				[
+					{ text: "Bekor qilish", style: "cancel" },
+					{
+						text: "Tiklash",
+						style: "destructive",
+						onPress: () => replaceLedger(payload),
+					},
+				],
+			);
+		} catch (e) {
+			console.warn("[backup] failed to load", e);
+			Alert.alert("Tiklanmadi", "Faylni o'qib bo'lmadi.");
+		} finally {
+			setBusy(null);
+		}
+	};
 
 	const confirmReset = () => {
 		Alert.alert(
@@ -127,6 +196,29 @@ export default function SettingsScreen() {
 							)}
 						/>
 					</View>
+				</Card>
+
+				{/* Backup ------------------------------------------------------ */}
+				<Card flush title="Zaxira nusxa">
+					<ListRow
+						title="Faylga saqlash"
+						subtitle={`${transactions.length} ta yozuv va ${categories.length} ta kategoriya JSON fayliga yoziladi`}
+						icon="save-outline"
+						onPress={runSave}
+						trailing={
+							busy === "save" ? <ActivityIndicator color={tc.primary} /> : undefined
+						}
+					/>
+					<ListRow
+						title="Fayldan tiklash"
+						subtitle="Zaxira faylini tanlang — hozirgi yozuvlar o'rniga qo'yiladi"
+						icon="folder-open-outline"
+						divider
+						onPress={runLoad}
+						trailing={
+							busy === "load" ? <ActivityIndicator color={tc.primary} /> : undefined
+						}
+					/>
 				</Card>
 
 				{/* Theme ------------------------------------------------------- */}

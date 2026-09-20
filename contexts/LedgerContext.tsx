@@ -8,6 +8,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import type { BackupPayload } from "@/lib/backup";
 import { getJSON, getSetting, setJSON, setSetting } from "@/lib/storage";
 import { DEFAULT_UNIT, unitByCode } from "@/lib/money";
 import { SEED_CATEGORIES } from "@/lib/seed";
@@ -61,6 +62,9 @@ type LedgerContextType = {
 
 	/** Wipes every transaction and restores the starter categories. */
 	resetLedger: () => void;
+
+	/** Swaps the whole ledger for a restored backup. Nothing is merged. */
+	replaceLedger: (payload: BackupPayload) => void;
 };
 
 const LedgerContext = createContext<LedgerContextType | null>(null);
@@ -227,6 +231,19 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		setCategories(SEED_CATEGORIES);
 	}, []);
 
+	// A restore replaces rather than merges: two ledgers hold their own ids, so
+	// merging would mean guessing which of two entries on the same day is the
+	// same purchase. Replacing is the one interpretation with no wrong answer,
+	// and the screen confirms what is about to be lost before calling this.
+	const replaceLedger = useCallback(
+		(payload: BackupPayload) => {
+			setCategories(payload.categories);
+			setTransactions(payload.transactions);
+			setDefaultUnit(payload.defaultUnit);
+		},
+		[setDefaultUnit],
+	);
+
 	const value = useMemo(
 		() => ({
 			ready,
@@ -244,6 +261,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			updateTransaction,
 			deleteTransaction,
 			resetLedger,
+			replaceLedger,
 		}),
 		[
 			ready,
@@ -261,6 +279,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			updateTransaction,
 			deleteTransaction,
 			resetLedger,
+			replaceLedger,
 		],
 	);
 
