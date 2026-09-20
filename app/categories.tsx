@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import CategoryReorderList from "@/components/CategoryReorderList";
 import {
 	BottomSheet,
 	Button,
@@ -57,12 +58,17 @@ export default function CategoriesScreen() {
 		addCategory,
 		updateCategory,
 		deleteCategory,
+		reorderCategories,
 		addSubcategory,
 		updateSubcategory,
 		deleteSubcategory,
 	} = useLedger();
 
 	const [type, setType] = useState<TxType>("expense");
+	const [reordering, setReordering] = useState(false);
+	// A drag and a vertical scroll are the same movement, so the list stops
+	// scrolling while a row is in hand.
+	const [dragging, setDragging] = useState(false);
 	const [categoryDraft, setCategoryDraft] = useState<CategoryDraftState | null>(null);
 	const [subDraft, setSubDraft] = useState<SubcategoryDraftState | null>(null);
 
@@ -166,6 +172,7 @@ export default function CategoriesScreen() {
 				<ScrollView
 					contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
 					showsVerticalScrollIndicator={false}
+					scrollEnabled={!dragging}
 				>
 					<SegmentedControl
 						items={[
@@ -173,23 +180,63 @@ export default function CategoriesScreen() {
 							{ key: "income", label: "Kirim" },
 						]}
 						value={type}
-						onChange={(key) => setType(key as TxType)}
+						onChange={(key) => {
+							setType(key as TxType);
+							// The order being dragged belongs to the list leaving the
+							// screen, so the mode doesn't follow across.
+							setReordering(false);
+						}}
 					/>
 
 					{/* Above the list rather than after it: the list grows without
 					    limit, and an action pinned to its end drifts further out of
 					    reach with every category added. */}
-					{visible.length > 0 && (
-						<Button
-							label="Yangi kategoriya"
-							variant="soft"
-							fullWidth
-							onPress={openNewCategory}
-							startIcon={<Ionicons name="add" size={18} color={tc.primary} />}
-						/>
-					)}
+					{visible.length > 0 &&
+						(reordering ? (
+							<Button
+								label="Tayyor"
+								fullWidth
+								onPress={() => setReordering(false)}
+								startIcon={<Ionicons name="checkmark" size={18} color="#fff" />}
+							/>
+						) : (
+							<View className="flex-row gap-3">
+								<View className="flex-1">
+									<Button
+										label="Yangi kategoriya"
+										variant="soft"
+										fullWidth
+										onPress={openNewCategory}
+										startIcon={
+											<Ionicons name="add" size={18} color={tc.primary} />
+										}
+									/>
+								</View>
+								{visible.length > 1 && (
+									<Button
+										label="Tartiblash"
+										variant="soft"
+										color="secondary"
+										onPress={() => setReordering(true)}
+										startIcon={
+											<Ionicons
+												name="swap-vertical"
+												size={18}
+												color={tc.foreground}
+											/>
+										}
+									/>
+								)}
+							</View>
+						))}
 
-					{visible.length === 0 ? (
+					{reordering ? (
+						<CategoryReorderList
+							categories={visible}
+							onReorder={(orderedIds) => reorderCategories(type, orderedIds)}
+							onDragChange={setDragging}
+						/>
+					) : visible.length === 0 ? (
 						<Card>
 							<EmptyState
 								icon="pricetags-outline"
@@ -322,7 +369,9 @@ export default function CategoriesScreen() {
 						className="text-muted-foreground text-center px-4 pt-1"
 						style={{ fontSize: tf.xs }}
 					>
-						{"Tahrirlash uchun ichki kategoriyaga bosing, o'chirish uchun uzoq bosing."}
+						{reordering
+							? "Tartibni o'zgartirish uchun dastakni bosib turing va suring."
+							: "Tahrirlash uchun ichki kategoriyaga bosing, o'chirish uchun uzoq bosing."}
 					</Text>
 				</ScrollView>
 			</View>

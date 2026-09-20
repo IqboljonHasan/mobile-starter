@@ -11,6 +11,7 @@ import {
 import type { BackupPayload } from "@/lib/backup";
 import { getJSON, getSetting, setJSON, setSetting } from "@/lib/storage";
 import { DEFAULT_UNIT, unitByCode } from "@/lib/money";
+import { applyOrder } from "@/lib/reorder";
 import { SEED_CATEGORIES } from "@/lib/seed";
 import {
 	type Category,
@@ -18,6 +19,7 @@ import {
 	type Subcategory,
 	type Transaction,
 	type TransactionInput,
+	type TxType,
 	uid,
 } from "@/lib/types";
 
@@ -47,6 +49,8 @@ type LedgerContextType = {
 	addCategory: (draft: CategoryDraft) => Category;
 	updateCategory: (id: string, patch: Partial<CategoryDraft>) => void;
 	deleteCategory: (id: string) => void;
+	/** Rewrites the order of one side of the ledger. */
+	reorderCategories: (type: TxType, orderedIds: string[]) => void;
 
 	addSubcategory: (categoryId: string, draft: Omit<Subcategory, "id">) => Subcategory;
 	updateSubcategory: (
@@ -134,6 +138,12 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		setCategories((prev) =>
 			prev.map((c) => (c.id === id ? { ...c, ...patch } : c)),
 		);
+	}, []);
+
+	// Order is the array's own, so it rides along with the ledger's single
+	// writer and needs no separate stored index.
+	const reorderCategories = useCallback((type: TxType, orderedIds: string[]) => {
+		setCategories((prev) => applyOrder(prev, type, orderedIds));
 	}, []);
 
 	// Transactions filed under a deleted category are kept, not cascaded — a
@@ -254,6 +264,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			addCategory,
 			updateCategory,
 			deleteCategory,
+			reorderCategories,
 			addSubcategory,
 			updateSubcategory,
 			deleteSubcategory,
@@ -272,6 +283,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			addCategory,
 			updateCategory,
 			deleteCategory,
+			reorderCategories,
 			addSubcategory,
 			updateSubcategory,
 			deleteSubcategory,
