@@ -8,6 +8,7 @@ import {
 	Pressable,
 	View,
 } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useTheme } from "@/hooks/useTheme";
@@ -142,7 +143,10 @@ export default function BottomSheet({
 				onClose();
 			}}
 		>
-			<View style={{ flex: 1 }}>
+			{/* A Modal is its own view hierarchy, so the root view at the top of the
+			    app doesn't reach inside it. Gesture handlers used in sheet content —
+			    the reorder list, say — need this one to be orchestrated at all. */}
+			<GestureHandlerRootView style={{ flex: 1 }}>
 				{/* Decorative dim layer — non-interactive, so it never competes with
 				    the tap-outside-to-close area below. */}
 				<Animated.View
@@ -185,7 +189,7 @@ export default function BottomSheet({
 						{children}
 					</Animated.View>
 				</View>
-			</View>
+			</GestureHandlerRootView>
 		</Modal>
 	);
 }

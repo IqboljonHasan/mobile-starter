@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useCallback } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
 	runOnJS,
@@ -13,38 +13,55 @@ import Animated, {
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
+import { categoryColorValue } from "@/lib/categoryColors";
 import { dropTarget, moveItem } from "@/lib/reorder";
-import type { Category } from "@/lib/types";
+import type { IconName } from "@/lib/types";
 import "../global.css";
 
 /**
- * Drag-to-reorder for one side of the ledger.
+ * Drag-to-reorder for a list of ledger items — categories, or the
+ * subcategories of one category.
  *
- * Rows are compact and equal height rather than the full category card: the
- * card carries tappable chips and two icon buttons, which fight a drag for the
- * same touch, and its height varies with how many subcategories it holds —
- * which would turn every drop into a walk over measured offsets. A fixed height
- * keeps the arithmetic in lib/reorder.ts, where it can be tested.
+ * Rows are compact and equal height rather than the thing being reordered in
+ * its usual form. Category cards carry tappable chips and icon buttons that
+ * fight a drag for the same touch, and subcategories are normally chips in a
+ * wrapped row, where dragging would mean hit-testing a two-dimensional layout
+ * of varying widths. One fixed-height column keeps the arithmetic in
+ * lib/reorder.ts, where it is tested.
  *
  * Nothing is held in local state: the committed order comes back down as
- * `categories`, so there is no second copy to fall out of step.
+ * `items`, so there is no second copy to fall out of step.
  */
 
-/** Only the handle starts a drag, so a stray swipe still scrolls the screen. */
-export default function CategoryReorderList({
-	categories,
+export type ReorderItem = {
+	id: string;
+	title: string;
+	subtitle?: string;
+	/** Palette key from lib/categoryColors. */
+	color: string;
+	/** Drawn in a tinted circle. A plain dot stands in when there isn't one. */
+	icon?: IconName;
+	/** Shows a chevron and lets the row be tapped, for a level below this one. */
+	disclosure?: boolean;
+};
+
+export default function ReorderList({
+	items,
 	onReorder,
 	onDragChange,
+	onPressItem,
 }: {
-	categories: Category[];
+	items: ReorderItem[];
 	onReorder: (orderedIds: string[]) => void;
 	/** Lets the screen freeze its ScrollView while a row is in hand. */
 	onDragChange: (dragging: boolean) => void;
+	/** Called when a row marked `disclosure` is tapped. */
+	onPressItem?: (id: string) => void;
 }) {
 	const { tf } = useFont();
 
 	// Constant per render, which is all the drop arithmetic needs — but it still
-	// follows the text-size setting, so the name never outgrows its row.
+	// follows the text-size setting, so a name never outgrows its row.
 	const rowHeight = 40 + tf.base + tf.sm;
 
 	const activeIndex = useSharedValue(-1);
@@ -54,14 +71,14 @@ export default function CategoryReorderList({
 	const finish = useCallback(
 		(from: number, to: number) => {
 			if (from !== to) {
-				onReorder(moveItem(categories, from, to).map((c) => c.id));
+				onReorder(moveItem(items, from, to).map((i) => i.id));
 			}
 			activeIndex.set(-1);
 			hoverIndex.set(-1);
 			dragY.set(0);
 			onDragChange(false);
 		},
-		[categories, onReorder, onDragChange, activeIndex, hoverIndex, dragY],
+		[items, onReorder, onDragChange, activeIndex, hoverIndex, dragY],
 	);
 
 	const start = useCallback(() => {
@@ -72,27 +89,28 @@ export default function CategoryReorderList({
 	return (
 		// Rows are absolutely positioned, so a lifted row slides over its
 		// neighbours instead of pushing the list around as it goes.
-		<View style={{ height: categories.length * rowHeight }}>
-			{categories.map((category, index) => (
-				<ReorderRow
-					key={category.id}
-					category={category}
+		<View style={{ height: items.length * rowHeight }}>
+			{items.map((item, index) => (
+				<Row
+					key={item.id}
+					item={item}
 					index={index}
-					count={categories.length}
+					count={items.length}
 					rowHeight={rowHeight}
 					activeIndex={activeIndex}
 					hoverIndex={hoverIndex}
 					dragY={dragY}
 					onStart={start}
 					onDrop={finish}
+					onPress={onPressItem}
 				/>
 			))}
 		</View>
 	);
 }
 
-function ReorderRow({
-	category,
+function Row({
+	item,
 	index,
 	count,
 	rowHeight,
@@ -101,8 +119,9 @@ function ReorderRow({
 	dragY,
 	onStart,
 	onDrop,
+	onPress,
 }: {
-	category: Category;
+	item: ReorderItem;
 	index: number;
 	count: number;
 	rowHeight: number;
@@ -111,8 +130,9 @@ function ReorderRow({
 	dragY: SharedValue<number>;
 	onStart: () => void;
 	onDrop: (from: number, to: number) => void;
+	onPress?: (id: string) => void;
 }) {
-	const { tc } = useTheme();
+	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
 
 	// Set once the drop has been handed to JS, so the cancel path in
@@ -120,8 +140,8 @@ function ReorderRow({
 	const dropped = useSharedValue(false);
 
 	const pan = Gesture.Pan()
-		// The row sits inside the screen's ScrollView. Waiting for a long press
-		// means a plain swipe still scrolls, and only a deliberate hold lifts.
+		// The row sits inside a ScrollView. Waiting for a long press means a
+		// plain swipe still scrolls, and only a deliberate hold lifts.
 		.activateAfterLongPress(200)
 		.onStart(() => {
 			dropped.set(false);
@@ -179,6 +199,48 @@ function ReorderRow({
 		};
 	});
 
+	const tappable = !!item.disclosure && !!onPress;
+
+	const body = (
+		<>
+			{item.icon ? (
+				<CategoryAvatar icon={item.icon} color={item.color} size={32} />
+			) : (
+				<View className="w-8 items-center">
+					<View
+						style={{
+							width: 12,
+							height: 12,
+							borderRadius: 6,
+							backgroundColor: categoryColorValue(item.color, isDark),
+						}}
+					/>
+				</View>
+			)}
+			<View className="flex-1">
+				<Text
+					className="font-semibold text-foreground"
+					style={{ fontSize: tf.base }}
+					numberOfLines={1}
+				>
+					{item.title}
+				</Text>
+				{!!item.subtitle && (
+					<Text
+						className="text-muted-foreground"
+						style={{ fontSize: tf.sm }}
+						numberOfLines={1}
+					>
+						{item.subtitle}
+					</Text>
+				)}
+			</View>
+			{tappable && (
+				<Ionicons name="chevron-forward" size={16} color={tc.mutedForeground} />
+			)}
+		</>
+	);
+
 	return (
 		<Animated.View
 			style={[
@@ -193,26 +255,25 @@ function ReorderRow({
 				animatedStyle,
 			]}
 		>
-			<View className="flex-1 flex-row items-center gap-3 rounded-2xl bg-card px-4">
-				<CategoryAvatar icon={category.icon} color={category.color} size={32} />
-				<View className="flex-1">
-					<Text
-						className="font-semibold text-foreground"
-						style={{ fontSize: tf.base }}
-						numberOfLines={1}
+			<View className="flex-1 flex-row items-center rounded-2xl bg-card pl-4 pr-1">
+				{tappable ? (
+					<Pressable
+						accessibilityRole="button"
+						accessibilityLabel={`${item.title} — ichki kategoriyalarni tartiblash`}
+						onPress={() => onPress?.(item.id)}
+						className="flex-1 flex-row items-center gap-3 active:opacity-60"
 					>
-						{category.name}
-					</Text>
-					<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
-						{category.subcategories.length} ta ichki kategoriya
-					</Text>
-				</View>
+						{body}
+					</Pressable>
+				) : (
+					<View className="flex-1 flex-row items-center gap-3">{body}</View>
+				)}
 				<GestureDetector gesture={pan}>
 					{/* Padded out to a comfortable target — the handle is the only
 					    part of the row that starts a drag. */}
 					<View
 						accessibilityRole="adjustable"
-						accessibilityLabel={`${category.name} — tartibini o'zgartirish`}
+						accessibilityLabel={`${item.title} — tartibini o'zgartirish`}
 						className="h-11 w-11 items-center justify-center"
 					>
 						<Ionicons

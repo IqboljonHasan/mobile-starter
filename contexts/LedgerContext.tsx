@@ -11,7 +11,7 @@ import {
 import type { BackupPayload } from "@/lib/backup";
 import { getJSON, getSetting, setJSON, setSetting } from "@/lib/storage";
 import { DEFAULT_UNIT, unitByCode } from "@/lib/money";
-import { applyOrder } from "@/lib/reorder";
+import { applyOrder, orderById } from "@/lib/reorder";
 import { SEED_CATEGORIES } from "@/lib/seed";
 import {
 	type Category,
@@ -53,6 +53,8 @@ type LedgerContextType = {
 	reorderCategories: (type: TxType, orderedIds: string[]) => void;
 
 	addSubcategory: (categoryId: string, draft: Omit<Subcategory, "id">) => Subcategory;
+	/** Rewrites the order of one category's subcategories. */
+	reorderSubcategories: (categoryId: string, orderedIds: string[]) => void;
 	updateSubcategory: (
 		categoryId: string,
 		subcategoryId: string,
@@ -168,6 +170,19 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		[],
 	);
 
+	const reorderSubcategories = useCallback(
+		(categoryId: string, orderedIds: string[]) => {
+			setCategories((prev) =>
+				prev.map((c) =>
+					c.id === categoryId
+						? { ...c, subcategories: orderById(c.subcategories, orderedIds) }
+						: c,
+				),
+			);
+		},
+		[],
+	);
+
 	const updateSubcategory = useCallback(
 		(
 			categoryId: string,
@@ -266,6 +281,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			deleteCategory,
 			reorderCategories,
 			addSubcategory,
+			reorderSubcategories,
 			updateSubcategory,
 			deleteSubcategory,
 			addTransaction,
@@ -285,6 +301,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			deleteCategory,
 			reorderCategories,
 			addSubcategory,
+			reorderSubcategories,
 			updateSubcategory,
 			deleteSubcategory,
 			addTransaction,

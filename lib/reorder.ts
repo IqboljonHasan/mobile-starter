@@ -36,23 +36,18 @@ export function dropTarget(
 }
 
 /**
- * Rewrites one side of the ledger into `orderedIds`, leaving every item of the
- * other type exactly where it was.
+ * Sorts a flat list into `orderedIds`.
  *
- * Categories of both types share a single array, so reordering the expense list
- * must not disturb the income list interleaved with it. Ids the caller doesn't
- * mention keep their old relative order at the end, so an order captured before
- * a category was added can still be applied without dropping it.
+ * Ids the caller doesn't mention keep their old relative order at the end, and
+ * ids that no longer exist are ignored — so an order captured before an item
+ * was added or removed still applies without losing anything.
  */
-export function applyOrder<T extends { id: string; type: string }>(
-	all: T[],
-	type: string,
+export function orderById<T extends { id: string }>(
+	items: T[],
 	orderedIds: string[],
 ): T[] {
 	const pending = new Map<string, T>();
-	for (const item of all) {
-		if (item.type === type) pending.set(item.id, item);
-	}
+	for (const item of items) pending.set(item.id, item);
 
 	const ordered: T[] = [];
 	for (const id of orderedIds) {
@@ -62,9 +57,28 @@ export function applyOrder<T extends { id: string; type: string }>(
 			pending.delete(id);
 		}
 	}
-	for (const item of all) {
-		if (item.type === type && pending.has(item.id)) ordered.push(item);
+	for (const item of items) {
+		if (pending.has(item.id)) ordered.push(item);
 	}
+	return ordered;
+}
+
+/**
+ * Rewrites one side of the ledger into `orderedIds`, leaving every item of the
+ * other type exactly where it was.
+ *
+ * Categories of both types share a single array, so reordering the expense list
+ * must not disturb the income list interleaved with it.
+ */
+export function applyOrder<T extends { id: string; type: string }>(
+	all: T[],
+	type: string,
+	orderedIds: string[],
+): T[] {
+	const ordered = orderById(
+		all.filter((item) => item.type === type),
+		orderedIds,
+	);
 
 	let next = 0;
 	return all.map((item) => (item.type === type ? ordered[next++] : item));

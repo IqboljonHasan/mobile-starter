@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
-import CategoryReorderList from "@/components/CategoryReorderList";
+import ReorderList from "@/components/ReorderList";
 import {
 	BottomSheet,
 	Button,
@@ -60,12 +60,15 @@ export default function CategoriesScreen() {
 		deleteCategory,
 		reorderCategories,
 		addSubcategory,
+		reorderSubcategories,
 		updateSubcategory,
 		deleteSubcategory,
 	} = useLedger();
 
 	const [type, setType] = useState<TxType>("expense");
 	const [reordering, setReordering] = useState(false);
+	/** Category whose subcategories are being arranged, by id. */
+	const [subReorderId, setSubReorderId] = useState<string | null>(null);
 	// A drag and a vertical scroll are the same movement, so the list stops
 	// scrolling while a row is in hand.
 	const [dragging, setDragging] = useState(false);
@@ -76,6 +79,12 @@ export default function CategoriesScreen() {
 		() => categories.filter((c) => c.type === type),
 		[categories, type],
 	);
+
+	// Read back out of the ledger rather than held in state, so the sheet shows
+	// the new order the moment a drop commits.
+	const subReorderCategory = subReorderId
+		? (categories.find((c) => c.id === subReorderId) ?? null)
+		: null;
 
 	const openNewCategory = () => {
 		setCategoryDraft({
@@ -231,10 +240,19 @@ export default function CategoriesScreen() {
 						))}
 
 					{reordering ? (
-						<CategoryReorderList
-							categories={visible}
+						<ReorderList
+							items={visible.map((c) => ({
+								id: c.id,
+								title: c.name,
+								subtitle: `${c.subcategories.length} ta ichki kategoriya`,
+								color: c.color,
+								icon: c.icon,
+								// Only worth opening when there is something to arrange.
+								disclosure: c.subcategories.length > 1,
+							}))}
 							onReorder={(orderedIds) => reorderCategories(type, orderedIds)}
 							onDragChange={setDragging}
+							onPressItem={setSubReorderId}
 						/>
 					) : visible.length === 0 ? (
 						<Card>
@@ -289,51 +307,77 @@ export default function CategoriesScreen() {
 										</Pressable>
 									</View>
 
-									{/* Subcategories as chips in their own colors — tap to edit,
-									    long-press to delete. */}
+									{/* Subcategories as chips in their own colors. The chip carries
+									    its own delete button rather than hiding the action behind a
+									    long press: the categories above show what they can do, and a
+									    subcategory that looks inert reads as one that can't be
+									    changed. The long press still works as a shortcut. */}
 									<View className="flex-row flex-wrap gap-2 mt-3">
 										{category.subcategories.map((subcategory) => {
 											const subHex = categoryColorValue(subcategory.color, isDark);
 											return (
-												<Pressable
+												<View
 													key={subcategory.id}
-													accessibilityRole="button"
-													accessibilityLabel={`${subcategory.name} — tahrirlash`}
-													onPress={() =>
-														setSubDraft({
-															categoryId: category.id,
-															id: subcategory.id,
-															name: subcategory.name,
-															color: subcategory.color,
-														})
-													}
-													onLongPress={() =>
-														confirmDeleteSubcategory(
-															category,
-															subcategory.id,
-															subcategory.name,
-														)
-													}
-													className="flex-row items-center gap-2 rounded-full px-3 py-2 active:opacity-70"
+													className="flex-row items-center rounded-full py-1 pl-3 pr-1"
 													style={{
 														backgroundColor: withAlpha(subHex, isDark ? 0.22 : 0.14),
 													}}
 												>
-													<View
-														style={{
-															width: 8,
-															height: 8,
-															borderRadius: 4,
-															backgroundColor: subHex,
-														}}
-													/>
-													<Text
-														className="font-medium text-foreground"
-														style={{ fontSize: tf.sm }}
+													<Pressable
+														accessibilityRole="button"
+														accessibilityLabel={`${subcategory.name} — tahrirlash`}
+														onPress={() =>
+															setSubDraft({
+																categoryId: category.id,
+																id: subcategory.id,
+																name: subcategory.name,
+																color: subcategory.color,
+															})
+														}
+														onLongPress={() =>
+															confirmDeleteSubcategory(
+																category,
+																subcategory.id,
+																subcategory.name,
+															)
+														}
+														className="flex-row items-center gap-2 py-1 pr-1 active:opacity-60"
 													>
-														{subcategory.name}
-													</Text>
-												</Pressable>
+														<View
+															style={{
+																width: 8,
+																height: 8,
+																borderRadius: 4,
+																backgroundColor: subHex,
+															}}
+														/>
+														<Text
+															className="font-medium text-foreground"
+															style={{ fontSize: tf.sm }}
+														>
+															{subcategory.name}
+														</Text>
+													</Pressable>
+													<Pressable
+														accessibilityRole="button"
+														accessibilityLabel={`${subcategory.name} — o'chirish`}
+														onPress={() =>
+															confirmDeleteSubcategory(
+																category,
+																subcategory.id,
+																subcategory.name,
+															)
+														}
+														hitSlop={6}
+														className="w-7 h-7 items-center justify-center rounded-full active:opacity-60"
+													>
+														<Ionicons
+															name="close"
+															size={14}
+															color={tc.mutedForeground}
+														/>
+													</Pressable>
+												</View>
 											);
 										})}
 
@@ -370,11 +414,51 @@ export default function CategoriesScreen() {
 						style={{ fontSize: tf.xs }}
 					>
 						{reordering
-							? "Tartibni o'zgartirish uchun dastakni bosib turing va suring."
-							: "Tahrirlash uchun ichki kategoriyaga bosing, o'chirish uchun uzoq bosing."}
+							? "Dastakni bosib turing va suring. Ichki kategoriyalarni tartiblash uchun kategoriya nomiga bosing."
+							: "Ichki kategoriya nomiga bosing — tahrirlanadi, × tugmasi o'chiradi."}
 					</Text>
 				</ScrollView>
 			</View>
+
+			{/* Subcategory order ----------------------------------------------- */}
+			<BottomSheet
+				visible={!!subReorderCategory}
+				onClose={() => setSubReorderId(null)}
+				maxHeight="80%"
+			>
+				{subReorderCategory && (
+					<View className="px-4 pb-2">
+						<Text
+							className="font-bold text-foreground mb-1"
+							style={{ fontSize: tf.xl }}
+						>
+							{subReorderCategory.name}
+						</Text>
+						<Text
+							className="text-muted-foreground mb-3"
+							style={{ fontSize: tf.sm }}
+						>
+							{"Dastakni bosib turing va suring."}
+						</Text>
+						<ScrollView
+							showsVerticalScrollIndicator={false}
+							scrollEnabled={!dragging}
+						>
+							<ReorderList
+								items={subReorderCategory.subcategories.map((s) => ({
+									id: s.id,
+									title: s.name,
+									color: s.color,
+								}))}
+								onReorder={(orderedIds) =>
+									reorderSubcategories(subReorderCategory.id, orderedIds)
+								}
+								onDragChange={setDragging}
+							/>
+						</ScrollView>
+					</View>
+				)}
+			</BottomSheet>
 
 			{/* Category editor ------------------------------------------------- */}
 			<BottomSheet
