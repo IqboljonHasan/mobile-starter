@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { BackupPayload } from "@/lib/backup";
 import { getJSON, getSetting, setJSON, setSetting } from "@/lib/storage";
-import { DEFAULT_UNIT, unitByCode } from "@/lib/money";
+import { asPayMethod, DEFAULT_UNIT, unitByCode } from "@/lib/money";
 import { applyOrder, orderById } from "@/lib/reorder";
 import { SEED_CATEGORIES } from "@/lib/seed";
 import {
@@ -96,7 +96,11 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			if (cancelled) return;
 
 			setCategories(storedCategories ?? SEED_CATEGORIES);
-			setTransactions(storedTransactions);
+			// Entries written before payment method existed carry none. Filling it
+			// in here, once, keeps every screen below free of the empty case.
+			setTransactions(
+				storedTransactions.map((t) => ({ ...t, method: asPayMethod(t.method) })),
+			);
 			setDefaultUnitState(unitByCode(storedUnit).code);
 			setReady(true);
 		})();

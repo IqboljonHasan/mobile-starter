@@ -1,9 +1,11 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { useFont } from "@/hooks/useFont";
+import { useTheme } from "@/hooks/useTheme";
 import { formatDate } from "@/lib/date";
 import { resolveCategory } from "@/lib/ledger";
-import { formatAmount } from "@/lib/money";
+import { formatAmount, methodByKey } from "@/lib/money";
 import type { Category, Transaction } from "@/lib/types";
 
 /**
@@ -26,8 +28,10 @@ export default function TransactionRow({
 	showDate?: boolean;
 }) {
 	const { tf } = useFont();
+	const { tc } = useTheme();
 	const { category, subcategory } = resolveCategory(transaction, categories);
 	const income = transaction.type === "income";
+	const method = methodByKey(transaction.method);
 
 	return (
 		<Pressable
@@ -58,13 +62,24 @@ export default function TransactionRow({
 							</Text>
 						) : null}
 					</Text>
-					<Text
-						className="text-muted-foreground"
-						style={{ fontSize: tf.sm }}
-						numberOfLines={1}
-					>
-						{transaction.description || formatDate(transaction.date)}
-					</Text>
+					{/* The icon alone carries the payment method here — the word is
+					    spelled out on the form and in the month's totals, and a row
+					    has to stay readable at a glance. */}
+					<View className="flex-row items-center gap-1.5">
+						<Ionicons
+							name={method.icon}
+							size={12}
+							color={tc.mutedForeground}
+							accessibilityLabel={method.label}
+						/>
+						<Text
+							className="flex-1 text-muted-foreground"
+							style={{ fontSize: tf.sm }}
+							numberOfLines={1}
+						>
+							{transaction.description || formatDate(transaction.date)}
+						</Text>
+					</View>
 				</View>
 				<View className="items-end">
 					<Text

@@ -1,6 +1,6 @@
 import { isCategoryColor } from "@/lib/categoryColors";
 import { toISODate } from "@/lib/date";
-import { DEFAULT_UNIT, unitByCode } from "@/lib/money";
+import { asPayMethod, DEFAULT_UNIT, unitByCode } from "@/lib/money";
 import type {
 	Category,
 	IconName,
@@ -140,6 +140,9 @@ function parseTransaction(raw: unknown): Transaction | null {
 		unit: raw.unit,
 		categoryId: raw.categoryId,
 		date: raw.date,
+		// Absent in files written before the field existed, and in anything
+		// hand-edited; both read as card rather than failing the entry.
+		method: asPayMethod(raw.method),
 		// These three are recoverable, so a miss costs the entry its label or its
 		// place in the day's order — not the entry itself.
 		subcategoryId: nonEmptyString(raw.subcategoryId) ? raw.subcategoryId : null,

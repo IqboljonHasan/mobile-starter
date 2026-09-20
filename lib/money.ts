@@ -1,3 +1,5 @@
+import type { IconName, PayMethod } from "@/lib/types";
+
 /**
  * Amounts and their unit.
  *
@@ -6,6 +8,35 @@
  * a single unit. `defaultUnit` (see LedgerContext) is what a new transaction
  * starts with.
  */
+
+/**
+ * How a transaction was paid.
+ *
+ * Card first, and the default for a new entry: a card payment leaves a trail
+ * the user can check later, so it's the one they're most likely to be
+ * reconciling against — and cash is the deliberate exception worth marking.
+ */
+export const PAY_METHODS: { key: PayMethod; label: string; icon: IconName }[] = [
+	{ key: "card", label: "Karta", icon: "card-outline" },
+	{ key: "cash", label: "Naqd", icon: "cash-outline" },
+];
+
+export const DEFAULT_METHOD: PayMethod = "card";
+
+/**
+ * Reads a stored or imported value as a payment method.
+ *
+ * Entries written before the field existed simply don't carry one, and they
+ * far more often than not were card — so an absent value reads as card rather
+ * than forcing every screen to handle a third, empty state.
+ */
+export function asPayMethod(value: unknown): PayMethod {
+	return value === "cash" || value === "card" ? value : DEFAULT_METHOD;
+}
+
+export function methodByKey(method: PayMethod) {
+	return PAY_METHODS.find((m) => m.key === method) ?? PAY_METHODS[0];
+}
 
 export type Unit = {
 	code: string;

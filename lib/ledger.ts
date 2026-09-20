@@ -39,6 +39,24 @@ export function sumByUnit(transactions: Transaction[]): UnitTotal[] {
 		.sort((a, b) => b.amount - a.amount);
 }
 
+export type MethodTotals = { cash: number; card: number };
+
+/**
+ * Splits a list by how the money moved. Scope the list to one unit first —
+ * like every other total here, these must not mix currencies.
+ */
+export function sumByMethod(transactions: Transaction[]): MethodTotals {
+	const totals: MethodTotals = { cash: 0, card: 0 };
+	for (const t of transactions) {
+		// Tested against "cash" rather than indexed by the field, so an entry
+		// carrying something unexpected lands on card instead of turning the
+		// whole total into NaN.
+		if (t.method === "cash") totals.cash += t.amount;
+		else totals.card += t.amount;
+	}
+	return totals;
+}
+
 /** Units present in a set of transactions, busiest first. */
 export function unitsUsed(transactions: Transaction[]): string[] {
 	return sumByUnit(transactions).map((t) => t.unit);

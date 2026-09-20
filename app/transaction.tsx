@@ -15,6 +15,7 @@ import {
 	Button,
 	DateField,
 	InputField,
+	SegmentedControl,
 	Select,
 	Textarea,
 } from "@/components/ui";
@@ -23,8 +24,15 @@ import { useFont } from "@/hooks/useFont";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useTheme } from "@/hooks/useTheme";
 import { formatDayLabel, todayISO } from "@/lib/date";
-import { formatAmount, parseAmount, UNITS, unitByCode } from "@/lib/money";
-import type { Transaction, TxType } from "@/lib/types";
+import {
+	DEFAULT_METHOD,
+	formatAmount,
+	parseAmount,
+	PAY_METHODS,
+	UNITS,
+	unitByCode,
+} from "@/lib/money";
+import type { PayMethod, Transaction, TxType } from "@/lib/types";
 import "../global.css";
 
 /**
@@ -108,6 +116,9 @@ function TransactionForm({
 		existing ? String(existing.amount) : "",
 	);
 	const [unit, setUnit] = useState(existing?.unit ?? defaultUnit);
+	const [method, setMethod] = useState<PayMethod>(
+		existing?.method ?? DEFAULT_METHOD,
+	);
 	const [categoryId, setCategoryId] = useState<string | null>(
 		existing?.categoryId ?? null,
 	);
@@ -152,6 +163,7 @@ function TransactionForm({
 			type,
 			amount,
 			unit,
+			method,
 			categoryId,
 			subcategoryId,
 			description: description.trim(),
@@ -311,6 +323,22 @@ function TransactionForm({
 						{formatAmount(amount, unit)} · {unitByCode(unit).name}
 					</Text>
 				)}
+
+				{/* How it was paid ---------------------------------------------- */}
+				<View>
+					<Text
+						className="font-medium text-foreground mb-1.5"
+						style={{ fontSize: tf.base }}
+					>
+						{"To'lov turi"}
+					</Text>
+					<SegmentedControl
+						items={PAY_METHODS}
+						value={method}
+						onChange={setMethod}
+						className="bg-muted"
+					/>
+				</View>
 
 				{/* Category ----------------------------------------------------- */}
 				<View>

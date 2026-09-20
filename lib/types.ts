@@ -8,6 +8,9 @@ export type TxType = "income" | "expense";
 
 export const TX_TYPES: TxType[] = ["income", "expense"];
 
+/** How the money actually moved. See PAY_METHODS in lib/money.ts. */
+export type PayMethod = "cash" | "card";
+
 export type Subcategory = {
 	id: string;
 	name: string;
@@ -31,6 +34,8 @@ export type Transaction = {
 	amount: number;
 	/** Currency code, e.g. "UZS". See lib/money.ts. */
 	unit: string;
+	/** Cash or card. Entries stored before this existed read as card. */
+	method: PayMethod;
 	categoryId: string;
 	subcategoryId: string | null;
 	description: string;

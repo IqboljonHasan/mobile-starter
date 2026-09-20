@@ -18,8 +18,15 @@ import { useTabScrollShadow } from "@/contexts/TabScrollShadowContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { currentMonthKey, formatDayLabel } from "@/lib/date";
-import { groupByDay, inMonth, ofType, sumByUnit } from "@/lib/ledger";
-import { formatAmount } from "@/lib/money";
+import {
+	groupByDay,
+	inMonth,
+	inUnit,
+	ofType,
+	sumByMethod,
+	sumByUnit,
+} from "@/lib/ledger";
+import { formatAmount, PAY_METHODS } from "@/lib/money";
 import type { TxType } from "@/lib/types";
 import "../global.css";
 
@@ -96,6 +103,53 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 					<View className="px-4 gap-3" style={{ marginBottom: 12 }}>
 						<Card>
 							<MonthSwitcher value={month} onChange={setMonth} />
+							{/* One block per unit: som and dollars can't be added, so a
+							    month holding both reports each on its own terms rather
+							    than inventing a single figure. */}
+							{totals.map((total) => {
+								const split = sumByMethod(inUnit(filtered, total.unit));
+								return (
+									<View key={total.unit} className="items-center pt-4">
+										<Text
+											className="text-muted-foreground"
+											style={{ fontSize: tf.sm }}
+										>
+											{categoryFilter ? "Tanlangan kategoriya" : "Bu oy jami"}
+										</Text>
+										<Text
+											className={`font-bold mt-1 ${
+												income ? "text-success" : "text-danger"
+											}`}
+											style={{ fontSize: tf.xxxl }}
+											numberOfLines={1}
+											adjustsFontSizeToFit
+										>
+											{formatAmount(total.amount, total.unit)}
+										</Text>
+										<View className="flex-row gap-3 mt-3">
+											{PAY_METHODS.map((payMethod) => (
+												<View
+													key={payMethod.key}
+													className="flex-row items-center gap-1.5 rounded-full bg-muted px-3 py-1.5"
+												>
+													<Ionicons
+														name={payMethod.icon}
+														size={14}
+														color={tc.mutedForeground}
+													/>
+													<Text
+														className="font-semibold text-foreground"
+														style={{ fontSize: tf.sm }}
+														numberOfLines={1}
+													>
+														{formatAmount(split[payMethod.key], total.unit)}
+													</Text>
+												</View>
+											))}
+										</View>
+									</View>
+								);
+							})}
 						</Card>
 						{usedCategories.length > 1 && (
 							<ScrollView
