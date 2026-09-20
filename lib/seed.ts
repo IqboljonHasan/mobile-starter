@@ -187,24 +187,31 @@ export const SEED_CATEGORIES: Category[] = [
 		icon: "home-outline",
 		subcategories: [
 			{ id: "sub_home_rent", name: "Ijara", color: "aqua" },
-			{ id: "sub_home_utilities", name: "Kommunal", color: "blue" },
 			{ id: "sub_home_repair", name: "Ta'mirlash", color: "orange" },
 			{ id: "sub_home_furniture", name: "Mebel", color: "violet" },
 			{ id: "sub_home_supplies", name: "Uy-ro'zg'or", color: "yellow" },
 		],
 	},
 	{
-		// Internet lives here rather than under Uy: it is billed with the phone
-		// far more often than with the rent.
-		id: "cat_communication",
+		// A category of its own rather than one line under Uy: these are the
+		// month's most repetitive entries, and each arrives as its own bill, so
+		// they are worth telling apart. Internet and the phone sit here too —
+		// they are paid the same way, on the same day, as the rest.
+		id: "cat_utilities",
 		type: "expense",
-		name: "Aloqa",
+		name: "Kommunal",
 		color: "violet",
-		icon: "phone-portrait-outline",
+		icon: "bulb-outline",
 		subcategories: [
-			{ id: "sub_comm_mobile", name: "Mobil aloqa", color: "violet" },
-			{ id: "sub_home_internet", name: "Internet", color: "blue" },
-			{ id: "sub_comm_tv", name: "Televidenie", color: "aqua" },
+			{ id: "sub_util_power", name: "Elektr", color: "yellow" },
+			{ id: "sub_util_gas", name: "Gaz", color: "blue" },
+			{ id: "sub_util_water", name: "Sovuq suv", color: "aqua" },
+			{ id: "sub_util_heating", name: "Issiq suv va isitish", color: "red" },
+			{ id: "sub_util_waste", name: "Chiqindi", color: "green" },
+			{ id: "sub_util_internet", name: "Internet", color: "violet" },
+			{ id: "sub_util_phone", name: "Telefon", color: "magenta" },
+			{ id: "sub_util_tv", name: "Kabel TV", color: "orange" },
+			{ id: "sub_util_intercom", name: "Domofon", color: "blue" },
 		],
 	},
 	{
