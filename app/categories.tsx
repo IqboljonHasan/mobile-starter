@@ -176,6 +176,19 @@ export default function CategoriesScreen() {
 						onChange={(key) => setType(key as TxType)}
 					/>
 
+					{/* Above the list rather than after it: the list grows without
+					    limit, and an action pinned to its end drifts further out of
+					    reach with every category added. */}
+					{visible.length > 0 && (
+						<Button
+							label="Yangi kategoriya"
+							variant="soft"
+							fullWidth
+							onPress={openNewCategory}
+							startIcon={<Ionicons name="add" size={18} color={tc.primary} />}
+						/>
+					)}
+
 					{visible.length === 0 ? (
 						<Card>
 							<EmptyState
@@ -303,16 +316,6 @@ export default function CategoriesScreen() {
 								</Card>
 							);
 						})
-					)}
-
-					{visible.length > 0 && (
-						<Button
-							label="Yangi kategoriya"
-							variant="soft"
-							fullWidth
-							onPress={openNewCategory}
-							startIcon={<Ionicons name="add" size={18} color={tc.primary} />}
-						/>
 					)}
 
 					<Text

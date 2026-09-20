@@ -4,13 +4,12 @@ import {
 	type DimensionValue,
 	Dimensions,
 	Keyboard,
-	KeyboardAvoidingView,
 	Modal,
-	Platform,
 	Pressable,
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
 
@@ -50,8 +49,15 @@ export default function BottomSheet({
 	// bottom edge of the screen (the window is translucent over the navigation
 	// bar) while content still clears the gesture bar. Sheet content must not
 	// add its own bottom padding on top of this, or the two stack into a gap.
+	//
+	// The same padding is what lifts the sheet off the keyboard: the modal is
+	// its own edge-to-edge window, which the IME never resizes, so a sheet
+	// holding a text field would otherwise sit behind it. Padding rather than
+	// margin keeps the lift inside `maxHeight`, so the sheet can't be pushed
+	// taller than the screen and lose its top edge.
 	const insets = useSafeAreaInsets();
-	const bottomPad = Math.max(insets.bottom, 16);
+	const keyboardInset = useKeyboardInset();
+	const bottomPad = keyboardInset || Math.max(insets.bottom, 16);
 	const { tc } = useTheme();
 
 	// Inline rgba() rather than a `bg-black/50`-style className: NativeWind 5
@@ -136,55 +142,50 @@ export default function BottomSheet({
 				onClose();
 			}}
 		>
-			<KeyboardAvoidingView
-				style={{ flex: 1 }}
-				behavior={Platform.OS === "ios" ? "padding" : undefined}
-			>
-				<View style={{ flex: 1 }}>
-					{/* Decorative dim layer — non-interactive, so it never competes with
-					    the tap-outside-to-close area below. */}
-					<Animated.View
-						pointerEvents="none"
-						style={{
-							position: "absolute",
-							top: 0,
-							left: 0,
-							right: 0,
-							bottom: 0,
-							backgroundColor: backdropColor,
-							opacity: overlayOpacity,
-						}}
+			<View style={{ flex: 1 }}>
+				{/* Decorative dim layer — non-interactive, so it never competes with
+				    the tap-outside-to-close area below. */}
+				<Animated.View
+					pointerEvents="none"
+					style={{
+						position: "absolute",
+						top: 0,
+						left: 0,
+						right: 0,
+						bottom: 0,
+						backgroundColor: backdropColor,
+						opacity: overlayOpacity,
+					}}
+				/>
+				<View className="flex-1 justify-end">
+					<Pressable
+						className="flex-1"
+						accessibilityLabel="Yopish"
+						onPress={onClose}
 					/>
-					<View className="flex-1 justify-end">
-						<Pressable
-							className="flex-1"
-							accessibilityLabel="Yopish"
-							onPress={onClose}
-						/>
-						{/* The transform lives on the card itself rather than a wrapper:
-						    a percentage `maxHeight` only resolves against a parent with a
-						    definite height, and an extra wrapper (content-sized, so
-						    indefinite) silently drops the constraint. This keeps the card
-						    a direct child of the flex-1 container above. */}
-						<Animated.View
-							className="rounded-t-3xl"
-							style={{
-								backgroundColor: tc.card,
-								transform: [{ translateY }],
-								paddingBottom: bottomPad,
-								...(maxHeight ? { maxHeight } : {}),
-							}}
-						>
-							{showHandle && (
-								<View className="items-center pt-3 pb-1">
-									<View className="w-10 h-1 rounded-full bg-disabled" />
-								</View>
-							)}
-							{children}
-						</Animated.View>
-					</View>
+					{/* The transform lives on the card itself rather than a wrapper:
+					    a percentage `maxHeight` only resolves against a parent with a
+					    definite height, and an extra wrapper (content-sized, so
+					    indefinite) silently drops the constraint. This keeps the card
+					    a direct child of the flex-1 container above. */}
+					<Animated.View
+						className="rounded-t-3xl"
+						style={{
+							backgroundColor: tc.card,
+							transform: [{ translateY }],
+							paddingBottom: bottomPad,
+							...(maxHeight ? { maxHeight } : {}),
+						}}
+					>
+						{showHandle && (
+							<View className="items-center pt-3 pb-1">
+								<View className="w-10 h-1 rounded-full bg-disabled" />
+							</View>
+						)}
+						{children}
+					</Animated.View>
 				</View>
-			</KeyboardAvoidingView>
+			</View>
 		</Modal>
 	);
 }

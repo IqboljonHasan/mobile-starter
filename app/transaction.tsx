@@ -9,6 +9,7 @@ import {
 	Text,
 	View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import {
 	Button,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useTheme } from "@/hooks/useTheme";
 import { formatDayLabel, todayISO } from "@/lib/date";
 import { formatAmount, parseAmount, UNITS, unitByCode } from "@/lib/money";
@@ -91,6 +93,8 @@ function TransactionForm({
 	const router = useRouter();
 	const { tc } = useTheme();
 	const { tf } = useFont();
+	const insets = useSafeAreaInsets();
+	const keyboardInset = useKeyboardInset();
 	const {
 		categories,
 		defaultUnit,
@@ -193,6 +197,12 @@ function TransactionForm({
 			/>
 			<ScrollView
 				className="flex-1 bg-background"
+				// Shrinking the scroll viewport, rather than only padding its
+				// content, is what lets a field tapped low in the form scroll itself
+				// into view: the native scroll container pulls a newly focused child
+				// inside its own bounds. The root layout already pads past the
+				// navigation bar, so only the rest of the keyboard is taken off here.
+				style={{ marginBottom: Math.max(keyboardInset - insets.bottom, 0) }}
 				contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}
