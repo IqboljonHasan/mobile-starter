@@ -353,3 +353,18 @@ export const SEED_CATEGORIES: Category[] = [
 		],
 	},
 ];
+
+/**
+ * Categories that record money moving against a debt — borrowing it, lending
+ * it, collecting on it, repaying it — rather than money actually earned or
+ * spent. Kept as a fixed id list rather than matched by name (the user can
+ * freely rename a category) so stats can optionally leave them out. See
+ * `excludeDebts` in lib/ledger.ts and `includeDebtsInStats` in
+ * PreferencesContext.
+ */
+export const DEBT_CATEGORY_IDS: ReadonlySet<string> = new Set([
+	"cat_debts", // Qarz olish — borrowing (income)
+	"cat_loans", // Qarz undirish — debt collection (income)
+	"cat_debs-out", // Qarz berish — lending (expense)
+	"cat_loans-out", // Qarz to'lovi — loan repayment (expense)
+]);

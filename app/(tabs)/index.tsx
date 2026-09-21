@@ -8,6 +8,7 @@ import TabHeader from "@/components/TabHeader";
 import TransactionRow from "@/components/TransactionRow";
 import { Button, Card, EmptyState, IconButton, SegmentedControl } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { useTabNavigation } from "@/contexts/TabNavigationContext";
 import { useTabScrollShadow } from "@/contexts/TabScrollShadowContext";
 import { useFont } from "@/hooks/useFont";
@@ -15,13 +16,14 @@ import { useTheme } from "@/hooks/useTheme";
 import { currentMonthKey } from "@/lib/date";
 import {
 	categoryBreakdown,
+	excludeDebts,
 	inMonth,
 	inUnit,
 	ofType,
 	sum,
 	unitsUsed,
 } from "@/lib/ledger";
-import { formatAmount, unitByCode } from "@/lib/money";
+import { formatAmount, maskAmount, unitByCode } from "@/lib/money";
 import type { TxType } from "@/lib/types";
 import "../../global.css";
 
@@ -32,6 +34,7 @@ export default function DashboardScreen() {
 	const { tf } = useFont();
 	const shadow = useTabScrollShadow("home");
 	const { ready, transactions, categories, defaultUnit } = useLedger();
+	const { hideIncome, toggleHideIncome, includeDebtsInStats } = usePreferences();
 
 	const [month, setMonth] = useState(currentMonthKey);
 	const [breakdownType, setBreakdownType] = useState<TxType>("expense");
@@ -55,8 +58,17 @@ export default function DashboardScreen() {
 				: (units[0] ?? defaultUnit);
 
 	const scoped = useMemo(() => inUnit(monthTransactions, unit), [monthTransactions, unit]);
-	const income = useMemo(() => ofType(scoped, "income"), [scoped]);
-	const expense = useMemo(() => ofType(scoped, "expense"), [scoped]);
+	// Debt categories (borrowing, lending, collection, repayment) are money
+	// moving against a debt, not real income or spending — left out of every
+	// stat below unless the user opts back in from Settings.
+	const income = useMemo(() => {
+		const list = ofType(scoped, "income");
+		return includeDebtsInStats ? list : excludeDebts(list);
+	}, [scoped, includeDebtsInStats]);
+	const expense = useMemo(() => {
+		const list = ofType(scoped, "expense");
+		return includeDebtsInStats ? list : excludeDebts(list);
+	}, [scoped, includeDebtsInStats]);
 
 	const incomeTotal = sum(income);
 	const expenseTotal = sum(expense);
@@ -93,11 +105,18 @@ export default function DashboardScreen() {
 				title="Asosiy"
 				subtitle="Kirim va chiqim bir qarashda"
 				headerRight={
-					<IconButton
-						icon="settings-outline"
-						accessibilityLabel="Sozlamalar"
-						onPress={() => router.push("/settings")}
-					/>
+					<View className="flex-row items-center gap-1">
+						<IconButton
+							icon={hideIncome ? "eye-off-outline" : "eye-outline"}
+							accessibilityLabel={hideIncome ? "Kirimni ko'rsatish" : "Kirimni yashirish"}
+							onPress={toggleHideIncome}
+						/>
+						<IconButton
+							icon="settings-outline"
+							accessibilityLabel="Sozlamalar"
+							onPress={() => router.push("/settings")}
+						/>
+					</View>
 				}
 			/>
 			<ScrollView
@@ -152,7 +171,7 @@ export default function DashboardScreen() {
 							numberOfLines={1}
 							adjustsFontSizeToFit
 						>
-							{formatAmount(net, unit, { signed: true })}
+							{hideIncome ? maskAmount(unit) : formatAmount(net, unit, { signed: true })}
 						</Text>
 						<Text
 							className="text-muted-foreground mt-1"
@@ -163,8 +182,21 @@ export default function DashboardScreen() {
 					</View>
 
 					{/* Two series, so both are labelled — the bar shows the split, the
-					    labels say which is which and by how much. */}
-					{flow > 0 && (
+					    labels say which is which and by how much. Hidden along with
+					    income: the bar's widths and the % figures would otherwise let
+					    the hidden income be read straight back out against the visible
+					    expense total. */}
+					{flow > 0 && hideIncome && (
+						<View className="flex-row justify-between mt-2">
+							<Text className="text-success font-semibold" style={{ fontSize: tf.sm }}>
+								Kirim ••
+							</Text>
+							<Text className="text-danger font-semibold" style={{ fontSize: tf.sm }}>
+								Chiqim ••
+							</Text>
+						</View>
+					)}
+					{flow > 0 && !hideIncome && (
 						<>
 							<View className="flex-row gap-0.5" style={{ height: 10 }}>
 								<View
@@ -209,7 +241,7 @@ export default function DashboardScreen() {
 							numberOfLines={1}
 							adjustsFontSizeToFit
 						>
-							{formatAmount(incomeTotal, unit)}
+							{hideIncome ? maskAmount(unit) : formatAmount(incomeTotal, unit)}
 						</Text>
 						<Text className="text-muted-foreground" style={{ fontSize: tf.xs }}>
 							{income.length} ta yozuv
@@ -277,7 +309,11 @@ export default function DashboardScreen() {
 							{"Bu oyda yozuv yo'q."}
 						</Text>
 					) : (
-						<CategoryBreakdown slices={slices} unit={unit} />
+						<CategoryBreakdown
+							slices={slices}
+							unit={unit}
+							hideAmounts={breakdownType === "income" && hideIncome}
+						/>
 					)}
 				</Card>
 

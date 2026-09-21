@@ -12,13 +12,15 @@ import {
 import MonthSwitcher from "@/components/MonthSwitcher";
 import TabHeader from "@/components/TabHeader";
 import TransactionRow from "@/components/TransactionRow";
-import { Button, Card, EmptyState } from "@/components/ui";
+import { Button, Card, EmptyState, IconButton } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { useTabScrollShadow } from "@/contexts/TabScrollShadowContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { currentMonthKey, formatDayLabel } from "@/lib/date";
 import {
+	excludeDebts,
 	groupByDay,
 	inMonth,
 	inUnit,
@@ -26,7 +28,7 @@ import {
 	sumByMethod,
 	sumByUnit,
 } from "@/lib/ledger";
-import { formatAmount, PAY_METHODS } from "@/lib/money";
+import { formatAmount, maskAmount, PAY_METHODS } from "@/lib/money";
 import type { TxType } from "@/lib/types";
 import "../global.css";
 
@@ -41,6 +43,7 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 	const { tf } = useFont();
 	const shadow = useTabScrollShadow(type);
 	const { ready, transactions, categories } = useLedger();
+	const { hideIncome, toggleHideIncome, includeDebtsInStats } = usePreferences();
 
 	const [month, setMonth] = useState(currentMonthKey);
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -69,10 +72,22 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 	);
 
 	const sections = useMemo(() => groupByDay(filtered), [filtered]);
-	const totals = useMemo(() => sumByUnit(filtered), [filtered]);
 
+	// The headline total is a stat, and debt categories are left out of it by
+	// default — but once the user has filtered down to one category (debt or
+	// not), that filter says exactly what they want totalled, so it's shown
+	// as-is rather than being zeroed out from under them.
+	const statsFiltered = useMemo(
+		() => (categoryFilter || includeDebtsInStats ? filtered : excludeDebts(filtered)),
+		[filtered, categoryFilter, includeDebtsInStats],
+	);
+	const totals = useMemo(() => sumByUnit(statsFiltered), [statsFiltered]);
+
+	const maskTotals = income && hideIncome;
 	const subtitle = totals.length
-		? totals.map((t) => formatAmount(t.amount, t.unit)).join("  ·  ")
+		? maskTotals
+			? totals.map((t) => maskAmount(t.unit)).join("  ·  ")
+			: totals.map((t) => formatAmount(t.amount, t.unit)).join("  ·  ")
 		: "Yozuv yo'q";
 
 	const addHref = `/transaction?type=${type}` as const;
@@ -90,7 +105,19 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 
 	return (
 		<View className="flex-1 bg-background">
-			<TabHeader title={title} subtitle={subtitle} />
+			<TabHeader
+				title={title}
+				subtitle={subtitle}
+				headerRight={
+					income ? (
+						<IconButton
+							icon={hideIncome ? "eye-off-outline" : "eye-outline"}
+							accessibilityLabel={hideIncome ? "Kirimni ko'rsatish" : "Kirimni yashirish"}
+							onPress={toggleHideIncome}
+						/>
+					) : undefined
+				}
+			/>
 
 			<SectionList
 				{...shadow}
@@ -107,7 +134,7 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 							    month holding both reports each on its own terms rather
 							    than inventing a single figure. */}
 							{totals.map((total) => {
-								const split = sumByMethod(inUnit(filtered, total.unit));
+								const split = sumByMethod(inUnit(statsFiltered, total.unit));
 								return (
 									<View key={total.unit} className="items-center pt-4">
 										<Text
@@ -124,7 +151,7 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 											numberOfLines={1}
 											adjustsFontSizeToFit
 										>
-											{formatAmount(total.amount, total.unit)}
+											{maskTotals ? maskAmount(total.unit) : formatAmount(total.amount, total.unit)}
 										</Text>
 										<View className="flex-row gap-3 mt-3">
 											{PAY_METHODS.map((payMethod) => (
@@ -142,7 +169,7 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 														style={{ fontSize: tf.sm }}
 														numberOfLines={1}
 													>
-														{formatAmount(split[payMethod.key], total.unit)}
+														{maskTotals ? maskAmount(total.unit) : formatAmount(split[payMethod.key], total.unit)}
 													</Text>
 												</View>
 											))}
@@ -191,7 +218,7 @@ export default function TransactionListScreen({ type }: { type: TxType }) {
 							style={{ fontSize: tf.sm }}
 						>
 							{section.totals
-								.map((t) => formatAmount(t.amount, t.unit))
+								.map((t) => (maskTotals ? maskAmount(t.unit) : formatAmount(t.amount, t.unit)))
 								.join("  ·  ")}
 						</Text>
 					</View>

@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { formatDate } from "@/lib/date";
 import { resolveCategory } from "@/lib/ledger";
-import { formatAmount, methodByKey } from "@/lib/money";
+import { formatAmount, maskAmount, methodByKey } from "@/lib/money";
 import type { Category, Transaction } from "@/lib/types";
 
 /**
@@ -29,8 +30,10 @@ export default function TransactionRow({
 }) {
 	const { tf } = useFont();
 	const { tc } = useTheme();
+	const { hideIncome } = usePreferences();
 	const { category, subcategory } = resolveCategory(transaction, categories);
 	const income = transaction.type === "income";
+	const hidden = income && hideIncome;
 	const method = methodByKey(transaction.method);
 
 	return (
@@ -88,7 +91,9 @@ export default function TransactionRow({
 						numberOfLines={1}
 					>
 						{income ? "+" : "−"}
-						{formatAmount(transaction.amount, transaction.unit)}
+						{hidden
+							? maskAmount(transaction.unit)
+							: formatAmount(transaction.amount, transaction.unit)}
 					</Text>
 					{showDate && (
 						<Text

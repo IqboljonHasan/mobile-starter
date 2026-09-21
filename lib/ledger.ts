@@ -1,5 +1,6 @@
 import type { Category, Transaction, TxType } from "@/lib/types";
 import { monthKeyOf } from "@/lib/date";
+import { DEBT_CATEGORY_IDS } from "@/lib/seed";
 
 /**
  * Pure read-side helpers over the ledger. Nothing here touches storage or
@@ -18,6 +19,12 @@ export function inMonth(transactions: Transaction[], monthKey: string): Transact
 
 export function ofType(transactions: Transaction[], type: TxType): Transaction[] {
 	return transactions.filter((t) => t.type === type);
+}
+
+/** Drops transactions filed under a debt category — see DEBT_CATEGORY_IDS in
+ *  lib/seed.ts. Used to keep debt movement out of income/expense stats. */
+export function excludeDebts(transactions: Transaction[]): Transaction[] {
+	return transactions.filter((t) => !DEBT_CATEGORY_IDS.has(t.categoryId));
 }
 
 export function inUnit(transactions: Transaction[], unit: string | null): Transaction[] {

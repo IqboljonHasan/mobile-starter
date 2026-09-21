@@ -3,7 +3,7 @@ import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";
 import type { CategorySlice } from "@/lib/ledger";
-import { formatAmount } from "@/lib/money";
+import { formatAmount, maskAmount } from "@/lib/money";
 
 /**
  * Where the month's money went, as a ranked bar per category.
@@ -20,10 +20,13 @@ export default function CategoryBreakdown({
 	slices,
 	unit,
 	onSelect,
+	hideAmounts = false,
 }: {
 	slices: CategorySlice[];
 	unit: string;
 	onSelect?: (categoryId: string) => void;
+	/** Masks each row's amount — for an income breakdown while income is hidden. */
+	hideAmounts?: boolean;
 }) {
 	const { isDark } = useTheme();
 	const { tf } = useFont();
@@ -52,12 +55,15 @@ export default function CategoryBreakdown({
 				const hex = categoryColorValue(slice.color, isDark);
 				const percent = slice.share < 0.01 ? "<1%" : `${Math.round(slice.share * 100)}%`;
 				const interactive = !!onSelect && slice.categoryId !== "__other__";
+				const amountText = hideAmounts ? maskAmount(unit) : formatAmount(slice.amount, unit);
 
 				return (
 					<Pressable
 						key={slice.categoryId}
 						accessibilityRole={interactive ? "button" : "text"}
-						accessibilityLabel={`${slice.name}, ${formatAmount(slice.amount, unit)}, ${percent}`}
+						accessibilityLabel={`${slice.name}, ${
+							hideAmounts ? "yashirilgan" : formatAmount(slice.amount, unit)
+						}, ${percent}`}
 						disabled={!interactive}
 						onPress={() => onSelect?.(slice.categoryId)}
 						className={interactive ? "active:opacity-70" : undefined}
@@ -83,7 +89,7 @@ export default function CategoryBreakdown({
 								style={{ fontSize: tf.base }}
 								numberOfLines={1}
 							>
-								{formatAmount(slice.amount, unit)}
+								{amountText}
 							</Text>
 						</View>
 						<View className="flex-row items-center gap-2 mt-1.5">

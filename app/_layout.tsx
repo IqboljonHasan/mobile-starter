@@ -10,6 +10,7 @@ import {
 } from "react-native-safe-area-context";
 import { FontSizeProvider } from "@/contexts/FontSizeContext";
 import { LedgerProvider } from "@/contexts/LedgerContext";
+import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useTheme } from "@/hooks/useTheme";
 import "../global.css";
@@ -71,9 +72,11 @@ export default function RootLayout() {
 				    both. */}
 				<ThemeProvider>
 					<FontSizeProvider>
-						<LedgerProvider>
-							<AppContent />
-						</LedgerProvider>
+						<PreferencesProvider>
+							<LedgerProvider>
+								<AppContent />
+							</LedgerProvider>
+						</PreferencesProvider>
 					</FontSizeProvider>
 				</ThemeProvider>
 			</SafeAreaProvider>

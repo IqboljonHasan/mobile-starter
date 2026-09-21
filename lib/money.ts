@@ -97,6 +97,16 @@ export function formatAmount(
 }
 
 /**
+ * Placeholder standing in for a masked amount — same unit-symbol placement as
+ * formatAmount, so hiding income doesn't reflow the surrounding layout.
+ */
+export function maskAmount(unitCode: string): string {
+	const unit = unitByCode(unitCode);
+	const dots = "••••";
+	return unit.position === "before" ? `${unit.symbol}${dots}` : `${dots} ${unit.symbol}`;
+}
+
+/**
  * Parses what a user can actually type: a comma decimal separator, grouping
  * spaces, a stray currency symbol. Returns NaN for anything that isn't a
  * positive number, which is what the form validates on.

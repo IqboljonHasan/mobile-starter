@@ -7,6 +7,7 @@ import {
 	Alert,
 	Pressable,
 	ScrollView,
+	Switch,
 	Text,
 	View,
 } from "react-native";
@@ -18,6 +19,7 @@ import {
 	useFontSize,
 } from "@/contexts/FontSizeContext";
 import { useLedger } from "@/contexts/LedgerContext";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { THEME_MODE_LABELS, type ThemeMode } from "@/contexts/ThemeContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
@@ -46,6 +48,7 @@ export default function SettingsScreen() {
 	const { tc, isDark, mode, setMode } = useTheme();
 	const { tf } = useFont();
 	const { scale, setScale } = useFontSize();
+	const { includeDebtsInStats, setIncludeDebtsInStats } = usePreferences();
 	const {
 		categories,
 		transactions,
@@ -196,6 +199,23 @@ export default function SettingsScreen() {
 							)}
 						/>
 					</View>
+				</Card>
+
+				{/* Stats --------------------------------------------------------- */}
+				<Card flush title="Statistika">
+					<ListRow
+						title="Qarzlarni statistikaga qo'shish"
+						subtitle="Qarz olish, qarz berish, qaytarish va undirish — yoqilsa, bular ham kirim/chiqim jamiga qo'shiladi"
+						icon="swap-horizontal-outline"
+						trailing={
+							<Switch
+								value={includeDebtsInStats}
+								onValueChange={setIncludeDebtsInStats}
+								trackColor={{ false: tc.muted, true: tc.primary }}
+								thumbColor="#fff"
+							/>
+						}
+					/>
 				</Card>
 
 				{/* Backup ------------------------------------------------------ */}
