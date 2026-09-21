@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
+import { categoryColorValue } from "@/lib/categoryColors";
 import { formatDate } from "@/lib/date";
 import { resolveCategory } from "@/lib/ledger";
 import { formatAmount, maskAmount, methodByKey } from "@/lib/money";
+import { walletColor, walletName } from "@/lib/wallets";
 import type { Category, Transaction } from "@/lib/types";
 
 /**
@@ -29,12 +32,17 @@ export default function TransactionRow({
 	showDate?: boolean;
 }) {
 	const { tf } = useFont();
-	const { tc } = useTheme();
+	const { tc, isDark } = useTheme();
 	const { hideIncome } = usePreferences();
+	const { wallets } = useLedger();
 	const { category, subcategory } = resolveCategory(transaction, categories);
 	const income = transaction.type === "income";
 	const hidden = income && hideIncome;
 	const method = methodByKey(transaction.method);
+	const paidFrom = !income && transaction.walletId
+		? walletName(wallets, transaction.walletId)
+		: null;
+	const allocations = income ? transaction.allocations : [];
 
 	return (
 		<Pressable
@@ -82,7 +90,59 @@ export default function TransactionRow({
 						>
 							{transaction.description || formatDate(transaction.date)}
 						</Text>
+						{/* Which jar paid. Colour alone would be a guess at this size, so
+						    the name rides along and gives way first when space is short. */}
+						{!!paidFrom && (
+							<View
+								className="flex-row items-center gap-1"
+								style={{ maxWidth: "45%" }}
+							>
+								<View
+									style={{
+										width: 6,
+										height: 6,
+										borderRadius: 3,
+										backgroundColor: categoryColorValue(
+											walletColor(wallets, transaction.walletId),
+											isDark,
+										),
+									}}
+								/>
+								<Text
+									className="text-muted-foreground"
+									style={{ fontSize: tf.xs }}
+									numberOfLines={1}
+								>
+									{paidFrom}
+								</Text>
+							</View>
+						)}
 					</View>
+
+					{/* How this income was divided, as the proportions themselves. The
+					    figures are on the entry's own screen — a row has to survive five
+					    jars without turning into a paragraph. */}
+					{allocations.length > 0 && (
+						<View
+							className="flex-row gap-0.5 mt-1.5"
+							style={{ height: 4 }}
+							accessibilityLabel={`${allocations.length} ta hamyonga taqsimlangan`}
+						>
+							{allocations.map((allocation) => (
+								<View
+									key={allocation.walletId}
+									style={{
+										flex: Math.max(allocation.amount, 0.0001),
+										backgroundColor: categoryColorValue(
+											walletColor(wallets, allocation.walletId),
+											isDark,
+										),
+										borderRadius: 2,
+									}}
+								/>
+							))}
+						</View>
+					)}
 				</View>
 				<View className="items-end">
 					<Text

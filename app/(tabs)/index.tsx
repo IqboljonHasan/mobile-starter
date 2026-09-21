@@ -24,16 +24,19 @@ import {
 	unitsUsed,
 } from "@/lib/ledger";
 import { formatAmount, maskAmount, unitByCode } from "@/lib/money";
+import { walletBalances } from "@/lib/wallets";
+import { categoryColorValue } from "@/lib/categoryColors";
 import type { TxType } from "@/lib/types";
 import "../../global.css";
 
 export default function DashboardScreen() {
 	const router = useRouter();
 	const { goToTab } = useTabNavigation();
-	const { tc } = useTheme();
+	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
 	const shadow = useTabScrollShadow("home");
-	const { ready, transactions, categories, defaultUnit } = useLedger();
+	const { ready, transactions, categories, wallets, transfers, defaultUnit } =
+		useLedger();
 	const { hideIncome, toggleHideIncome, includeDebtsInStats } = usePreferences();
 
 	const [month, setMonth] = useState(currentMonthKey);
@@ -78,6 +81,13 @@ export default function DashboardScreen() {
 	const slices = useMemo(
 		() => categoryBreakdown(breakdownType === "income" ? income : expense, categories),
 		[breakdownType, income, expense, categories],
+	);
+
+	// All-time and unaffected by the month being viewed: what a jar holds is a
+	// running balance, not something the month resets.
+	const balances = useMemo(
+		() => walletBalances(transactions, transfers, wallets, unit),
+		[transactions, transfers, wallets, unit],
 	);
 
 	const recent = useMemo(
@@ -267,6 +277,46 @@ export default function DashboardScreen() {
 						</Text>
 					</Card>
 				</View>
+
+				{/* Wallets ----------------------------------------------------- */}
+				{balances.length > 0 && (
+					<Card
+						title="Hamyonlar"
+						subtitle="Joriy qoldiq — butun tarix bo'yicha"
+						onPress={() => router.push("/wallets")}
+					>
+						<View className="gap-2.5">
+							{balances.map((row) => (
+								<View key={row.walletId} className="flex-row items-center gap-2">
+									<View
+										style={{
+											width: 10,
+											height: 10,
+											borderRadius: 5,
+											backgroundColor: categoryColorValue(row.color, isDark),
+										}}
+									/>
+									<Text
+										className="flex-1 text-foreground"
+										style={{ fontSize: tf.base }}
+										numberOfLines={1}
+									>
+										{row.name}
+									</Text>
+									<Text
+										className={`font-semibold ${
+											row.balance < 0 ? "text-danger" : "text-foreground"
+										}`}
+										style={{ fontSize: tf.base }}
+										numberOfLines={1}
+									>
+										{hideIncome ? maskAmount(unit) : formatAmount(row.balance, unit)}
+									</Text>
+								</View>
+							))}
+						</View>
+					</Card>
+				)}
 
 				{/* Quick add --------------------------------------------------- */}
 				<View className="flex-row gap-3">

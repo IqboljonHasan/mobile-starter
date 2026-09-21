@@ -52,6 +52,8 @@ export default function SettingsScreen() {
 	const {
 		categories,
 		transactions,
+		wallets,
+		transfers,
 		defaultUnit,
 		setDefaultUnit,
 		resetLedger,
@@ -69,7 +71,13 @@ export default function SettingsScreen() {
 		if (busy) return;
 		setBusy("save");
 		try {
-			const result = await saveBackup({ categories, transactions, defaultUnit });
+			const result = await saveBackup({
+				categories,
+				transactions,
+				wallets,
+				transfers,
+				defaultUnit,
+			});
 			// A cancelled picker is a decision, not a failure — say nothing.
 			if (result.status === "saved") {
 				Alert.alert("Saqlandi", `Zaxira nusxa "${result.fileName}" fayliga yozildi.`);
@@ -148,6 +156,16 @@ export default function SettingsScreen() {
 						)} ta ichki kategoriya`}
 						icon="pricetags-outline"
 						onPress={() => router.push("/categories")}
+					/>
+					<ListRow
+						title="Hamyonlar"
+						subtitle={`${wallets.length} ta hamyon · kirim ${wallets.reduce(
+							(n, w) => n + w.percent,
+							0,
+						)}% taqsimlanadi`}
+						icon="wallet-outline"
+						divider
+						onPress={() => router.push("/wallets")}
 					/>
 					<View className="px-4 py-3.5 border-t border-border">
 						<View className="flex-row items-center gap-3 mb-2">

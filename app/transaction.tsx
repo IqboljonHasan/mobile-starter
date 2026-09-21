@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import TransferSheet from "@/components/TransferSheet";
+import WalletPicker from "@/components/WalletPicker";
 import {
 	Button,
 	DateField,
@@ -20,18 +22,28 @@ import {
 	Textarea,
 } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useTheme } from "@/hooks/useTheme";
+import { categoryColorValue } from "@/lib/categoryColors";
 import { formatDayLabel, todayISO } from "@/lib/date";
 import {
 	DEFAULT_METHOD,
 	formatAmount,
+	maskAmount,
 	parseAmount,
 	PAY_METHODS,
 	UNITS,
 	unitByCode,
 } from "@/lib/money";
+import {
+	splitAmount,
+	splitsIncome,
+	walletBalances,
+	walletColor,
+	walletName,
+} from "@/lib/wallets";
 import type { PayMethod, Transaction, TxType } from "@/lib/types";
 import "../global.css";
 
@@ -99,17 +111,22 @@ function TransactionForm({
 	initialType: TxType;
 }) {
 	const router = useRouter();
-	const { tc } = useTheme();
+	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
 	const insets = useSafeAreaInsets();
 	const keyboardInset = useKeyboardInset();
 	const {
 		categories,
+		wallets,
+		transactions,
+		transfers,
 		defaultUnit,
 		addTransaction,
 		updateTransaction,
 		deleteTransaction,
+		addTransfer,
 	} = useLedger();
+	const { hideIncome } = usePreferences();
 
 	const [type, setType] = useState<TxType>(existing?.type ?? initialType);
 	const [amountText, setAmountText] = useState(
@@ -127,6 +144,11 @@ function TransactionForm({
 	);
 	const [description, setDescription] = useState(existing?.description ?? "");
 	const [date, setDate] = useState(existing?.date ?? todayISO());
+	const [walletId, setWalletId] = useState<string | null>(existing?.walletId ?? null);
+	// Once the wallet has been set by hand, changing the category stops moving
+	// it: the override was a deliberate "this one comes from somewhere else".
+	const [walletTouched, setWalletTouched] = useState(!!existing?.walletId);
+	const [coverOpen, setCoverOpen] = useState(false);
 	// Errors only appear once the user has tried to save — a form that turns red
 	// while it's still being filled in is nagging, not helping.
 	const [submitted, setSubmitted] = useState(false);
@@ -146,6 +168,48 @@ function TransactionForm({
 				: undefined;
 	const categoryError = categoryId ? undefined : "Kategoriyani tanlang";
 
+	// The entry being edited is left out, so an expense is measured against the
+	// balance without its own older version still subtracted from it.
+	const balances = useMemo(
+		() => walletBalances(transactions, transfers, wallets, unit, existing?.id),
+		[transactions, transfers, wallets, unit, existing?.id],
+	);
+
+	const available = walletId
+		? (balances.find((b) => b.walletId === walletId)?.balance ?? 0)
+		: 0;
+	const shortfall =
+		type === "expense" && walletId && Number.isFinite(amount) && amount > available
+			? amount - available
+			: 0;
+
+	// Nothing that feeds the split has been touched, so the entry keeps the
+	// division it was saved with.
+	const splitUnchanged =
+		!!existing &&
+		existing.type === type &&
+		existing.amount === amount &&
+		existing.unit === unit &&
+		existing.categoryId === categoryId;
+
+	// The stored split for an entry as it stands, and the split it is about to
+	// get once an edit is saved — history shows what actually happened, the form
+	// shows what saving would make happen.
+	const preview = useMemo(() => {
+		if (splitUnchanged && existing.allocations.length > 0) return existing.allocations;
+		if (type !== "income" || !splitsIncome(category)) return [];
+		if (!Number.isFinite(amount) || amount <= 0) return [];
+		return splitAmount(amount, unit, wallets);
+	}, [splitUnchanged, existing, type, category, amount, unit, wallets]);
+
+	// Only surfaced as quick-pick chips once there's an actual choice to make —
+	// a category mapped to none or one wallet is already handled by the
+	// WalletPicker's own default.
+	const mappedWallets = useMemo(
+		() => wallets.filter((w) => category?.walletIds?.includes(w.id)),
+		[wallets, category],
+	);
+
 	const changeType = (next: TxType) => {
 		if (next === type) return;
 		setType(next);
@@ -153,12 +217,22 @@ function TransactionForm({
 		// survive the switch.
 		setCategoryId(null);
 		setSubcategoryId(null);
+		setWalletId(null);
+		setWalletTouched(false);
 	};
 
-	const save = () => {
-		setSubmitted(true);
-		if (amountError || !categoryId) return;
+	const changeCategory = (next: string | null) => {
+		setCategoryId(next);
+		setSubcategoryId(null);
+		if (walletTouched) return;
+		const mappedIds = categories.find((c) => c.id === next)?.walletIds ?? [];
+		// Auto-fill only when the category leaves no doubt about which wallet
+		// pays; with more than one candidate the quick-pick chips below decide.
+		setWalletId(mappedIds.length === 1 ? mappedIds[0] : null);
+	};
 
+	const commit = () => {
+		if (!categoryId) return;
 		const input = {
 			type,
 			amount,
@@ -168,11 +242,39 @@ function TransactionForm({
 			subcategoryId,
 			description: description.trim(),
 			date,
+			// Only an expense is paid out of a wallet; an income is divided into
+			// all of them, which the store works out from the category.
+			walletId: type === "expense" ? walletId : null,
 		};
 
 		if (existing) updateTransaction(existing.id, input);
 		else addTransaction(input);
 		router.back();
+	};
+
+	const save = () => {
+		setSubmitted(true);
+		if (amountError || !categoryId) return;
+
+		// Spending money a jar doesn't hold is the one thing this form won't
+		// record silently. The way through is to name the wallet that is really
+		// paying, which keeps both balances true instead of hiding the overspend.
+		if (shortfall > 0) {
+			Alert.alert(
+				`"${walletName(wallets, walletId)}" hamyonida yetarli mablag' yo'q`,
+				`Qoldiq: ${formatAmount(available, unit)}\nKerak: ${formatAmount(amount, unit)}\nYetishmaydi: ${formatAmount(shortfall, unit)}\n\nBoshqa hamyondan qoplasangiz, yozuv saqlanadi.`,
+				[
+					{ text: "Bekor qilish", style: "cancel" },
+					{
+						text: "Boshqa hamyondan qoplash",
+						onPress: () => setCoverOpen(true),
+					},
+				],
+			);
+			return;
+		}
+
+		commit();
 	};
 
 	const confirmDelete = () => {
@@ -353,10 +455,7 @@ function TransactionForm({
 						label="Kategoriya"
 						value={categoryId}
 						toggleOff={false}
-						onChange={(next) => {
-							setCategoryId(next);
-							setSubcategoryId(null);
-						}}
+						onChange={changeCategory}
 						options={typeCategories.map((c) => ({ key: c.id, label: c.name }))}
 						emptyMessage={`Hali ${type === "income" ? "kirim" : "chiqim"} kategoriyasi yo'q — avval qo'shing.`}
 						headerRight={
@@ -511,6 +610,144 @@ function TransactionForm({
 					/>
 				</View>
 
+				{/* Which wallet pays, or how the income divides ------------------ */}
+				{type === "expense" ? (
+					<View>
+						{mappedWallets.length > 1 && (
+							<View className="flex-row flex-wrap gap-2 mb-2">
+								{mappedWallets.map((w) => {
+									const active = walletId === w.id;
+									return (
+										<Pressable
+											key={w.id}
+											accessibilityRole="button"
+											accessibilityState={{ selected: active }}
+											onPress={() => {
+												setWalletId(w.id);
+												setWalletTouched(true);
+											}}
+											className={`flex-row items-center gap-1.5 rounded-full px-3 py-1.5 active:opacity-70 ${
+												active ? "bg-primary-highlight" : "bg-muted"
+											}`}
+										>
+											<View
+												style={{
+													width: 7,
+													height: 7,
+													borderRadius: 3.5,
+													backgroundColor: categoryColorValue(w.color, isDark),
+												}}
+											/>
+											<Text
+												className={`font-medium ${
+													active ? "text-primary" : "text-muted-foreground"
+												}`}
+												style={{ fontSize: tf.sm }}
+											>
+												{w.name}
+											</Text>
+										</Pressable>
+									);
+								})}
+							</View>
+						)}
+						<WalletPicker
+							label="Qaysi hamyondan"
+							value={walletId}
+							onChange={(next) => {
+								setWalletId(next);
+								setWalletTouched(true);
+							}}
+							wallets={wallets}
+							balances={balances}
+							unit={unit}
+							allowNone
+							includeUnallocated
+							hideAmounts={hideIncome}
+						/>
+						{shortfall > 0 ? (
+							<Text className="text-danger mt-1.5" style={{ fontSize: tf.sm }}>
+								{`Yetishmaydi: ${formatAmount(shortfall, unit)} — saqlashda boshqa hamyondan qoplashni taklif qilamiz.`}
+							</Text>
+						) : walletId ? (
+							<Text
+								className="text-muted-foreground mt-1.5"
+								style={{ fontSize: tf.sm }}
+							>
+								{`Yozuvdan keyin qoladi: ${
+									hideIncome
+										? maskAmount(unit)
+										: formatAmount(
+												available - (Number.isFinite(amount) ? amount : 0),
+												unit,
+											)
+								}`}
+							</Text>
+						) : null}
+					</View>
+				) : preview.length > 0 ? (
+					<View>
+						<Text
+							className="font-medium text-foreground mb-1.5"
+							style={{ fontSize: tf.base }}
+						>
+							{splitUnchanged ? "Hamyonlarga taqsimlangan" : "Hamyonlarga taqsimlanadi"}
+						</Text>
+						<View
+							className="rounded-xl px-4 py-3 gap-2"
+							style={{
+								backgroundColor: tc.card,
+								borderWidth: 1,
+								borderColor: tc.border,
+							}}
+						>
+							{preview.map((allocation) => {
+								const share = amount > 0 ? allocation.amount / amount : 0;
+								return (
+									<View
+										key={allocation.walletId}
+										className="flex-row items-center gap-2"
+									>
+										<View
+											style={{
+												width: 8,
+												height: 8,
+												borderRadius: 4,
+												backgroundColor: categoryColorValue(
+													walletColor(wallets, allocation.walletId),
+													isDark,
+												),
+											}}
+										/>
+										<Text
+											className="flex-1 text-foreground"
+											style={{ fontSize: tf.sm }}
+											numberOfLines={1}
+										>
+											{walletName(wallets, allocation.walletId)}
+										</Text>
+										<Text
+											className="text-muted-foreground"
+											style={{ fontSize: tf.sm }}
+										>
+											{Math.round(share * 100)}%
+										</Text>
+										<Text
+											className="font-semibold text-foreground text-right"
+											style={{ fontSize: tf.sm, minWidth: 96 }}
+											numberOfLines={1}
+										>
+											{hideIncome
+												? maskAmount(unit)
+												: formatAmount(allocation.amount, unit)}
+										</Text>
+									</View>
+								);
+							})}
+						</View>
+					</View>
+				) : null}
+
 				{/* Description and date ----------------------------------------- */}
 				<Textarea
 					label="Izoh"
@@ -550,6 +787,28 @@ function TransactionForm({
 					) : null}
 				</View>
 			</ScrollView>
+
+			{/* Covering a shortfall: the transfer lands first, then the expense it
+			    was opened for — so the entry is never saved against a balance that
+			    still can't carry it. */}
+			<TransferSheet
+				key={coverOpen ? "cover-open" : "cover-closed"}
+				visible={coverOpen}
+				onClose={() => setCoverOpen(false)}
+				onSubmit={(input) => {
+					setCoverOpen(false);
+					addTransfer(input);
+					commit();
+				}}
+				wallets={wallets}
+				balances={balances}
+				unit={unit}
+				title="Yetishmagan summani qoplash"
+				description={`"${walletName(wallets, walletId)}" hamyoniga boshqa hamyondan pul o'tkaziladi, so'ng yozuv saqlanadi.`}
+				initialToWalletId={walletId}
+				initialAmount={shortfall}
+				submitLabel="Qoplash va saqlash"
+			/>
 		</>
 	);
 }

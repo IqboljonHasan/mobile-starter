@@ -1,12 +1,16 @@
 import { isCategoryColor } from "@/lib/categoryColors";
 import { toISODate } from "@/lib/date";
 import { asPayMethod, DEFAULT_UNIT, unitByCode } from "@/lib/money";
+import { SEED_WALLETS } from "@/lib/wallets";
 import type {
+	Allocation,
 	Category,
 	IconName,
 	Subcategory,
 	Transaction,
+	Transfer,
 	TxType,
+	Wallet,
 } from "@/lib/types";
 
 /**
@@ -28,13 +32,22 @@ import type {
 /** Marks a file as ours. Checked on import before anything else is read. */
 export const BACKUP_FORMAT = "kirciq.backup";
 
-/** Bump when the shape changes; `parseBackup` refuses anything newer. */
-export const BACKUP_VERSION = 1;
+/**
+ * Bump when the shape changes; `parseBackup` refuses anything newer.
+ *
+ * 2 added wallets, transfers, and the allocation each income carries. A
+ * version 1 file still imports: it simply has no wallets of its own, so the
+ * starter set stands in and its entries read as unallocated until the wallets
+ * screen redistributes them.
+ */
+export const BACKUP_VERSION = 2;
 
 /** The part of the ledger worth carrying between devices. */
 export type BackupPayload = {
 	categories: Category[];
 	transactions: Transaction[];
+	wallets: Wallet[];
+	transfers: Transfer[];
 	defaultUnit: string;
 };
 
@@ -120,6 +133,70 @@ function parseCategory(raw: unknown): Category | null {
 		// only has to be a string for the app to stay on its feet.
 		icon: raw.icon as IconName,
 		subcategories,
+		// Absent in version 1 files. An unassigned category simply spends from no
+		// wallet, so a miss here costs the mapping, never the category. A file
+		// written before the mapping went many-to-many carries the old singular
+		// `walletId` instead — read as a one-item set rather than dropped.
+		walletIds: Array.isArray(raw.walletIds)
+			? raw.walletIds.filter(nonEmptyString)
+			: nonEmptyString(raw.walletId)
+				? [raw.walletId]
+				: [],
+		splitIncome: raw.splitIncome === false ? false : true,
+	};
+}
+
+function parseWallet(raw: unknown): Wallet | null {
+	if (!isRecord(raw)) return null;
+	if (!nonEmptyString(raw.id) || !nonEmptyString(raw.name)) return null;
+	if (typeof raw.color !== "string" || !isCategoryColor(raw.color)) return null;
+	if (!nonEmptyString(raw.icon)) return null;
+
+	// A percentage outside 0–100 would let a split claim more than it divided.
+	const percent =
+		typeof raw.percent === "number" && Number.isFinite(raw.percent)
+			? Math.min(Math.max(raw.percent, 0), 100)
+			: 0;
+
+	return {
+		id: raw.id,
+		name: raw.name,
+		color: raw.color,
+		icon: raw.icon as IconName,
+		percent,
+	};
+}
+
+function parseAllocation(raw: unknown): Allocation | null {
+	if (!isRecord(raw)) return null;
+	if (!nonEmptyString(raw.walletId)) return null;
+	if (typeof raw.amount !== "number" || !Number.isFinite(raw.amount)) return null;
+	if (raw.amount < 0) return null;
+	return { walletId: raw.walletId, amount: raw.amount };
+}
+
+function parseTransfer(raw: unknown): Transfer | null {
+	if (!isRecord(raw)) return null;
+	if (!nonEmptyString(raw.id) || !nonEmptyString(raw.unit)) return null;
+	if (!nonEmptyString(raw.fromWalletId) || !nonEmptyString(raw.toWalletId)) return null;
+	// A transfer to itself moves nothing and would only confuse the history.
+	if (raw.fromWalletId === raw.toWalletId) return null;
+	if (typeof raw.amount !== "number" || !Number.isFinite(raw.amount)) return null;
+	if (raw.amount <= 0) return null;
+	if (typeof raw.date !== "string" || !ISO_DATE.test(raw.date)) return null;
+
+	return {
+		id: raw.id,
+		fromWalletId: raw.fromWalletId,
+		toWalletId: raw.toWalletId,
+		amount: raw.amount,
+		unit: raw.unit,
+		date: raw.date,
+		note: typeof raw.note === "string" ? raw.note : "",
+		createdAt:
+			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
+				? raw.createdAt
+				: Date.now(),
 	};
 }
 
@@ -151,6 +228,13 @@ function parseTransaction(raw: unknown): Transaction | null {
 			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
 				? raw.createdAt
 				: Date.now(),
+		// Both absent in version 1 files, and both recoverable from the wallets
+		// screen, so a miss leaves the entry out of the balances rather than
+		// dropping the entry.
+		allocations: Array.isArray(raw.allocations)
+			? raw.allocations.map(parseAllocation).filter((a): a is Allocation => a !== null)
+			: [],
+		walletId: nonEmptyString(raw.walletId) ? raw.walletId : null,
 	};
 }
 
@@ -187,10 +271,25 @@ export function parseBackup(text: string): ParseResult {
 	const transactions = raw.transactions
 		.map(parseTransaction)
 		.filter((t): t is Transaction => t !== null);
+
+	// Both are absent from a version 1 file rather than malformed, so neither
+	// counts towards `skipped`. A file with no wallets falls back to the starter
+	// set: leaving a restored ledger with none would strand every entry's
+	// allocation against wallets that don't exist.
+	const rawWallets = Array.isArray(raw.wallets) ? raw.wallets : [];
+	const parsedWallets = rawWallets
+		.map(parseWallet)
+		.filter((w): w is Wallet => w !== null);
+	const wallets = parsedWallets.length > 0 ? parsedWallets : SEED_WALLETS;
+	const transfers = Array.isArray(raw.transfers)
+		? raw.transfers.map(parseTransfer).filter((t): t is Transfer => t !== null)
+		: [];
+
 	const skipped =
 		raw.categories.length -
 		categories.length +
-		(raw.transactions.length - transactions.length);
+		(raw.transactions.length - transactions.length) +
+		(rawWallets.length - parsedWallets.length);
 
 	if (categories.length === 0 && transactions.length === 0) {
 		return { ok: false, error: "Faylda tiklash uchun ma'lumot yo'q." };
@@ -202,6 +301,8 @@ export function parseBackup(text: string): ParseResult {
 		payload: {
 			categories,
 			transactions,
+			wallets,
+			transfers,
 			// An unknown code would leave every new entry in a currency that
 			// doesn't exist; `unitByCode` falls back to the default.
 			defaultUnit:
