@@ -9,6 +9,8 @@ import {
 	useState,
 } from "react";
 import type { BackupPayload } from "@/lib/backup";
+import { matchContact, paymentInput, principalInput } from "@/lib/debts";
+import type { PhoneContact } from "@/lib/phoneContacts";
 import { getJSON, getSetting, setJSON, setSetting } from "@/lib/storage";
 import { asPayMethod, DEFAULT_UNIT, unitByCode } from "@/lib/money";
 import { applyOrder, orderById } from "@/lib/reorder";
@@ -24,6 +26,12 @@ import {
 	type Category,
 	type CategoryDraft,
 	type CategoryPatch,
+	type Contact,
+	type ContactDraft,
+	type Debt,
+	type DebtInput,
+	type DebtPayment,
+	type DebtPaymentInput,
 	type Subcategory,
 	type Transaction,
 	type TransactionInput,
@@ -49,6 +57,8 @@ const KEY_CATEGORIES = "categories";
 const KEY_TRANSACTIONS = "transactions";
 const KEY_WALLETS = "wallets";
 const KEY_TRANSFERS = "transfers";
+const KEY_CONTACTS = "contacts";
+const KEY_DEBTS = "debts";
 const KEY_UNIT = "default_unit";
 
 type LedgerContextType = {
@@ -58,6 +68,8 @@ type LedgerContextType = {
 	transactions: Transaction[];
 	wallets: Wallet[];
 	transfers: Transfer[];
+	contacts: Contact[];
+	debts: Debt[];
 	/** Unit a new transaction starts with. */
 	defaultUnit: string;
 	setDefaultUnit: (unit: string) => void;
@@ -89,6 +101,22 @@ type LedgerContextType = {
 	addTransfer: (input: TransferInput) => Transfer;
 	deleteTransfer: (id: string) => void;
 
+	addContact: (draft: ContactDraft) => Contact;
+	updateContact: (id: string, patch: Partial<ContactDraft>) => void;
+	deleteContact: (id: string) => void;
+	/** Folds an address-book selection in, updating the people already here
+	 *  rather than adding a second copy of them. */
+	importContacts: (imported: PhoneContact[]) => { added: number; updated: number };
+
+	/** Records a debt and the ledger entry its principal moved. */
+	addDebt: (input: DebtInput) => Debt;
+	updateDebt: (id: string, patch: Partial<DebtInput>) => void;
+	/** Removes the debt together with every entry it wrote. */
+	deleteDebt: (id: string) => void;
+	/** A repayment (to'lash) or a collection (undirish) against one debt. */
+	addDebtPayment: (debtId: string, input: DebtPaymentInput) => void;
+	deleteDebtPayment: (debtId: string, paymentId: string) => void;
+
 	/** Re-runs the current percentages and category mappings over the whole
 	 *  history — the one way to change what past entries were divided into. */
 	redistributeHistory: () => void;
@@ -108,6 +136,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 	const [transactions, setTransactions] = useState<Transaction[]>([]);
 	const [wallets, setWallets] = useState<Wallet[]>([]);
 	const [transfers, setTransfers] = useState<Transfer[]>([]);
+	const [contacts, setContacts] = useState<Contact[]>([]);
+	const [debts, setDebts] = useState<Debt[]>([]);
 	const [defaultUnit, setDefaultUnitState] = useState(DEFAULT_UNIT);
 
 	useEffect(() => {
@@ -119,6 +149,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 				storedTransactions,
 				storedWallets,
 				storedTransfers,
+				storedContacts,
+				storedDebts,
 				storedUnit,
 			] = await Promise.all([
 				// `null` rather than `[]` as the fallback: it's how a first launch
@@ -128,6 +160,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 				getJSON<Transaction[]>(KEY_TRANSACTIONS, []),
 				getJSON<Wallet[] | null>(KEY_WALLETS, null),
 				getJSON<Transfer[]>(KEY_TRANSFERS, []),
+				getJSON<Contact[]>(KEY_CONTACTS, []),
+				getJSON<Debt[]>(KEY_DEBTS, []),
 				getSetting(KEY_UNIT, DEFAULT_UNIT),
 			]);
 			if (cancelled) return;
@@ -155,6 +189,19 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			setCategories(nextCategories);
 			setWallets(nextWallets);
 			setTransfers(storedTransfers);
+			setContacts(storedContacts);
+			// A debt stored before a field existed would break the arithmetic that
+			// reads it, so the list is normalised once here rather than guarded at
+			// every call site.
+			setDebts(
+				storedDebts.map((d) => ({
+					...d,
+					payments: Array.isArray(d.payments) ? d.payments : [],
+					dueDate: d.dueDate ?? null,
+					walletId: d.walletId ?? null,
+					transactionId: d.transactionId ?? null,
+				})),
+			);
 			setTransactions(
 				firstRun
 					? redistribute(normalized, nextCategories, nextWallets)
@@ -172,25 +219,43 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 	// One writer for the whole ledger, rather than a save call inside every
 	// mutator — a mutator that forgot one would lose data silently. Skipped
 	// until `ready`, so the initial empty state can't overwrite what's stored.
-	const persisted = useRef({ categories, transactions, wallets, transfers });
+	const persisted = useRef({
+		categories,
+		transactions,
+		wallets,
+		transfers,
+		contacts,
+		debts,
+	});
 	useEffect(() => {
 		if (!ready) return;
 		if (
 			persisted.current.categories === categories &&
 			persisted.current.transactions === transactions &&
 			persisted.current.wallets === wallets &&
-			persisted.current.transfers === transfers
+			persisted.current.transfers === transfers &&
+			persisted.current.contacts === contacts &&
+			persisted.current.debts === debts
 		) {
 			return;
 		}
-		persisted.current = { categories, transactions, wallets, transfers };
+		persisted.current = {
+			categories,
+			transactions,
+			wallets,
+			transfers,
+			contacts,
+			debts,
+		};
 		Promise.all([
 			setJSON(KEY_CATEGORIES, categories),
 			setJSON(KEY_TRANSACTIONS, transactions),
 			setJSON(KEY_WALLETS, wallets),
 			setJSON(KEY_TRANSFERS, transfers),
+			setJSON(KEY_CONTACTS, contacts),
+			setJSON(KEY_DEBTS, debts),
 		]).catch((e) => console.warn("[ledger] failed to save", e));
-	}, [ready, categories, transactions, wallets, transfers]);
+	}, [ready, categories, transactions, wallets, transfers, contacts, debts]);
 
 	const setDefaultUnit = useCallback((unit: string) => {
 		setDefaultUnitState(unit);
@@ -299,18 +364,23 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 	// one place it can be got wrong, and it is snapshotted onto the entry: what
 	// an income was divided into is a fact about the day it arrived, not
 	// something later percentage changes should quietly rewrite.
+	const buildTransaction = useCallback(
+		(input: TransactionInput): Transaction => ({
+			...input,
+			allocations: allocationFor(input, categories, wallets),
+			id: uid("tx_"),
+			createdAt: Date.now(),
+		}),
+		[categories, wallets],
+	);
+
 	const addTransaction = useCallback(
 		(input: TransactionInput) => {
-			const transaction: Transaction = {
-				...input,
-				allocations: allocationFor(input, categories, wallets),
-				id: uid("tx_"),
-				createdAt: Date.now(),
-			};
+			const transaction = buildTransaction(input);
 			setTransactions((prev) => [transaction, ...prev]);
 			return transaction;
 		},
-		[categories, wallets],
+		[buildTransaction],
 	);
 
 	const updateTransaction = useCallback(
@@ -375,6 +445,23 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		setTransfers((prev) =>
 			prev.filter((t) => t.fromWalletId !== id && t.toWalletId !== id),
 		);
+		// A debt outlives the jar it was paid into: what is still owed doesn't
+		// change because the envelope was reorganised, so the record stays and
+		// only loses its wallet.
+		setDebts((prev) =>
+			prev.map((debt) => {
+				const touched =
+					debt.walletId === id || debt.payments.some((p) => p.walletId === id);
+				if (!touched) return debt;
+				return {
+					...debt,
+					walletId: debt.walletId === id ? null : debt.walletId,
+					payments: debt.payments.map((p) =>
+						p.walletId === id ? { ...p, walletId: null } : p,
+					),
+				};
+			}),
+		);
 	}, []);
 
 	const addTransfer = useCallback((input: TransferInput) => {
@@ -387,6 +474,196 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		setTransfers((prev) => prev.filter((t) => t.id !== id));
 	}, []);
 
+	/* Contacts --------------------------------------------------------- */
+
+	const addContact = useCallback((draft: ContactDraft) => {
+		const contact: Contact = {
+			name: draft.name,
+			phone: draft.phone,
+			note: draft.note,
+			sourceId: draft.sourceId ?? null,
+			id: uid("con_"),
+			createdAt: Date.now(),
+		};
+		setContacts((prev) => [...prev, contact]);
+		return contact;
+	}, []);
+
+	const updateContact = useCallback((id: string, patch: Partial<ContactDraft>) => {
+		setContacts((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+	}, []);
+
+	// Debts filed against a deleted contact are kept, exactly as transactions
+	// under a deleted category are: what was owed still happened. They read as
+	// "Noma'lum" until they're pointed at somebody again, and the screen says
+	// how many that will be before it calls this.
+	const deleteContact = useCallback((id: string) => {
+		setContacts((prev) => prev.filter((c) => c.id !== id));
+	}, []);
+
+	/**
+	 * Folds an address-book selection in.
+	 *
+	 * Importing twice is the normal case, not the exception — a user adds a few
+	 * people, then comes back for more — so a person already here is refreshed
+	 * rather than duplicated. `matchContact` recognises them by the address-book
+	 * id they were imported with, falling back to the phone number for someone
+	 * who was first typed in by hand.
+	 */
+	const importContacts = useCallback((imported: PhoneContact[]) => {
+		let added = 0;
+		let updated = 0;
+
+		setContacts((prev) => {
+			const next = [...prev];
+			for (const candidate of imported) {
+				const existing = matchContact(next, candidate);
+				if (existing) {
+					const index = next.indexOf(existing);
+					next[index] = {
+						...existing,
+						// The name the user gave someone here is theirs to keep; only an
+						// empty one is filled in from the phone.
+						name: existing.name.trim() || candidate.name,
+						phone: existing.phone.trim() || candidate.phone,
+						sourceId: existing.sourceId ?? candidate.sourceId,
+					};
+					updated += 1;
+				} else {
+					next.push({
+						id: uid("con_"),
+						name: candidate.name,
+						phone: candidate.phone,
+						note: "",
+						sourceId: candidate.sourceId,
+						createdAt: Date.now(),
+					});
+					added += 1;
+				}
+			}
+			return next;
+		});
+
+		return { added, updated };
+	}, []);
+
+	/* Debts ------------------------------------------------------------ */
+
+	const nameOfContact = useCallback(
+		(contactId: string) =>
+			contacts.find((c) => c.id === contactId)?.name ?? "",
+		[contacts],
+	);
+
+	/**
+	 * A debt and the entry its principal moved are written together.
+	 *
+	 * The transaction is built here rather than through `addTransaction` so its
+	 * id is known before the debt is stored: the two point at each other, and a
+	 * debt that couldn't name its entry would have no way to keep it in step
+	 * when the amount is later corrected.
+	 */
+	const addDebt = useCallback(
+		(input: DebtInput) => {
+			const id = uid("debt_");
+			const transaction = buildTransaction(
+				principalInput({ ...input, id }, nameOfContact(input.contactId)),
+			);
+			const debt: Debt = {
+				...input,
+				id,
+				transactionId: transaction.id,
+				payments: [],
+				createdAt: Date.now(),
+			};
+			setTransactions((prev) => [transaction, ...prev]);
+			setDebts((prev) => [debt, ...prev]);
+			return debt;
+		},
+		[buildTransaction, nameOfContact],
+	);
+
+	// Everything the principal's entry shows is derived from the debt, so the
+	// entry is rewritten wholesale rather than patched field by field — there is
+	// no version of "edited the debt but the ledger still says the old amount"
+	// that is correct.
+	const updateDebt = useCallback(
+		(id: string, patch: Partial<DebtInput>) => {
+			const debt = debts.find((d) => d.id === id);
+			if (!debt) return;
+
+			const next = { ...debt, ...patch };
+			const rebuilt = principalInput(next, nameOfContact(next.contactId));
+
+			setDebts((prev) => prev.map((d) => (d.id === id ? next : d)));
+			setTransactions((prev) =>
+				prev.map((t) => {
+					if (t.id !== next.transactionId) return t;
+					const merged = { ...t, ...rebuilt };
+					return {
+						...merged,
+						allocations: allocationFor(merged, categories, wallets),
+					};
+				}),
+			);
+		},
+		[debts, categories, wallets, nameOfContact],
+	);
+
+	// The entries go with it: they were never independent records of money the
+	// user entered, only the ledger's side of this debt.
+	const deleteDebt = useCallback((id: string) => {
+		setDebts((prev) => prev.filter((d) => d.id !== id));
+		setTransactions((prev) => prev.filter((t) => t.debtId !== id));
+	}, []);
+
+	const addDebtPayment = useCallback(
+		(debtId: string, input: DebtPaymentInput) => {
+			const debt = debts.find((d) => d.id === debtId);
+			if (!debt) return;
+
+			const transaction = buildTransaction(
+				paymentInput(debt, input, nameOfContact(debt.contactId)),
+			);
+			const payment: DebtPayment = {
+				...input,
+				id: uid("pay_"),
+				transactionId: transaction.id,
+				createdAt: Date.now(),
+			};
+
+			setTransactions((prev) => [transaction, ...prev]);
+			setDebts((prev) =>
+				prev.map((d) =>
+					d.id === debtId ? { ...d, payments: [...d.payments, payment] } : d,
+				),
+			);
+		},
+		[debts, buildTransaction, nameOfContact],
+	);
+
+	const deleteDebtPayment = useCallback(
+		(debtId: string, paymentId: string) => {
+			const debt = debts.find((d) => d.id === debtId);
+			const payment = debt?.payments.find((p) => p.id === paymentId);
+			if (!debt || !payment) return;
+
+			setDebts((prev) =>
+				prev.map((d) =>
+					d.id === debtId
+						? { ...d, payments: d.payments.filter((p) => p.id !== paymentId) }
+						: d,
+				),
+			);
+			if (payment.transactionId) {
+				setTransactions((prev) =>
+					prev.filter((t) => t.id !== payment.transactionId),
+				);
+			}
+		},
+		[debts],
+	);
+
 	const redistributeHistory = useCallback(() => {
 		setTransactions((prev) => redistribute(prev, categories, wallets));
 	}, [categories, wallets]);
@@ -394,6 +671,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 	const resetLedger = useCallback(() => {
 		setTransactions([]);
 		setTransfers([]);
+		setContacts([]);
+		setDebts([]);
 		setWallets(SEED_WALLETS);
 		setCategories(
 			SEED_CATEGORIES.map((c) =>
@@ -414,6 +693,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			setTransactions(payload.transactions);
 			setWallets(payload.wallets);
 			setTransfers(payload.transfers);
+			setContacts(payload.contacts);
+			setDebts(payload.debts);
 			setDefaultUnit(payload.defaultUnit);
 		},
 		[setDefaultUnit],
@@ -426,6 +707,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			transactions,
 			wallets,
 			transfers,
+			contacts,
+			debts,
 			defaultUnit,
 			setDefaultUnit,
 			addCategory,
@@ -444,6 +727,15 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			deleteWallet,
 			addTransfer,
 			deleteTransfer,
+			addContact,
+			updateContact,
+			deleteContact,
+			importContacts,
+			addDebt,
+			updateDebt,
+			deleteDebt,
+			addDebtPayment,
+			deleteDebtPayment,
 			redistributeHistory,
 			resetLedger,
 			replaceLedger,
@@ -454,6 +746,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			transactions,
 			wallets,
 			transfers,
+			contacts,
+			debts,
 			defaultUnit,
 			setDefaultUnit,
 			addCategory,
@@ -472,6 +766,15 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			deleteWallet,
 			addTransfer,
 			deleteTransfer,
+			addContact,
+			updateContact,
+			deleteContact,
+			importContacts,
+			addDebt,
+			updateDebt,
+			deleteDebt,
+			addDebtPayment,
+			deleteDebtPayment,
 			redistributeHistory,
 			resetLedger,
 			replaceLedger,

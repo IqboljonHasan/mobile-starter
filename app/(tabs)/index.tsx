@@ -166,7 +166,7 @@ export default function DashboardScreen() {
 					)}
 
 					{/* The headline number: what the month actually did to the balance. */}
-					<View className="items-center py-5">
+					<View className="items-center pt-5">
 						<Text
 							className="text-muted-foreground"
 							style={{ fontSize: tf.sm }}
@@ -183,57 +183,8 @@ export default function DashboardScreen() {
 						>
 							{hideIncome ? maskAmount(unit) : formatAmount(net, unit, { signed: true })}
 						</Text>
-						<Text
-							className="text-muted-foreground mt-1"
-							style={{ fontSize: tf.xs }}
-						>
-							{unitByCode(unit).name}
-						</Text>
 					</View>
 
-					{/* Two series, so both are labelled — the bar shows the split, the
-					    labels say which is which and by how much. Hidden along with
-					    income: the bar's widths and the % figures would otherwise let
-					    the hidden income be read straight back out against the visible
-					    expense total. */}
-					{flow > 0 && hideIncome && (
-						<View className="flex-row justify-between mt-2">
-							<Text className="text-success font-semibold" style={{ fontSize: tf.sm }}>
-								Kirim ••
-							</Text>
-							<Text className="text-danger font-semibold" style={{ fontSize: tf.sm }}>
-								Chiqim ••
-							</Text>
-						</View>
-					)}
-					{flow > 0 && !hideIncome && (
-						<>
-							<View className="flex-row gap-0.5" style={{ height: 10 }}>
-								<View
-									style={{
-										flex: Math.max(incomeTotal, 0.0001),
-										backgroundColor: tc.success,
-										borderRadius: 5,
-									}}
-								/>
-								<View
-									style={{
-										flex: Math.max(expenseTotal, 0.0001),
-										backgroundColor: tc.danger,
-										borderRadius: 5,
-									}}
-								/>
-							</View>
-							<View className="flex-row justify-between mt-2">
-								<Text className="text-success font-semibold" style={{ fontSize: tf.sm }}>
-									Kirim {Math.round((incomeTotal / flow) * 100)}%
-								</Text>
-								<Text className="text-danger font-semibold" style={{ fontSize: tf.sm }}>
-									Chiqim {Math.round((expenseTotal / flow) * 100)}%
-								</Text>
-							</View>
-						</>
-					)}
 				</Card>
 
 				{/* Totals ------------------------------------------------------ */}

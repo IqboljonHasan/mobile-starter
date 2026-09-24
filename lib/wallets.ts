@@ -199,13 +199,32 @@ export function splitAmount(
 /**
  * The allocation an income entry should carry, given the category it's filed
  * under. Expenses and non-split income get none.
+ *
+ * Debt income is the one income that names a single wallet instead of being
+ * divided: money borrowed, or collected on a loan, goes into the one jar that
+ * actually received it. It would be wrong to split it — it isn't earnings to
+ * apportion — but wrong too to leave it allocated to nothing, because paying
+ * that same debt back *does* come out of a jar. An unallocated borrowing plus
+ * a charged repayment would leave the balance lower than before the money was
+ * ever borrowed.
  */
 export function allocationFor(
-	transaction: { type: string; amount: number; unit: string; categoryId: string },
+	transaction: {
+		type: string;
+		amount: number;
+		unit: string;
+		categoryId: string;
+		walletId?: string | null;
+	},
 	categories: Category[],
 	wallets: Wallet[],
 ): Allocation[] {
 	if (transaction.type !== "income") return [];
+	if (DEBT_CATEGORY_IDS.has(transaction.categoryId)) {
+		if (!transaction.walletId) return [];
+		if (!Number.isFinite(transaction.amount) || transaction.amount <= 0) return [];
+		return [{ walletId: transaction.walletId, amount: transaction.amount }];
+	}
 	const category = categories.find((c) => c.id === transaction.categoryId) ?? null;
 	if (!splitsIncome(category)) return [];
 	return splitAmount(transaction.amount, transaction.unit, wallets);
@@ -257,12 +276,23 @@ export function redistribute(
 			? {
 					...t,
 					allocations: allocationFor(t, categories, wallets),
-					walletId: null,
+					// Debt income keeps the wallet it named — that is not a mapping
+					// derived from the category, it's the jar the money went into,
+					// and re-applying today's rules must not forget it.
+					walletId: DEBT_CATEGORY_IDS.has(t.categoryId) ? t.walletId : null,
 				}
 			: {
 					...t,
 					allocations: [],
-					walletId: resolveExpenseWallet(t.walletId, byId.get(t.categoryId)?.walletIds),
+					// A debt expense — repaying or lending — names its wallet the same
+					// way debt income does: the user said which jar the money left,
+					// and no category mapping can second-guess that. The debt
+					// categories ship unmapped, so resolving them the ordinary way
+					// would clear the wallet and quietly leave every jar that has ever
+					// repaid a debt reading higher than it holds.
+					walletId: DEBT_CATEGORY_IDS.has(t.categoryId)
+						? t.walletId
+						: resolveExpenseWallet(t.walletId, byId.get(t.categoryId)?.walletIds),
 				},
 	);
 }

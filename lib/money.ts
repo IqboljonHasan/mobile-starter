@@ -107,6 +107,20 @@ export function maskAmount(unitCode: string): string {
 }
 
 /**
+ * Snaps a value to the smallest unit its currency actually has.
+ *
+ * Repeated subtraction of user-entered amounts — a debt paid off in three
+ * instalments, say — leaves float dust behind, and a remaining balance of
+ * 0.0000000001 so'm would keep a settled debt forever open. Rounding at the
+ * unit's own precision is the only reading that matches the money.
+ */
+export function roundAmount(amount: number, unitCode: string): number {
+	if (!Number.isFinite(amount)) return 0;
+	const factor = 10 ** unitByCode(unitCode).decimals;
+	return Math.round(amount * factor) / factor;
+}
+
+/**
  * Parses what a user can actually type: a comma decimal separator, grouping
  * spaces, a stray currency symbol. Returns NaN for anything that isn't a
  * positive number, which is what the form validates on.

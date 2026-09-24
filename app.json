@@ -19,7 +19,13 @@
       "output": "static"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Kirciq qarzdorlarni tez qo'shish uchun kontaktlaringizni o'qiydi. Ular faqat shu qurilmada saqlanadi."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

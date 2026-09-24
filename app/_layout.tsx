@@ -58,6 +58,8 @@ function AppContent() {
 				<Stack.Screen name="transaction" options={{ title: "Yozuv" }} />
 				<Stack.Screen name="categories" options={{ title: "Kategoriyalar" }} />
 				<Stack.Screen name="wallets" options={{ title: "Hamyonlar" }} />
+				<Stack.Screen name="debt" options={{ title: "Qarz" }} />
+				<Stack.Screen name="contacts" options={{ title: "Kontaktlar" }} />
 				<Stack.Screen name="settings" options={{ title: "Sozlamalar" }} />
 			</Stack>
 		</View>

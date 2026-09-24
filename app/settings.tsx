@@ -54,6 +54,8 @@ export default function SettingsScreen() {
 		transactions,
 		wallets,
 		transfers,
+		contacts,
+		debts,
 		defaultUnit,
 		setDefaultUnit,
 		resetLedger,
@@ -76,6 +78,8 @@ export default function SettingsScreen() {
 				transactions,
 				wallets,
 				transfers,
+				contacts,
+				debts,
 				defaultUnit,
 			});
 			// A cancelled picker is a decision, not a failure — say nothing.
@@ -166,6 +170,17 @@ export default function SettingsScreen() {
 						icon="wallet-outline"
 						divider
 						onPress={() => router.push("/wallets")}
+					/>
+					<ListRow
+						title="Kontaktlar"
+						subtitle={
+							contacts.length
+								? `${contacts.length} ta kontakt · ${debts.length} ta qarz`
+								: "Qarzdorlarni qo'shing yoki telefondan import qiling"
+						}
+						icon="people-outline"
+						divider
+						onPress={() => router.push("/contacts")}
 					/>
 					<View className="px-4 py-3.5 border-t border-border">
 						<View className="flex-row items-center gap-3 mb-2">

@@ -37,6 +37,7 @@ import {
 	UNITS,
 	unitByCode,
 } from "@/lib/money";
+import { contactName, DIRECTION_META, remainingAmount } from "@/lib/debts";
 import {
 	splitAmount,
 	splitsIncome,
@@ -44,7 +45,7 @@ import {
 	walletColor,
 	walletName,
 } from "@/lib/wallets";
-import type { PayMethod, Transaction, TxType } from "@/lib/types";
+import type { Debt, PayMethod, Transaction, TxType } from "@/lib/types";
 import "../global.css";
 
 /**
@@ -61,9 +62,16 @@ export default function TransactionScreen() {
 	const { tc } = useTheme();
 	const { tf } = useFont();
 	const params = useLocalSearchParams<{ id?: string; type?: string }>();
-	const { ready, transactions } = useLedger();
+	const { ready, transactions, debts } = useLedger();
 
 	const existing = params.id ? transactions.find((t) => t.id === params.id) : undefined;
+	// An entry the Debts tab wrote is the ledger's side of a debt, not a record
+	// of its own. Editing it here would let the two disagree — the debt would
+	// still say 500 000 while the entry said 300 000 — so this one is read from
+	// here and changed there.
+	const owningDebt = existing?.debtId
+		? (debts.find((d) => d.id === existing.debtId) ?? null)
+		: null;
 
 	if (!ready) {
 		return (
@@ -92,6 +100,10 @@ export default function TransactionScreen() {
 		);
 	}
 
+	if (existing && owningDebt) {
+		return <DebtOwnedEntry transaction={existing} debt={owningDebt} />;
+	}
+
 	return (
 		<TransactionForm
 			// Remounting on a different entry is the point: every field is seeded
@@ -100,6 +112,96 @@ export default function TransactionScreen() {
 			existing={existing}
 			initialType={params.type === "income" ? "income" : "expense"}
 		/>
+	);
+}
+
+/**
+ * What the user sees when they open a ledger entry that belongs to a debt:
+ * the entry, read-only, and the way through to where it can actually be
+ * changed.
+ */
+function DebtOwnedEntry({
+	transaction,
+	debt,
+}: {
+	transaction: Transaction;
+	debt: Debt;
+}) {
+	const router = useRouter();
+	const { tc } = useTheme();
+	const { tf } = useFont();
+	const { contacts } = useLedger();
+
+	const meta = DIRECTION_META[debt.direction];
+	const isPrincipal = debt.transactionId === transaction.id;
+	const name = contactName(contacts, debt.contactId);
+
+	return (
+		<>
+			<Stack.Screen options={{ title: "Qarz yozuvi" }} />
+			<ScrollView
+				className="flex-1 bg-background"
+				contentContainerStyle={{ padding: 16, gap: 16 }}
+			>
+				<View
+					className="rounded-2xl bg-card p-4 items-center"
+					style={{ borderWidth: 1, borderColor: tc.border }}
+				>
+					<View className="w-14 h-14 rounded-full items-center justify-center bg-primary-highlight">
+						<Ionicons name="people-outline" size={26} color={tc.primary} />
+					</View>
+					<Text
+						className={`font-bold mt-3 ${
+							transaction.type === "income" ? "text-success" : "text-danger"
+						}`}
+						style={{ fontSize: tf.xxxl }}
+						numberOfLines={1}
+						adjustsFontSizeToFit
+					>
+						{transaction.type === "income" ? "+" : "−"}
+						{formatAmount(transaction.amount, transaction.unit)}
+					</Text>
+					<Text
+						className="text-muted-foreground mt-1 text-center"
+						style={{ fontSize: tf.base }}
+					>
+						{`${name} · ${formatDayLabel(transaction.date)}`}
+					</Text>
+				</View>
+
+				<View
+					className="rounded-2xl bg-card p-4 gap-1"
+					style={{ borderWidth: 1, borderColor: tc.border }}
+				>
+					<Text
+						className="font-semibold text-foreground"
+						style={{ fontSize: tf.base }}
+					>
+						{isPrincipal
+							? `Bu yozuv "${meta.label}" qarzining o'zi`
+							: `Bu yozuv qarz bo'yicha ${meta.payLabel.toLowerCase()}`}
+					</Text>
+					<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
+						{`Summani yoki sanani o'zgartirish uchun qarzning o'zini tahrirlang — aks holda qarz qoldig'i bilan hisob bir-biriga to'g'ri kelmay qoladi. Hozirgi qoldiq: ${formatAmount(remainingAmount(debt), debt.unit)}.`}
+					</Text>
+				</View>
+
+				<Button
+					label="Qarzni ochish"
+					size="lg"
+					fullWidth
+					startIcon={<Ionicons name="open-outline" size={18} color="#fff" />}
+					onPress={() => router.replace(`/debt?id=${debt.id}`)}
+				/>
+				<Button
+					label="Orqaga"
+					variant="text"
+					color="secondary"
+					fullWidth
+					onPress={() => router.back()}
+				/>
+			</ScrollView>
+		</>
 	);
 }
 

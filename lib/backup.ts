@@ -5,6 +5,10 @@ import { SEED_WALLETS } from "@/lib/wallets";
 import type {
 	Allocation,
 	Category,
+	Contact,
+	Debt,
+	DebtDirection,
+	DebtPayment,
 	IconName,
 	Subcategory,
 	Transaction,
@@ -39,8 +43,13 @@ export const BACKUP_FORMAT = "kirciq.backup";
  * version 1 file still imports: it simply has no wallets of its own, so the
  * starter set stands in and its entries read as unallocated until the wallets
  * screen redistributes them.
+ *
+ * 3 added contacts and debts. Older files import with neither, which is the
+ * honest reading — a ledger written before the Debts tab existed recorded its
+ * borrowing as plain entries under the debt categories, and those come across
+ * untouched.
  */
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 
 /** The part of the ledger worth carrying between devices. */
 export type BackupPayload = {
@@ -48,6 +57,8 @@ export type BackupPayload = {
 	transactions: Transaction[];
 	wallets: Wallet[];
 	transfers: Transfer[];
+	contacts: Contact[];
+	debts: Debt[];
 	defaultUnit: string;
 };
 
@@ -235,6 +246,94 @@ function parseTransaction(raw: unknown): Transaction | null {
 			? raw.allocations.map(parseAllocation).filter((a): a is Allocation => a !== null)
 			: [],
 		walletId: nonEmptyString(raw.walletId) ? raw.walletId : null,
+		// Absent on everything written before the Debts tab, and on every entry
+		// the user typed in by hand — which is exactly what a null means here.
+		debtId: nonEmptyString(raw.debtId) ? raw.debtId : null,
+	};
+}
+
+function parseContact(raw: unknown): Contact | null {
+	if (!isRecord(raw)) return null;
+	if (!nonEmptyString(raw.id) || !nonEmptyString(raw.name)) return null;
+
+	return {
+		id: raw.id,
+		name: raw.name,
+		phone: typeof raw.phone === "string" ? raw.phone : "",
+		note: typeof raw.note === "string" ? raw.note : "",
+		sourceId: nonEmptyString(raw.sourceId) ? raw.sourceId : null,
+		createdAt:
+			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
+				? raw.createdAt
+				: Date.now(),
+	};
+}
+
+function parseDebtPayment(raw: unknown): DebtPayment | null {
+	if (!isRecord(raw)) return null;
+	if (!nonEmptyString(raw.id)) return null;
+	// A payment of nothing, or of an unreadable amount, would silently skew how
+	// much of a debt is left — the one number the whole tab exists to report.
+	if (typeof raw.amount !== "number" || !Number.isFinite(raw.amount)) return null;
+	if (raw.amount <= 0) return null;
+	if (typeof raw.date !== "string" || !ISO_DATE.test(raw.date)) return null;
+
+	return {
+		id: raw.id,
+		amount: raw.amount,
+		date: raw.date,
+		method: asPayMethod(raw.method),
+		walletId: nonEmptyString(raw.walletId) ? raw.walletId : null,
+		note: typeof raw.note === "string" ? raw.note : "",
+		transactionId: nonEmptyString(raw.transactionId) ? raw.transactionId : null,
+		createdAt:
+			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
+				? raw.createdAt
+				: Date.now(),
+	};
+}
+
+function isDebtDirection(value: unknown): value is DebtDirection {
+	return value === "borrowed" || value === "lent";
+}
+
+function parseDebt(raw: unknown): Debt | null {
+	if (!isRecord(raw)) return null;
+	if (!nonEmptyString(raw.id) || !nonEmptyString(raw.unit)) return null;
+	if (!nonEmptyString(raw.contactId)) return null;
+	if (!isDebtDirection(raw.direction)) return null;
+	// Which way it runs and how much it was are the two things a debt cannot be
+	// guessed back from, so either missing drops the record.
+	if (typeof raw.amount !== "number" || !Number.isFinite(raw.amount)) return null;
+	if (raw.amount <= 0) return null;
+	if (typeof raw.date !== "string" || !ISO_DATE.test(raw.date)) return null;
+
+	// A bad payment costs the debt its accuracy, not its existence — same trade
+	// as a bad subcategory on a category.
+	const payments = Array.isArray(raw.payments)
+		? raw.payments.map(parseDebtPayment).filter((p): p is DebtPayment => p !== null)
+		: [];
+
+	return {
+		id: raw.id,
+		direction: raw.direction,
+		contactId: raw.contactId,
+		amount: raw.amount,
+		unit: raw.unit,
+		method: asPayMethod(raw.method),
+		walletId: nonEmptyString(raw.walletId) ? raw.walletId : null,
+		description: typeof raw.description === "string" ? raw.description : "",
+		date: raw.date,
+		dueDate:
+			typeof raw.dueDate === "string" && ISO_DATE.test(raw.dueDate)
+				? raw.dueDate
+				: null,
+		transactionId: nonEmptyString(raw.transactionId) ? raw.transactionId : null,
+		payments,
+		createdAt:
+			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
+				? raw.createdAt
+				: Date.now(),
 	};
 }
 
@@ -285,11 +384,22 @@ export function parseBackup(text: string): ParseResult {
 		? raw.transfers.map(parseTransfer).filter((t): t is Transfer => t !== null)
 		: [];
 
+	// Absent from any file below version 3, so like wallets they don't count as
+	// damage — only records that were there and didn't survive do.
+	const rawContacts = Array.isArray(raw.contacts) ? raw.contacts : [];
+	const contacts = rawContacts
+		.map(parseContact)
+		.filter((c): c is Contact => c !== null);
+	const rawDebts = Array.isArray(raw.debts) ? raw.debts : [];
+	const debts = rawDebts.map(parseDebt).filter((d): d is Debt => d !== null);
+
 	const skipped =
 		raw.categories.length -
 		categories.length +
 		(raw.transactions.length - transactions.length) +
-		(rawWallets.length - parsedWallets.length);
+		(rawWallets.length - parsedWallets.length) +
+		(rawContacts.length - contacts.length) +
+		(rawDebts.length - debts.length);
 
 	if (categories.length === 0 && transactions.length === 0) {
 		return { ok: false, error: "Faylda tiklash uchun ma'lumot yo'q." };
@@ -303,6 +413,8 @@ export function parseBackup(text: string): ParseResult {
 			transactions,
 			wallets,
 			transfers,
+			contacts,
+			debts,
 			// An unknown code would leave every new entry in a currency that
 			// doesn't exist; `unitByCode` falls back to the default.
 			defaultUnit:

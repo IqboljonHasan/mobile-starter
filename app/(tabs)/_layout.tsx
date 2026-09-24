@@ -20,6 +20,7 @@ import {
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
+import DebtsScreen from "./debts";
 import ExpenseScreen from "./expense";
 import IncomeScreen from "./income";
 import DashboardScreen from "./index";
@@ -38,7 +39,7 @@ type TabRoute = {
 
 /**
  * Tabs are rendered through a `PagerView` rather than a tab navigator, so they
- * are swipeable and all three stay mounted (no re-mount cost or lost scroll
+ * are swipeable and all of them stay mounted (no re-mount cost or lost scroll
  * position when switching). Add a tab by dropping a screen file in this folder
  * and adding an entry here.
  */
@@ -60,6 +61,12 @@ const TABS: TabRoute[] = [
 		title: "Chiqim",
 		icon: { active: "arrow-up-circle", inactive: "arrow-up-circle-outline" },
 		screen: ExpenseScreen,
+	},
+	{
+		key: "debts",
+		title: "Qarzlar",
+		icon: { active: "people", inactive: "people-outline" },
+		screen: DebtsScreen,
 	},
 ];
 
