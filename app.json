@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "Kirciq",
-    "slug": "kirciq",
+    "name": "Taqsim",
+    "slug": "taqsim",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "kirciq",
+    "scheme": "taqsim",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.iqboljonhasan.kirciq"
+      "bundleIdentifier": "uz.iqboljonhasan.taqsim"
     },
     "android": {
-      "package": "com.iqboljonhasan.kirciq",
+      "package": "uz.iqboljonhasan.taqsim",
       "predictiveBackGestureEnabled": false,
       "allowBackup": false
     },
@@ -23,7 +23,7 @@
       [
         "expo-contacts",
         {
-          "contactsPermission": "Kirciq qarzdorlarni tez qo'shish uchun kontaktlaringizni o'qiydi. Ular faqat shu qurilmada saqlanadi."
+          "contactsPermission": "Taqsim qarzdorlarni tez qo'shish uchun kontaktlaringizni o'qiydi. Ular faqat shu qurilmada saqlanadi."
         }
       ]
     ],

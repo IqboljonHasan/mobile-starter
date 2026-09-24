@@ -1,4 +1,4 @@
-# Kirciq
+# Taqsim
 
 A personal income and expense tracker. Built on React Native (Expo) with
 expo-router, NativeWind 5 semantic color tokens, a light/dark/system theme

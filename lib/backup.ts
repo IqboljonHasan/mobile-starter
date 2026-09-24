@@ -34,7 +34,7 @@ import type {
  */
 
 /** Marks a file as ours. Checked on import before anything else is read. */
-export const BACKUP_FORMAT = "kirciq.backup";
+export const BACKUP_FORMAT = "taqsim.backup";
 
 /**
  * Bump when the shape changes; `parseBackup` refuses anything newer.
@@ -81,7 +81,7 @@ function pad(value: number): string {
 /** Carries the clock as well as the day, so two exports never collide. */
 export function backupFileName(now: Date = new Date()): string {
 	const stamp = `${toISODate(now)}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-	return `kirciq-zaxira-${stamp}.json`;
+	return `taqsim-zaxira-${stamp}.json`;
 }
 
 export function serializeBackup(
@@ -352,7 +352,7 @@ export function parseBackup(text: string): ParseResult {
 
 	if (!isRecord(raw)) return { ok: false, error: "Fayl mazmuni noto'g'ri." };
 	if (raw.format !== BACKUP_FORMAT) {
-		return { ok: false, error: "Bu Kirciq zaxira fayli emas." };
+		return { ok: false, error: "Bu Taqsim zaxira fayli emas." };
 	}
 	if (typeof raw.version !== "number" || raw.version > BACKUP_VERSION) {
 		return {
