@@ -25,6 +25,7 @@ import {
 } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
+import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
@@ -46,7 +47,7 @@ import {
 	UNITS,
 	unitByCode,
 } from "@/lib/money";
-import type { Debt, DebtDirection, PayMethod } from "@/lib/types";
+import type { Debt, DebtDirection, DebtPayment, PayMethod } from "@/lib/types";
 import { walletBalances } from "@/lib/wallets";
 import "../global.css";
 
@@ -123,6 +124,7 @@ function DebtForm({
 		updateDebt,
 		deleteDebt,
 		addDebtPayment,
+		updateDebtPayment,
 		deleteDebtPayment,
 	} = useLedger();
 
@@ -144,6 +146,9 @@ function DebtForm({
 	const [date, setDate] = useState(existing?.date ?? todayISO());
 	const [dueDate, setDueDate] = useState<string | null>(existing?.dueDate ?? null);
 	const [payOpen, setPayOpen] = useState(false);
+	// Null while adding a new payment; the payment itself while editing one —
+	// the sheet reads this to seed its fields and to know which mutator to call.
+	const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null);
 	const [submitted, setSubmitted] = useState(false);
 
 	const today = todayISO();
@@ -390,7 +395,10 @@ function DebtForm({
 									startIcon={
 										<Ionicons name="cash-outline" size={18} color="#fff" />
 									}
-									onPress={() => setPayOpen(true)}
+									onPress={() => {
+										setEditingPayment(null);
+										setPayOpen(true);
+									}}
 								/>
 							</View>
 						)}
@@ -599,55 +607,28 @@ function DebtForm({
 								a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1,
 							)
 							.map((payment, index) => (
-								<Pressable
+								<PaymentRow
 									key={payment.id}
-									accessibilityRole="button"
-									accessibilityLabel={`${formatAmount(payment.amount, existing.unit)}, ${formatDate(payment.date)} — o'chirish`}
-									onLongPress={() =>
+									payment={payment}
+									unit={existing.unit}
+									divider={index > 0}
+									onPress={() => {
+										setEditingPayment(payment);
+										setPayOpen(true);
+									}}
+									onDelete={() =>
 										confirmDeletePayment(
 											payment.id,
 											`${formatAmount(payment.amount, existing.unit)} · ${formatDayLabel(payment.date)}`,
 										)
 									}
-									className={`flex-row items-center gap-3 px-4 py-3 active:opacity-70 ${
-										index > 0 ? "border-t border-border" : ""
-									}`}
-								>
-									<View className="w-9 h-9 rounded-full items-center justify-center bg-primary-highlight">
-										<Ionicons
-											name={methodByKey(payment.method).icon}
-											size={16}
-											color={tc.primary}
-										/>
-									</View>
-									<View className="flex-1">
-										<Text
-											className="font-medium text-foreground"
-											style={{ fontSize: tf.base }}
-										>
-											{formatAmount(payment.amount, existing.unit)}
-										</Text>
-										<Text
-											className="text-muted-foreground"
-											style={{ fontSize: tf.sm }}
-											numberOfLines={1}
-										>
-											{payment.note || formatDayLabel(payment.date)}
-										</Text>
-									</View>
-									<Text
-										className="text-muted-foreground"
-										style={{ fontSize: tf.sm }}
-									>
-										{formatDate(payment.date)}
-									</Text>
-								</Pressable>
+								/>
 							))}
 						<Text
 							className="text-muted-foreground px-4 py-2.5"
 							style={{ fontSize: tf.xs }}
 						>
-							{"To'lovni o'chirish uchun uzoq bosing."}
+							{"Tahrirlash uchun bosing, o'chirish uchun uzoq bosing."}
 						</Text>
 					</Card>
 				)}
@@ -673,13 +654,72 @@ function DebtForm({
 
 			{!!existing && (
 				<DebtPaymentSheet
-					key={payOpen ? "pay-open" : "pay-closed"}
+					key={payOpen ? `pay-open-${editingPayment?.id ?? "new"}` : "pay-closed"}
 					visible={payOpen}
 					onClose={() => setPayOpen(false)}
 					debt={existing}
-					onSubmit={(input) => addDebtPayment(existing.id, input)}
+					existing={editingPayment ?? undefined}
+					onSubmit={(input) =>
+						editingPayment
+							? updateDebtPayment(existing.id, editingPayment.id, input)
+							: addDebtPayment(existing.id, input)
+					}
 				/>
 			)}
 		</>
+	);
+}
+
+/** One entry in a debt's payment history — tap to edit, hold to delete. */
+function PaymentRow({
+	payment,
+	unit,
+	divider,
+	onPress,
+	onDelete,
+}: {
+	payment: DebtPayment;
+	unit: string;
+	divider?: boolean;
+	onPress: () => void;
+	onDelete: () => void;
+}) {
+	const { tc } = useTheme();
+	const { tf } = useFont();
+	const handlePress = useGuardedPress(onPress);
+
+	return (
+		<Pressable
+			accessibilityRole="button"
+			accessibilityLabel={`${formatAmount(payment.amount, unit)}, ${formatDate(payment.date)} — tahrirlash`}
+			onPress={handlePress}
+			onLongPress={onDelete}
+			className={`flex-row items-center gap-3 px-4 py-3 active:opacity-70 ${
+				divider ? "border-t border-border" : ""
+			}`}
+		>
+			<View className="w-9 h-9 rounded-full items-center justify-center bg-primary-highlight">
+				<Ionicons
+					name={methodByKey(payment.method).icon}
+					size={16}
+					color={tc.primary}
+				/>
+			</View>
+			<View className="flex-1">
+				<Text className="font-medium text-foreground" style={{ fontSize: tf.base }}>
+					{formatAmount(payment.amount, unit)}
+				</Text>
+				<Text
+					className="text-muted-foreground"
+					style={{ fontSize: tf.sm }}
+					numberOfLines={1}
+				>
+					{payment.note || formatDayLabel(payment.date)}
+				</Text>
+			</View>
+			<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
+				{formatDate(payment.date)}
+			</Text>
+		</Pressable>
 	);
 }

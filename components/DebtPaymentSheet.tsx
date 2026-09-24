@@ -13,17 +13,22 @@ import { useFont } from "@/hooks/useFont";
 import { todayISO } from "@/lib/date";
 import { DIRECTION_META, paymentType, remainingAmount } from "@/lib/debts";
 import { formatAmount, PAY_METHODS, parseAmount, roundAmount } from "@/lib/money";
-import type { Debt, DebtPaymentInput, PayMethod } from "@/lib/types";
+import type { Debt, DebtPayment, DebtPaymentInput, PayMethod } from "@/lib/types";
 import { walletBalances } from "@/lib/wallets";
 
 /**
  * Records money moving against one debt — a repayment on what the user
- * borrowed, or a collection on what they lent.
+ * borrowed, or a collection on what they lent — or edits one already
+ * recorded.
  *
- * It opens with the full remaining balance filled in, because settling a debt
- * in one go is the common case and the exact figure is the thing the user
- * would otherwise have to go and look up. A smaller amount is simply typed
- * over it.
+ * A new payment opens with the full remaining balance filled in, because
+ * settling a debt in one go is the common case and the exact figure is the
+ * thing the user would otherwise have to go and look up. A smaller amount is
+ * simply typed over it. However much is typed, it can never exceed what the
+ * debt still owes: `cap` is that ceiling, and for an edit it counts the
+ * payment's own current amount back in first — editing 100 down to 80 must
+ * not be judged against a remaining balance that 100 has already been
+ * subtracted from.
  *
  * Its fields are seeded on mount, so give it a `key` that changes when it
  * opens.
@@ -33,26 +38,36 @@ export default function DebtPaymentSheet({
 	onClose,
 	onSubmit,
 	debt,
+	existing,
 }: {
 	visible: boolean;
 	onClose: () => void;
 	onSubmit: (input: DebtPaymentInput) => void;
 	debt: Debt;
+	/** Editing this payment rather than recording a new one. */
+	existing?: DebtPayment;
 }) {
 	const { tf } = useFont();
 	const { transactions, transfers, wallets } = useLedger();
 
 	const meta = DIRECTION_META[debt.direction];
 	const remaining = remainingAmount(debt);
+	// The most this payment could be saved as: the debt's remaining balance,
+	// plus — when editing — the amount this same payment already accounts for,
+	// since that's room the debt hands back the moment its old value is
+	// replaced rather than room that has to come from anywhere else.
+	const cap = roundAmount(remaining + (existing?.amount ?? 0), debt.unit);
 	const incoming = paymentType(debt.direction) === "income";
 
 	const [amountText, setAmountText] = useState(
-		remaining > 0 ? String(remaining) : "",
+		existing ? String(existing.amount) : cap > 0 ? String(cap) : "",
 	);
-	const [date, setDate] = useState(todayISO());
-	const [method, setMethod] = useState<PayMethod>(debt.method);
-	const [walletId, setWalletId] = useState<string | null>(debt.walletId);
-	const [note, setNote] = useState("");
+	const [date, setDate] = useState(existing?.date ?? todayISO());
+	const [method, setMethod] = useState<PayMethod>(existing?.method ?? debt.method);
+	const [walletId, setWalletId] = useState<string | null>(
+		existing ? existing.walletId : debt.walletId,
+	);
+	const [note, setNote] = useState(existing?.note ?? "");
 	const [submitted, setSubmitted] = useState(false);
 
 	const balances = useMemo(
@@ -65,15 +80,9 @@ export default function DebtPaymentSheet({
 		? "Summani kiriting"
 		: !Number.isFinite(amount) || amount <= 0
 			? "Summa noldan katta bo'lishi kerak"
-			: undefined;
-
-	// Paying more than is left isn't refused — the user may be settling
-	// interest, or correcting an amount that was entered short — but it is said
-	// out loud, because the overpayment doesn't become a debt the other way.
-	const overpay =
-		!amountError && amount > remaining
-			? roundAmount(amount - remaining, debt.unit)
-			: 0;
+			: amount > cap
+				? `Qoldiqdan ko'p bo'lmasligi kerak: ${formatAmount(cap, debt.unit)}`
+				: undefined;
 
 	const available =
 		walletId && !incoming
@@ -101,7 +110,7 @@ export default function DebtPaymentSheet({
 			>
 				<View>
 					<Text className="font-bold text-foreground" style={{ fontSize: tf.xl }}>
-						{meta.payLabel}
+						{existing ? `${meta.payLabel}ni tahrirlash` : meta.payLabel}
 					</Text>
 					<Text className="text-muted-foreground mt-1" style={{ fontSize: tf.sm }}>
 						{`Qoldiq: ${formatAmount(remaining, debt.unit)}`}
@@ -119,24 +128,24 @@ export default function DebtPaymentSheet({
 						inputMode="decimal"
 						error={submitted ? amountError : undefined}
 						hint={
-							overpay > 0
-								? `Qoldiqdan ${formatAmount(overpay, debt.unit)} ortiq — qarz to'liq yopiladi.`
+							!amountError && cap > 0 && amount === cap
+								? "Qarz to'liq yopiladi."
 								: undefined
 						}
 					/>
 					{/* Half is what a part-payment almost always is, and the full
 					    balance is one tap back from wherever the user has typed to. */}
-					{remaining > 0 && (
+					{cap > 0 && (
 						<View className="flex-row gap-2 mt-2">
 							<QuickAmount
 								label="Yarmi"
 								onPress={() =>
-									setAmountText(String(roundAmount(remaining / 2, debt.unit)))
+									setAmountText(String(roundAmount(cap / 2, debt.unit)))
 								}
 							/>
 							<QuickAmount
 								label="To'liq"
-								onPress={() => setAmountText(String(remaining))}
+								onPress={() => setAmountText(String(cap))}
 							/>
 						</View>
 					)}
@@ -199,7 +208,7 @@ export default function DebtPaymentSheet({
 					</View>
 					<View className="flex-1">
 						<Button
-							label={meta.payLabel}
+							label={existing ? "Saqlash" : meta.payLabel}
 							color={incoming ? "success" : "danger"}
 							fullWidth
 							onPress={submit}

@@ -115,6 +115,11 @@ type LedgerContextType = {
 	deleteDebt: (id: string) => void;
 	/** A repayment (to'lash) or a collection (undirish) against one debt. */
 	addDebtPayment: (debtId: string, input: DebtPaymentInput) => void;
+	updateDebtPayment: (
+		debtId: string,
+		paymentId: string,
+		patch: Partial<DebtPaymentInput>,
+	) => void;
 	deleteDebtPayment: (debtId: string, paymentId: string) => void;
 
 	/** Re-runs the current percentages and category mappings over the whole
@@ -642,6 +647,42 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		[debts, buildTransaction, nameOfContact],
 	);
 
+	// Same reasoning as `updateDebt`: everything the payment's own entry shows
+	// is derived from the payment, so the entry is rewritten wholesale rather
+	// than patched field by field.
+	const updateDebtPayment = useCallback(
+		(debtId: string, paymentId: string, patch: Partial<DebtPaymentInput>) => {
+			const debt = debts.find((d) => d.id === debtId);
+			const payment = debt?.payments.find((p) => p.id === paymentId);
+			if (!debt || !payment) return;
+
+			const next: DebtPayment = { ...payment, ...patch };
+			const rebuilt = paymentInput(debt, next, nameOfContact(debt.contactId));
+
+			setDebts((prev) =>
+				prev.map((d) =>
+					d.id === debtId
+						? {
+								...d,
+								payments: d.payments.map((p) => (p.id === paymentId ? next : p)),
+							}
+						: d,
+				),
+			);
+			setTransactions((prev) =>
+				prev.map((t) => {
+					if (t.id !== next.transactionId) return t;
+					const merged = { ...t, ...rebuilt };
+					return {
+						...merged,
+						allocations: allocationFor(merged, categories, wallets),
+					};
+				}),
+			);
+		},
+		[debts, categories, wallets, nameOfContact],
+	);
+
 	const deleteDebtPayment = useCallback(
 		(debtId: string, paymentId: string) => {
 			const debt = debts.find((d) => d.id === debtId);
@@ -735,6 +776,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			updateDebt,
 			deleteDebt,
 			addDebtPayment,
+			updateDebtPayment,
 			deleteDebtPayment,
 			redistributeHistory,
 			resetLedger,
@@ -774,6 +816,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			updateDebt,
 			deleteDebt,
 			addDebtPayment,
+			updateDebtPayment,
 			deleteDebtPayment,
 			redistributeHistory,
 			resetLedger,
