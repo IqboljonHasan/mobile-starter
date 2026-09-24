@@ -4,8 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import CategoryBreakdown from "@/components/CategoryBreakdown";
 import MonthSwitcher from "@/components/MonthSwitcher";
 import TabHeader from "@/components/TabHeader";
-import TransactionRow from "@/components/TransactionRow";
-import { Button, Card, EmptyState, IconButton, SegmentedControl } from "@/components/ui";
+import { Button, Card, IconButton, SegmentedControl } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useTabNavigation } from "@/contexts/TabNavigationContext";
@@ -23,7 +22,7 @@ import {
 	sum,
 	unitsUsed,
 } from "@/lib/ledger";
-import { formatAmount, maskAmount, unitByCode } from "@/lib/money";
+import { formatAmount, maskAmount } from "@/lib/money";
 import { walletBalances } from "@/lib/wallets";
 import { categoryColorValue } from "@/lib/categoryColors";
 import type { TxType } from "@/lib/types";
@@ -76,7 +75,6 @@ export default function DashboardScreen() {
 	const incomeTotal = sum(income);
 	const expenseTotal = sum(expense);
 	const net = incomeTotal - expenseTotal;
-	const flow = incomeTotal + expenseTotal;
 
 	const slices = useMemo(
 		() => categoryBreakdown(breakdownType === "income" ? income : expense, categories),
@@ -88,14 +86,6 @@ export default function DashboardScreen() {
 	const balances = useMemo(
 		() => walletBalances(transactions, transfers, wallets, unit),
 		[transactions, transfers, wallets, unit],
-	);
-
-	const recent = useMemo(
-		() =>
-			[...scoped]
-				.sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1))
-				.slice(0, 5),
-		[scoped],
 	);
 
 	if (!ready) {
@@ -318,77 +308,6 @@ export default function DashboardScreen() {
 					)}
 				</Card>
 
-				{/* Recent ------------------------------------------------------ */}
-				<Card
-					flush
-					title="So'nggi yozuvlar"
-					headerRight={
-						recent.length > 0 ? (
-							<Pressable
-								accessibilityRole="button"
-								onPress={() => goToTab("expense")}
-								className="px-3 py-1.5 rounded-full bg-muted active:opacity-70"
-							>
-								<Text
-									className="font-medium text-muted-foreground"
-									style={{ fontSize: tf.sm }}
-								>
-									Barchasi
-								</Text>
-							</Pressable>
-						) : undefined
-					}
-				>
-					{recent.length === 0 ? (
-						<EmptyState
-							icon="receipt-outline"
-							title="Hozircha yozuv yo'q"
-							message="Kirim va chiqimni yozib boring — bu oy shu yerda to'ladi."
-							actionLabel="Chiqim qo'shish"
-							onAction={() => router.push("/transaction?type=expense")}
-						/>
-					) : (
-						recent.map((transaction, i) => (
-							<TransactionRow
-								key={transaction.id}
-								transaction={transaction}
-								categories={categories}
-								divider={i > 0}
-								showDate
-								onPress={() => router.push(`/transaction?id=${transaction.id}`)}
-							/>
-						))
-					)}
-				</Card>
-
-				<Card flush>
-					<Pressable
-						accessibilityRole="button"
-						onPress={() => router.push("/categories")}
-						className="flex-row items-center gap-3 px-4 py-4 active:opacity-70"
-					>
-						<View className="w-9 h-9 rounded-full items-center justify-center bg-primary-highlight">
-							<Ionicons name="pricetags-outline" size={18} color={tc.primary} />
-						</View>
-						<View className="flex-1">
-							<Text
-								className="font-medium text-foreground"
-								style={{ fontSize: tf.base }}
-							>
-								Kategoriyalar
-							</Text>
-							<Text
-								className="text-muted-foreground"
-								style={{ fontSize: tf.sm }}
-							>
-								{categories.length} ta kategoriya ·{" "}
-								{categories.reduce((n, c) => n + c.subcategories.length, 0)} ta
-								ichki kategoriya
-							</Text>
-						</View>
-						<Ionicons name="chevron-forward" size={18} color={tc.mutedForeground} />
-					</Pressable>
-				</Card>
 			</ScrollView>
 		</View>
 	);
