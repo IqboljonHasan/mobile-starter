@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
 	Alert,
@@ -16,6 +16,8 @@ import ContactSheet from "@/components/ContactSheet";
 import { Button, Card, EmptyState } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
+import { useGuardedPress } from "@/hooks/useGuardedPress";
+import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
 import {
 	contactTotals,
@@ -249,6 +251,8 @@ function ContactRow({
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
+	const handlePress = useGuardedPress(onPress);
+	const handleCall = useGuardedPress(onCall);
 
 	// Both directions can be open with the same person at once, so they're
 	// listed rather than netted off — owing somebody 100 while they owe you 100
@@ -275,7 +279,7 @@ function ContactRow({
 	return (
 		<Pressable
 			accessibilityRole="button"
-			onPress={onPress}
+			onPress={handlePress}
 			onLongPress={onDelete}
 			className={`flex-row items-center gap-3 px-4 py-3 active:opacity-70 ${
 				divider ? "border-t border-border" : ""
@@ -320,7 +324,7 @@ function ContactRow({
 				<Pressable
 					accessibilityRole="button"
 					accessibilityLabel={`${contact.name} ga qo'ng'iroq qilish`}
-					onPress={onCall}
+					onPress={handleCall}
 					hitSlop={8}
 					className="w-9 h-9 rounded-full items-center justify-center bg-muted active:opacity-70"
 				>

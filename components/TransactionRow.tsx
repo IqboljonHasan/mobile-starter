@@ -4,6 +4,7 @@ import CategoryAvatar from "@/components/CategoryAvatar";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
+import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";
 import { formatDate } from "@/lib/date";
@@ -15,7 +16,8 @@ import type { Category, Transaction } from "@/lib/types";
 /**
  * One line of the ledger. The amount carries the sign and the color — green for
  * money in, red for money out — and the label under the category is the
- * description, falling back to the date when there isn't one.
+ * description, left blank when there isn't one (the section it sits in already
+ * carries the date).
  */
 export default function TransactionRow({
 	transaction,
@@ -35,6 +37,7 @@ export default function TransactionRow({
 	const { tc, isDark } = useTheme();
 	const { hideIncome } = usePreferences();
 	const { wallets } = useLedger();
+	const handlePress = useGuardedPress(onPress);
 	const { category, subcategory } = resolveCategory(transaction, categories);
 	const income = transaction.type === "income";
 	const hidden = income && hideIncome;
@@ -47,7 +50,7 @@ export default function TransactionRow({
 	return (
 		<Pressable
 			accessibilityRole="button"
-			onPress={onPress}
+			onPress={handlePress}
 			className="active:opacity-70"
 		>
 			<View
@@ -88,7 +91,7 @@ export default function TransactionRow({
 							style={{ fontSize: tf.sm }}
 							numberOfLines={1}
 						>
-							{transaction.description || formatDate(transaction.date)}
+							{transaction.description}
 						</Text>
 						{/* Which jar paid. Colour alone would be a guess at this size, so
 						    the name rides along and gives way first when space is short. */}

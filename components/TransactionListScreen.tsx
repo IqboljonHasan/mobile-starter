@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
 	ActivityIndicator,
@@ -17,6 +16,7 @@ import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useTabScrollShadow } from "@/contexts/TabScrollShadowContext";
 import { useFont } from "@/hooks/useFont";
+import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
 import { currentMonthKey, formatDayLabel } from "@/lib/date";
 import {

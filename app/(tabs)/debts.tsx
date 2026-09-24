@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
 import DebtRow from "@/components/DebtRow";
@@ -8,6 +7,7 @@ import { Button, Card, EmptyState, IconButton } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useTabScrollShadow } from "@/contexts/TabScrollShadowContext";
 import { useFont } from "@/hooks/useFont";
+import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
 import { todayISO } from "@/lib/date";
 import {

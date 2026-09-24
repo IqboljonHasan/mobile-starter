@@ -14,6 +14,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { useFont } from "@/hooks/useFont";
+import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
 
@@ -105,6 +106,7 @@ export function Button({
 	startIcon,
 	endIcon,
 	children,
+	onPress,
 	onPressIn,
 	onPressOut,
 	...props
@@ -112,6 +114,12 @@ export function Button({
 	const { tc } = useTheme();
 	const { tf } = useFont();
 	const isDisabled = loading || disabled;
+
+	// A doubled tap — two touches landing before this component has re-rendered
+	// as `disabled` — must not run `onPress` twice: a FAB that navigates would
+	// push the same screen twice, and a save button would write the same
+	// transaction twice. See the hook for why this can't just be `disabled` state.
+	const handlePress = useGuardedPress(onPress);
 
 	// Press feedback runs on the UI thread, so it stays smooth even while the
 	// press handler does work on the JS thread.
@@ -166,6 +174,7 @@ export function Button({
 			accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
 			{...props}
 			disabled={isDisabled}
+			onPress={handlePress}
 			onPressIn={handlePressIn}
 			onPressOut={handlePressOut}
 			className={containerClassName}

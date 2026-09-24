@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Animated, Pressable } from "react-native";
+import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useTheme } from "@/hooks/useTheme";
 
 export interface IconButtonProps {
@@ -22,6 +23,7 @@ export function IconButton({
 	const { tc } = useTheme();
 	const [scale] = useState(() => new Animated.Value(1));
 	const [bgOpacity] = useState(() => new Animated.Value(0));
+	const handlePress = useGuardedPress(onPress);
 
 	const backgroundColor = bgOpacity.interpolate({
 		inputRange: [0, 1],
@@ -32,7 +34,7 @@ export function IconButton({
 		<Pressable
 			accessibilityRole="button"
 			accessibilityLabel={accessibilityLabel ?? icon}
-			onPress={onPress}
+			onPress={handlePress}
 			onPressIn={() => {
 				Animated.parallel([
 					Animated.timing(scale, {

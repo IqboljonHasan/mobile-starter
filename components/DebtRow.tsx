@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
 import ContactAvatar from "@/components/ContactAvatar";
 import { useFont } from "@/hooks/useFont";
+import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useTheme } from "@/hooks/useTheme";
 import { formatDate } from "@/lib/date";
 import {
@@ -40,6 +41,7 @@ export default function DebtRow({
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
+	const handlePress = useGuardedPress(onPress);
 
 	const meta = DIRECTION_META[debt.direction];
 	const status = debtStatus(debt, today);
@@ -72,7 +74,7 @@ export default function DebtRow({
 		<Pressable
 			accessibilityRole="button"
 			accessibilityLabel={`${name}, ${meta.label}, qoldiq ${formatAmount(remaining, debt.unit)}`}
-			onPress={onPress}
+			onPress={handlePress}
 			className="active:opacity-70"
 		>
 			<View

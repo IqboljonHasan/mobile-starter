@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { type ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useFont } from "@/hooks/useFont";
+import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
 
@@ -36,6 +37,10 @@ export function ListRow({
 }: ListRowProps) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
+	// Called unconditionally, ahead of the `!onPress` early return below, to
+	// keep the hook call itself unconditional — the guard is simply unused
+	// when there's nothing to guard.
+	const handlePress = useGuardedPress(onPress);
 
 	const content = (
 		<View
@@ -91,7 +96,7 @@ export function ListRow({
 	return (
 		<Pressable
 			accessibilityRole="button"
-			onPress={onPress}
+			onPress={handlePress}
 			className="active:opacity-70"
 		>
 			{content}

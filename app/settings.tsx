@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { useState } from "react";
 import {
 	ActivityIndicator,
@@ -22,6 +22,7 @@ import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { THEME_MODE_LABELS, type ThemeMode } from "@/contexts/ThemeContext";
 import { useFont } from "@/hooks/useFont";
+import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
 import { loadBackup, saveBackup } from "@/lib/backupFile";
 import { UNITS, unitByCode } from "@/lib/money";

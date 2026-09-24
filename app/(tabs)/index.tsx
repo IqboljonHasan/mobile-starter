@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import CategoryBreakdown from "@/components/CategoryBreakdown";
@@ -12,6 +11,7 @@ import { usePreferences } from "@/contexts/PreferencesContext";
 import { useTabNavigation } from "@/contexts/TabNavigationContext";
 import { useTabScrollShadow } from "@/contexts/TabScrollShadowContext";
 import { useFont } from "@/hooks/useFont";
+import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
 import { currentMonthKey } from "@/lib/date";
 import {
