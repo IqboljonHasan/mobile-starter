@@ -2,9 +2,8 @@ import { Text, View } from "react-native";
 import Svg, { Circle, G } from "react-native-svg";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
-import { categoryColorValue } from "@/lib/categoryColors";
-import type { CategorySlice } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
+import { sliceColor, type StatSlice } from "@/lib/stats";
 
 const SIZE = 168;
 const STROKE = 24;
@@ -12,7 +11,7 @@ const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 /**
- * A donut of the same slices `CategoryBreakdown` lists below it — angle for
+ * A donut of the same slices the breakdown card lists below it — angle for
  * the shape everyone recognizes at a glance, length still carried by that
  * list for the precision a bar gives that a wedge can't. Built from stacked
  * `<Circle>` strokes (the standard react-native-svg donut trick: each slice is
@@ -24,8 +23,8 @@ export default function PieChart({
 	unit,
 	hideTotal = false,
 }: {
-	/** Already folded to the rows worth drawing — see `foldCategorySlices`. */
-	slices: CategorySlice[];
+	/** Already folded to the rows worth drawing — see `foldSlices`. */
+	slices: StatSlice[];
 	unit: string;
 	/** Masks the center total — for an income breakdown while income is hidden. */
 	hideTotal?: boolean;
@@ -62,11 +61,11 @@ export default function PieChart({
 								cumulative += slice.share;
 								return (
 									<Circle
-										key={slice.categoryId}
+										key={slice.key}
 										cx={SIZE / 2}
 										cy={SIZE / 2}
 										r={RADIUS}
-										stroke={categoryColorValue(slice.color, isDark)}
+										stroke={sliceColor(slice.key, slice.color, isDark, tc.mutedForeground)}
 										strokeWidth={STROKE}
 										strokeDasharray={`${Math.max(dash - gapPx, 0)} ${CIRCUMFERENCE - dash + gapPx}`}
 										strokeDashoffset={offset}

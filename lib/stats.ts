@@ -1,5 +1,6 @@
 import { inMonth, inUnit, inYear, ofType, excludeDebts, sum } from "@/lib/ledger";
-import type { Category, Transaction, TxType } from "@/lib/types";
+import type { Category, Transaction } from "@/lib/types";
+import { categoryColorValue } from "@/lib/categoryColors";
 import { monthKeyOf, monthShortLabel, yearKeyOf } from "@/lib/date";
 
 /**
@@ -70,18 +71,28 @@ export function yearlyTotals(
 	}));
 }
 
-/* Subcategories ------------------------------------------------------------ */
+/* Breakdowns --------------------------------------------------------------- */
 
-/** One row of the flat subcategory ranking. */
-export type SubcategorySlice = {
-	/** `categoryId:subcategoryId`, stable across periods — what a row is selected by. */
+/** How finely a breakdown groups entries. */
+export type BreakdownLevel = "category" | "subcategory";
+
+/** How a breakdown card draws itself. Remembered per card — see PreferencesContext. */
+export type ChartKind = "trend" | "bar" | "pie";
+
+/** One row of a breakdown, at either level. */
+export type StatSlice = {
+	/**
+	 * Stable across periods — what a row is selected by. A category's id, or
+	 * `categoryId:subcategoryId` at the subcategory level.
+	 */
 	key: string;
-	categoryId: string;
-	/** Null for the entries of a category filed under no subcategory. */
-	subcategoryId: string | null;
-	categoryName: string;
-	/** The subcategory's name, or the category's own for its unfiled entries. */
 	name: string;
+	/**
+	 * A second line for the row: the parent category's name for a
+	 * subcategory, "subkategoriyasiz" for a category's unfiled entries, and
+	 * null at the category level, where the name says it all.
+	 */
+	context: string | null;
 	color: string;
 	amount: number;
 	/** 0–1 of the period's total for this type — the bar's length. */
@@ -90,56 +101,71 @@ export type SubcategorySlice = {
 };
 
 const NONE = "__none__";
-
-type Bucket = Omit<SubcategorySlice, "amount" | "share" | "count">;
+/** The folded tail of a breakdown. Drawn in a neutral tone, never a category's. */
+export const OTHER_KEY = "__other__";
 
 /**
- * Which row an entry is counted under. An entry with no subcategory — or one
- * whose subcategory has since been deleted — stays under its category as an
- * unfiled row rather than vanishing, so the ranking still adds up to the
- * period's whole spend; a deleted category's entries gather into one
- * "Kategoriyasiz" row, the same as the category breakdown does.
+ * A row's drawn color. The folded tail takes `neutral` (the theme's muted
+ * foreground) rather than a palette color, so it can't be mistaken for a real
+ * category that happens to share its hue.
  */
-function bucketOf(t: Transaction, byId: Map<string, Category>): Bucket {
+export function sliceColor(
+	key: string,
+	color: string,
+	isDark: boolean,
+	neutral: string,
+): string {
+	return key === OTHER_KEY ? neutral : categoryColorValue(color, isDark);
+}
+
+type Bucket = Omit<StatSlice, "amount" | "share" | "count">;
+
+/**
+ * Which row an entry is counted under. At the subcategory level an entry with
+ * no subcategory — or one whose subcategory has since been deleted — stays
+ * under its category as an unfiled row rather than vanishing, so the rows
+ * still add up to the period's whole total. A deleted category's entries
+ * gather into one "Kategoriyasiz" row at either level.
+ */
+function bucketOf(
+	t: Transaction,
+	byId: Map<string, Category>,
+	level: BreakdownLevel,
+): Bucket {
 	const category = byId.get(t.categoryId);
 	if (!category) {
-		return {
-			key: `${NONE}:${NONE}`,
-			categoryId: NONE,
-			subcategoryId: null,
-			categoryName: "Kategoriyasiz",
-			name: "Kategoriyasiz",
-			color: "blue",
-		};
+		return { key: NONE, name: "Kategoriyasiz", context: null, color: "blue" };
+	}
+	if (level === "category") {
+		return { key: category.id, name: category.name, context: null, color: category.color };
 	}
 	const sub = t.subcategoryId
 		? category.subcategories.find((s) => s.id === t.subcategoryId)
 		: undefined;
 	return {
 		key: `${category.id}:${sub?.id ?? NONE}`,
-		categoryId: category.id,
-		subcategoryId: sub?.id ?? null,
-		categoryName: category.name,
 		name: sub?.name ?? category.name,
+		context: sub ? category.name : "subkategoriyasiz",
 		color: sub?.color ?? category.color,
 	};
 }
 
 /**
- * Spend (or income) per subcategory across every category, largest first —
- * the view that answers "what exactly is the money going on", which a
- * per-category total hides when one category holds both bread and furniture.
- * The caller scopes `transactions` to one unit, type, and period first.
+ * Total per category or per subcategory, largest first. At the subcategory
+ * level the list is flat across every category, so "Taksi" and "Non" compete
+ * directly instead of each hiding inside its category's total. The caller
+ * scopes `transactions` to one unit, type, and period first.
  */
-export function subcategoryBreakdown(
+export function breakdown(
 	transactions: Transaction[],
 	categories: Category[],
-): SubcategorySlice[] {
+	level: BreakdownLevel,
+): StatSlice[] {
 	const byId = new Map(categories.map((c) => [c.id, c]));
-	const rows = new Map<string, SubcategorySlice>();
+	const rows = new Map<string, StatSlice>();
 
 	for (const t of transactions) {
-		const bucket = bucketOf(t, byId);
+		const bucket = bucketOf(t, byId, level);
 		const row = rows.get(bucket.key) ?? { ...bucket, amount: 0, share: 0, count: 0 };
 		row.amount += t.amount;
 		row.count += 1;
@@ -153,34 +179,75 @@ export function subcategoryBreakdown(
 }
 
 /**
- * One subcategory row's total per period, for its trend chart. The amount
- * lands on the side matching `type`, so the ordinary `BarChart` can draw it
- * as a single series. `transactions` is scoped by the caller the same way as
- * for `subcategoryBreakdown`, minus the period — this spans many.
+ * Folds every slice past the first `maxRows` into one "Boshqa" slice rather
+ * than dropping them, so a chart's slices still add up to the period's total.
  */
-export function subcategoryTrend(
+export function foldSlices(slices: StatSlice[], maxRows: number): StatSlice[] {
+	const head = slices.slice(0, maxRows);
+	const tail = slices.slice(maxRows);
+	if (tail.length === 0) return head;
+
+	return [
+		...head,
+		{
+			key: OTHER_KEY,
+			name: `Boshqa (${tail.length})`,
+			context: null,
+			color: "blue",
+			amount: tail.reduce((acc, s) => acc + s.amount, 0),
+			share: tail.reduce((acc, s) => acc + s.share, 0),
+			count: tail.reduce((acc, s) => acc + s.count, 0),
+		},
+	];
+}
+
+/** One period of a stacked trend: a segment per tracked row, in rank order. */
+export type StackedPeriod = {
+	key: string;
+	label: string;
+	segments: { key: string; amount: number }[];
+	total: number;
+};
+
+/**
+ * Each tracked row's total per period, for a stacked trend chart. Rows not in
+ * `keys` are summed into one `OTHER_KEY` segment when `withOther` is set —
+ * so a stack still reaches the period's real total — or left out when the
+ * chart is about the tracked rows alone. `transactions` is scoped by the
+ * caller the same way as for `breakdown`, minus the period: this spans many.
+ */
+export function stackedTrend(
 	transactions: Transaction[],
 	categories: Category[],
-	key: string,
+	level: BreakdownLevel,
 	span: "month" | "year",
 	periodKeys: string[],
-	type: TxType,
-): PeriodTotal[] {
+	keys: string[],
+	withOther: boolean,
+): StackedPeriod[] {
 	const byId = new Map(categories.map((c) => [c.id, c]));
-	const totals = new Map<string, number>();
+	const tracked = new Set(keys);
+	const totals = new Map<string, Map<string, number>>();
+
 	for (const t of transactions) {
-		if (bucketOf(t, byId).key !== key) continue;
+		const bucket = bucketOf(t, byId, level).key;
+		const segment = tracked.has(bucket) ? bucket : withOther ? OTHER_KEY : null;
+		if (!segment) continue;
 		const period = span === "month" ? monthKeyOf(t.date) : yearKeyOf(t.date);
-		totals.set(period, (totals.get(period) ?? 0) + t.amount);
+		const row = totals.get(period) ?? new Map<string, number>();
+		row.set(segment, (row.get(segment) ?? 0) + t.amount);
+		totals.set(period, row);
 	}
 
+	const order = withOther ? [...keys, OTHER_KEY] : keys;
 	return periodKeys.map((period) => {
-		const amount = totals.get(period) ?? 0;
+		const row = totals.get(period);
+		const segments = order.map((key) => ({ key, amount: row?.get(key) ?? 0 }));
 		return {
 			key: period,
 			label: span === "month" ? monthShortLabel(period) : period,
-			income: type === "income" ? amount : 0,
-			expense: type === "expense" ? amount : 0,
+			segments,
+			total: segments.reduce((acc, s) => acc + s.amount, 0),
 		};
 	});
 }

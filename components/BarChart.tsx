@@ -2,7 +2,6 @@ import { Text, View } from "react-native";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import type { PeriodTotal } from "@/lib/stats";
-import type { TxType } from "@/lib/types";
 
 /**
  * Income vs. expense per period, as paired vertical bars — plain `View`s
@@ -12,29 +11,19 @@ import type { TxType } from "@/lib/types";
  * Bar heights are relative to the tallest bar across the whole series, not to
  * each group's own total: reading "this month was bigger than that one" only
  * works if every group is measured against the same ruler.
- *
- * `only` draws a single series — a subcategory's trend has just one side to
- * show, and a row of empty partner bars would read as missing data.
  */
 export default function BarChart({
 	periods,
 	height = 120,
-	only,
 }: {
 	periods: PeriodTotal[];
 	height?: number;
-	only?: TxType;
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
 
-	const showIncome = only !== "expense";
-	const showExpense = only !== "income";
-	const peak = Math.max(
-		1,
-		...periods.flatMap((p) => [showIncome ? p.income : 0, showExpense ? p.expense : 0]),
-	);
-	const barWidth = (periods.length > 8 ? 5 : 8) * (only ? 2 : 1);
+	const peak = Math.max(1, ...periods.flatMap((p) => [p.income, p.expense]));
+	const barWidth = periods.length > 8 ? 5 : 8;
 
 	return (
 		<View>
@@ -47,28 +36,22 @@ export default function BarChart({
 						<View
 							className="flex-row items-end"
 							style={{ height, gap: 2 }}
-							accessibilityLabel={`${period.label}: ${
-								only === "income" ? "kirim" : only === "expense" ? "chiqim" : "kirim, chiqim"
-							}`}
+							accessibilityLabel={`${period.label}: kirim, chiqim`}
 						>
-							{showIncome && (
-								<Bar
-									value={period.income}
-									peak={peak}
-									height={height}
-									width={barWidth}
-									color={tc.success}
-								/>
-							)}
-							{showExpense && (
-								<Bar
-									value={period.expense}
-									peak={peak}
-									height={height}
-									width={barWidth}
-									color={tc.danger}
-								/>
-							)}
+							<Bar
+								value={period.income}
+								peak={peak}
+								height={height}
+								width={barWidth}
+								color={tc.success}
+							/>
+							<Bar
+								value={period.expense}
+								peak={peak}
+								height={height}
+								width={barWidth}
+								color={tc.danger}
+							/>
 						</View>
 						<Text
 							className="text-muted-foreground mt-1.5"
@@ -80,12 +63,10 @@ export default function BarChart({
 					</View>
 				))}
 			</View>
-			{!only && (
-				<View className="flex-row items-center justify-center gap-4 mt-3">
-					<Legend color={tc.success} label="Kirim" />
-					<Legend color={tc.danger} label="Chiqim" />
-				</View>
-			)}
+			<View className="flex-row items-center justify-center gap-4 mt-3">
+				<Legend color={tc.success} label="Kirim" />
+				<Legend color={tc.danger} label="Chiqim" />
+			</View>
 		</View>
 	);
 }

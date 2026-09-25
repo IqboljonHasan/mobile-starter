@@ -2,29 +2,16 @@ import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import BarChart from "@/components/BarChart";
-import CategoryBreakdown from "@/components/CategoryBreakdown";
-import MonthSwitcher from "@/components/MonthSwitcher";
-import PieChart from "@/components/PieChart";
-import SubcategoryStats from "@/components/SubcategoryStats";
+import BreakdownStats from "@/components/BreakdownStats";
 import { Card, SegmentedControl } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
-import { currentMonthKey, lastMonthKeys, lastYearKeys } from "@/lib/date";
-import {
-	categoryBreakdown,
-	excludeDebts,
-	foldCategorySlices,
-	inMonth,
-	inUnit,
-	ofType,
-	sum,
-	unitsUsed,
-} from "@/lib/ledger";
+import { lastMonthKeys, lastYearKeys } from "@/lib/date";
+import { excludeDebts, inUnit, ofType, sum, unitsUsed } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
 import { monthlyTotals, TREND_MONTHS, TREND_YEARS, yearlyTotals } from "@/lib/stats";
-import type { TxType } from "@/lib/types";
 import "../global.css";
 
 type TrendSpan = "month" | "year";
@@ -32,8 +19,8 @@ type TrendSpan = "month" | "year";
 /**
  * Every angle on the ledger the dashboard doesn't have room for: totals across
  * all time, a trend of income vs. expense over the trailing months or years,
- * a category breakdown for any month the user picks, and a flat subcategory
- * ranking by month or year with a trend per row — the same numbers
+ * and a breakdown by category or subcategory for any month or year, drawn as
+ * a pie, ranked bars, or a trend as the user picks — the same numbers
  * the dashboard's month card and the Kirim/Chiqim tabs already compute,
  * gathered onto one screen instead of a card the dashboard had to keep small.
  */
@@ -45,8 +32,6 @@ export default function StatsScreen() {
 
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
 	const [trendSpan, setTrendSpan] = useState<TrendSpan>("month");
-	const [month, setMonth] = useState(currentMonthKey);
-	const [breakdownType, setBreakdownType] = useState<TxType>("expense");
 
 	// Every unit ever used, not just this month's — the whole point of this
 	// screen is the view a single month is too narrow for.
@@ -78,18 +63,6 @@ export default function StatsScreen() {
 				: yearlyTotals(transactions, lastYearKeys(TREND_YEARS), unit, includeDebtsInStats),
 		[transactions, trendSpan, unit, includeDebtsInStats],
 	);
-
-	const monthTransactions = useMemo(() => inMonth(scoped, month), [scoped, month]);
-	const typeTransactions = useMemo(() => {
-		const list = ofType(monthTransactions, breakdownType);
-		return includeDebtsInStats ? list : excludeDebts(list);
-	}, [monthTransactions, breakdownType, includeDebtsInStats]);
-	const slices = useMemo(
-		() => foldCategorySlices(categoryBreakdown(typeTransactions, categories)),
-		[typeTransactions, categories],
-	);
-
-	const maskAmounts = breakdownType === "income" && hideIncome;
 
 	if (!ready) {
 		return (
@@ -188,51 +161,13 @@ export default function StatsScreen() {
 					<BarChart periods={trendPeriods} />
 				</Card>
 
-				{/* By category ------------------------------------------------------ */}
-				<Card title="Kategoriyalar bo'yicha">
-					<MonthSwitcher value={month} onChange={setMonth} />
-					<SegmentedControl
-						items={[
-							{ key: "expense", label: "Chiqim" },
-							{ key: "income", label: "Kirim" },
-						]}
-						value={breakdownType}
-						onChange={(key) => setBreakdownType(key as TxType)}
-						className="bg-muted mt-4 mb-4"
-					/>
-					{slices.length === 0 ? (
-						<Text
-							className="text-muted-foreground text-center py-6"
-							style={{ fontSize: tf.base }}
-						>
-							{"Bu oyda yozuv yo'q."}
-						</Text>
-					) : (
-						<>
-							<PieChart slices={slices} unit={unit} hideTotal={maskAmounts} />
-							<View className="mt-5">
-								<CategoryBreakdown
-									slices={slices}
-									unit={unit}
-									hideAmounts={maskAmounts}
-								/>
-							</View>
-						</>
-					)}
-				</Card>
-
-				{/* By subcategory --------------------------------------------------- */}
-				<Card
-					title="Subkategoriyalar bo'yicha"
-					subtitle="Batafsil ko'rish uchun qatorni bosing"
-				>
-					<SubcategoryStats
-						transactions={relevant}
-						categories={categories}
-						unit={unit}
-						hideIncome={hideIncome}
-					/>
-				</Card>
+				{/* Breakdown ------------------------------------------------------ */}
+				<BreakdownStats
+					transactions={relevant}
+					categories={categories}
+					unit={unit}
+					hideIncome={hideIncome}
+				/>
 			</ScrollView>
 		</>
 	);
