@@ -11,6 +11,7 @@ import {
 	View,
 } from "react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import TransferHistory from "@/components/TransferHistory";
 import TransferSheet from "@/components/TransferSheet";
 import {
 	BottomSheet,
@@ -73,6 +74,7 @@ export default function WalletsScreen() {
 		deleteWallet,
 		updateCategory,
 		addTransfer,
+		deleteTransfer,
 		redistributeHistory,
 	} = useLedger();
 
@@ -94,6 +96,11 @@ export default function WalletsScreen() {
 			: units.includes(defaultUnit)
 				? defaultUnit
 				: units[0];
+
+	const unitTransfers = useMemo(
+		() => transfers.filter((t) => t.unit === unit),
+		[transfers, unit],
+	);
 
 	const balances = useMemo(
 		() => walletBalances(transactions, transfers, wallets, unit),
@@ -335,6 +342,23 @@ export default function WalletsScreen() {
 							/>
 						</View>
 					</View>
+				</Card>
+
+				{/* Transfers ------------------------------------------------------ */}
+				<Card
+					title="O'tkazmalar tarixi"
+					subtitle={
+						unitTransfers.length > 0
+							? `${unitTransfers.length} ta o'tkazma · o'chirish uchun bosing`
+							: undefined
+					}
+				>
+					<TransferHistory
+						transfers={unitTransfers}
+						wallets={wallets}
+						money={money}
+						onDelete={deleteTransfer}
+					/>
 				</Card>
 
 				{/* Percentages --------------------------------------------------- */}
