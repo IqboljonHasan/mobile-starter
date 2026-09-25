@@ -19,7 +19,7 @@ export type SaveResult =
 	| { status: "canceled" };
 
 export type LoadResult =
-	| { status: "loaded"; payload: BackupPayload; skipped: number }
+	| { status: "loaded"; payload: BackupPayload; skipped: number; hasWallets: boolean }
 	| { status: "invalid"; error: string }
 	| { status: "canceled" };
 
@@ -69,5 +69,10 @@ export async function loadBackup(): Promise<LoadResult> {
 
 	const parsed = parseBackup(text);
 	if (!parsed.ok) return { status: "invalid", error: parsed.error };
-	return { status: "loaded", payload: parsed.payload, skipped: parsed.skipped };
+	return {
+		status: "loaded",
+		payload: parsed.payload,
+		skipped: parsed.skipped,
+		hasWallets: parsed.hasWallets,
+	};
 }

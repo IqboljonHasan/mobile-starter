@@ -24,6 +24,7 @@ import { THEME_MODE_LABELS, type ThemeMode } from "@/contexts/ThemeContext";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
+import { prepareRestore, type WalletRestoreMode } from "@/lib/backup";
 import { loadBackup, saveBackup } from "@/lib/backupFile";
 import { UNITS, unitByCode } from "@/lib/money";
 import "../global.css";
@@ -109,18 +110,31 @@ export default function SettingsScreen() {
 				return;
 			}
 
-			const { payload, skipped } = result;
+			const { payload, skipped, hasWallets } = result;
+			const restore = (mode: WalletRestoreMode) =>
+				replaceLedger(prepareRestore(payload, hasWallets, mode, { wallets, categories }));
+			// Both answers wipe the current ledger, so each button is itself the
+			// confirmation — the question is only what the jars should hold after.
 			Alert.alert(
 				"Zaxiradan tiklansinmi?",
 				`Fayldan ${payload.transactions.length} ta yozuv va ${payload.categories.length} ta kategoriya tiklanadi.` +
 					(skipped > 0 ? ` ${skipped} ta buzuq yozuv o'tkazib yuborildi.` : "") +
-					` Hozirgi ${transactions.length} ta yozuv o'chadi. Buni qaytarib bo'lmaydi.`,
+					` Hozirgi ${transactions.length} ta yozuv o'chadi. Buni qaytarib bo'lmaydi.\n\n` +
+					(hasWallets
+						? "Hamyonlar bilan — fayldagi hamyonlar va ularning qoldiqlari tiklanadi."
+						: "Hamyonlar bilan — fayldagi kirimlar hozirgi hamyonlaringizga taqsimlanadi.") +
+					"\n\nHamyonlarsiz — hozirgi hamyonlaringiz qoladi, tiklangan yozuvlar ularga tegmaydi va qoldiqlar noldan boshlanadi.",
 				[
 					{ text: "Bekor qilish", style: "cancel" },
 					{
-						text: "Tiklash",
+						text: "Hamyonlarsiz",
 						style: "destructive",
-						onPress: () => replaceLedger(payload),
+						onPress: () => restore("skip"),
+					},
+					{
+						text: "Hamyonlar bilan",
+						style: "destructive",
+						onPress: () => restore("apply"),
 					},
 				],
 			);

@@ -1,7 +1,7 @@
 import { isCategoryColor } from "@/lib/categoryColors";
 import { toISODate } from "@/lib/date";
 import { asPayMethod, DEFAULT_UNIT, unitByCode } from "@/lib/money";
-import { SEED_WALLETS } from "@/lib/wallets";
+import { redistribute, SEED_WALLETS } from "@/lib/wallets";
 import type {
 	Allocation,
 	Category,
@@ -69,7 +69,17 @@ type BackupFile = BackupPayload & {
 };
 
 export type ParseResult =
-	| { ok: true; payload: BackupPayload; skipped: number }
+	| {
+			ok: true;
+			payload: BackupPayload;
+			skipped: number;
+			/**
+			 * Whether the file brought wallets of its own. When it didn't, the
+			 * payload's wallets are only the starter set standing in, and its
+			 * entries carry no splits worth keeping.
+			 */
+			hasWallets: boolean;
+	  }
 	| { ok: false; error: string };
 
 /* Writing ------------------------------------------------------------------ */
@@ -408,6 +418,7 @@ export function parseBackup(text: string): ParseResult {
 	return {
 		ok: true,
 		skipped,
+		hasWallets: parsedWallets.length > 0,
 		payload: {
 			categories,
 			transactions,
@@ -422,6 +433,93 @@ export function parseBackup(text: string): ParseResult {
 					? unitByCode(raw.defaultUnit).code
 					: DEFAULT_UNIT,
 		},
+	};
+}
+
+/* Restoring --------------------------------------------------------------- */
+
+/**
+ * What a restore does with the wallets. "apply" brings the file's wallet
+ * history in with it; "skip" keeps this device's wallets and lets the restored
+ * history sit outside them.
+ */
+export type WalletRestoreMode = "apply" | "skip";
+
+/**
+ * Shapes a parsed backup for `replaceLedger` according to the user's choice.
+ *
+ * - "apply" with a file that has wallets: the file wins wholesale — its
+ *   wallets, the splits each income recorded, its transfers. Splits are
+ *   snapshots and are never recomputed here, for the same reason changing a
+ *   percentage doesn't rewrite them.
+ * - "apply" with a file that has none (older than wallets): the device's
+ *   wallets stand in rather than the starter set, since they're the ones the
+ *   user actually set up, and the history is split across them once.
+ * - "skip": the device's wallets stay, and no restored entry touches them —
+ *   income carries no split, expenses and debts name no wallet, transfers are
+ *   dropped. Every jar starts from zero and fills from new income only; the
+ *   wallets screen can still redistribute the history later if asked.
+ *
+ * Whenever the device's wallets are kept, a category also keeps how it feeds
+ * them — its wallet mapping and split toggle belong to the wallet setup, not
+ * to the history. A category the device doesn't have keeps only the mapping
+ * to wallets that exist here.
+ */
+export function prepareRestore(
+	payload: BackupPayload,
+	hasWallets: boolean,
+	mode: WalletRestoreMode,
+	current: { wallets: Wallet[]; categories: Category[] },
+): BackupPayload {
+	if (mode === "apply" && hasWallets) return payload;
+
+	const wallets = current.wallets;
+	const walletIds = new Set(wallets.map((w) => w.id));
+	const known = (id: string | null) => (id && walletIds.has(id) ? id : null);
+	const mine = new Map(current.categories.map((c) => [c.id, c]));
+
+	const categories = payload.categories.map((c) => {
+		const own = mine.get(c.id);
+		return own
+			? { ...c, walletIds: own.walletIds ?? [], splitIncome: own.splitIncome }
+			: { ...c, walletIds: (c.walletIds ?? []).filter((id) => walletIds.has(id)) };
+	});
+
+	if (mode === "apply") {
+		// Only debt entries keep the wallet they named through `redistribute`,
+		// and a file without wallets can't have named one of ours.
+		const transactions = redistribute(payload.transactions, categories, wallets).map(
+			(t) => ({ ...t, walletId: known(t.walletId) }),
+		);
+		return {
+			...payload,
+			wallets,
+			categories,
+			transactions,
+			transfers: [],
+			debts: payload.debts.map((d) => ({
+				...d,
+				walletId: known(d.walletId),
+				payments: d.payments.map((p) => ({ ...p, walletId: known(p.walletId) })),
+			})),
+		};
+	}
+
+	return {
+		...payload,
+		wallets,
+		categories,
+		transactions: payload.transactions.map((t) => ({
+			...t,
+			allocations: [],
+			walletId: null,
+		})),
+		transfers: [],
+		debts: payload.debts.map((d) => ({
+			...d,
+			walletId: null,
+			payments: d.payments.map((p) => ({ ...p, walletId: null })),
+		})),
 	};
 }
 
