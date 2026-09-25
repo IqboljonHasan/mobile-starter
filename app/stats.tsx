@@ -5,6 +5,7 @@ import BarChart from "@/components/BarChart";
 import CategoryBreakdown from "@/components/CategoryBreakdown";
 import MonthSwitcher from "@/components/MonthSwitcher";
 import PieChart from "@/components/PieChart";
+import SubcategoryStats from "@/components/SubcategoryStats";
 import { Card, SegmentedControl } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -31,7 +32,8 @@ type TrendSpan = "month" | "year";
 /**
  * Every angle on the ledger the dashboard doesn't have room for: totals across
  * all time, a trend of income vs. expense over the trailing months or years,
- * and a category breakdown for any month the user picks — the same numbers
+ * a category breakdown for any month the user picks, and a flat subcategory
+ * ranking by month or year with a trend per row — the same numbers
  * the dashboard's month card and the Kirim/Chiqim tabs already compute,
  * gathered onto one screen instead of a card the dashboard had to keep small.
  */
@@ -217,6 +219,19 @@ export default function StatsScreen() {
 							</View>
 						</>
 					)}
+				</Card>
+
+				{/* By subcategory --------------------------------------------------- */}
+				<Card
+					title="Subkategoriyalar bo'yicha"
+					subtitle="Batafsil ko'rish uchun qatorni bosing"
+				>
+					<SubcategoryStats
+						transactions={relevant}
+						categories={categories}
+						unit={unit}
+						hideIncome={hideIncome}
+					/>
 				</Card>
 			</ScrollView>
 		</>
