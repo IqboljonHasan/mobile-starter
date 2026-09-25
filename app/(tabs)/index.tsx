@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
-import CategoryBreakdown from "@/components/CategoryBreakdown";
 import MonthSwitcher from "@/components/MonthSwitcher";
 import TabHeader from "@/components/TabHeader";
-import { Button, Card, IconButton, SegmentedControl } from "@/components/ui";
+import { Button, Card, IconButton } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useTabNavigation } from "@/contexts/TabNavigationContext";
@@ -12,20 +11,11 @@ import { useTabScrollShadow } from "@/contexts/TabScrollShadowContext";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
-import { currentMonthKey } from "@/lib/date";
-import {
-	categoryBreakdown,
-	excludeDebts,
-	inMonth,
-	inUnit,
-	ofType,
-	sum,
-	unitsUsed,
-} from "@/lib/ledger";
-import { formatAmount, maskAmount } from "@/lib/money";
-import { walletBalances } from "@/lib/wallets";
 import { categoryColorValue } from "@/lib/categoryColors";
-import type { TxType } from "@/lib/types";
+import { currentMonthKey } from "@/lib/date";
+import { excludeDebts, inMonth, inUnit, ofType, sum, unitsUsed } from "@/lib/ledger";
+import { formatAmount, maskAmount } from "@/lib/money";
+import { walletBalances, walletUnitsUsed } from "@/lib/wallets";
 import "../../global.css";
 
 export default function DashboardScreen() {
@@ -34,13 +24,12 @@ export default function DashboardScreen() {
 	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
 	const shadow = useTabScrollShadow("home");
-	const { ready, transactions, categories, wallets, transfers, defaultUnit } =
-		useLedger();
+	const { ready, transactions, wallets, transfers, defaultUnit } = useLedger();
 	const { hideIncome, toggleHideIncome, includeDebtsInStats } = usePreferences();
 
 	const [month, setMonth] = useState(currentMonthKey);
-	const [breakdownType, setBreakdownType] = useState<TxType>("expense");
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
+	const [pickedWalletUnit, setPickedWalletUnit] = useState<string | null>(null);
 
 	const monthTransactions = useMemo(
 		() => inMonth(transactions, month),
@@ -76,16 +65,31 @@ export default function DashboardScreen() {
 	const expenseTotal = sum(expense);
 	const net = incomeTotal - expenseTotal;
 
-	const slices = useMemo(
-		() => categoryBreakdown(breakdownType === "income" ? income : expense, categories),
-		[breakdownType, income, expense, categories],
-	);
+	// The wallet section is deliberately independent of the month above it: what
+	// a jar holds is an all-time running balance, not something a month resets,
+	// so it picks its own unit from everything the wallets have ever touched
+	// rather than from whichever month happens to be showing below.
+	const walletUnits = useMemo(() => {
+		const used = walletUnitsUsed(transactions, transfers);
+		return used.length > 0 ? used : [defaultUnit];
+	}, [transactions, transfers, defaultUnit]);
+	const walletUnit =
+		pickedWalletUnit && walletUnits.includes(pickedWalletUnit)
+			? pickedWalletUnit
+			: walletUnits.includes(defaultUnit)
+				? defaultUnit
+				: walletUnits[0];
 
-	// All-time and unaffected by the month being viewed: what a jar holds is a
-	// running balance, not something the month resets.
 	const balances = useMemo(
-		() => walletBalances(transactions, transfers, wallets, unit),
-		[transactions, transfers, wallets, unit],
+		() => walletBalances(transactions, transfers, wallets, walletUnit),
+		[transactions, transfers, wallets, walletUnit],
+	);
+	// Everything the user holds, jars and the unallocated pool alike — a
+	// transfer moves money between rows without changing this sum, so it's
+	// exactly all-time income minus all-time expense in this unit.
+	const totalBalance = useMemo(
+		() => balances.reduce((acc, b) => acc + b.balance, 0),
+		[balances],
 	);
 
 	if (!ready) {
@@ -124,6 +128,89 @@ export default function DashboardScreen() {
 				contentContainerStyle={{ padding: 16, gap: 12 }}
 				showsVerticalScrollIndicator={false}
 			>
+				{/* Wallets ----------------------------------------------------- */}
+				<Card
+					title="Hamyonlar"
+					subtitle="Joriy qoldiq — butun tarix bo'yicha"
+					onPress={() => router.push("/wallets")}
+				>
+					{walletUnits.length > 1 && (
+						<View className="flex-row flex-wrap gap-2 mb-1">
+							{walletUnits.map((code) => {
+								const active = code === walletUnit;
+								return (
+									<Pressable
+										key={code}
+										accessibilityRole="button"
+										accessibilityState={{ selected: active }}
+										onPress={() => setPickedWalletUnit(code)}
+										className={`px-3 py-1.5 rounded-full active:opacity-70 ${
+											active ? "bg-primary-highlight" : "bg-muted"
+										}`}
+									>
+										<Text
+											className={`font-semibold ${
+												active ? "text-primary" : "text-muted-foreground"
+											}`}
+											style={{ fontSize: tf.sm }}
+										>
+											{code}
+										</Text>
+									</Pressable>
+								);
+							})}
+						</View>
+					)}
+
+					<View className="items-center pb-4">
+						<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
+							Jami balans
+						</Text>
+						<Text
+							className={`font-bold mt-1 ${
+								totalBalance < 0 ? "text-danger" : "text-foreground"
+							}`}
+							style={{ fontSize: tf.xxxl }}
+							numberOfLines={1}
+							adjustsFontSizeToFit
+						>
+							{hideIncome ? maskAmount(walletUnit) : formatAmount(totalBalance, walletUnit)}
+						</Text>
+					</View>
+
+					<View className="gap-2.5">
+						{balances.map((row) => (
+							<View key={row.walletId} className="flex-row items-center gap-2">
+								<View
+									style={{
+										width: 10,
+										height: 10,
+										borderRadius: 5,
+										backgroundColor: categoryColorValue(row.color, isDark),
+									}}
+								/>
+								<Text
+									className="flex-1 text-foreground"
+									style={{ fontSize: tf.base }}
+									numberOfLines={1}
+								>
+									{row.name}
+								</Text>
+								<Text
+									className={`font-semibold ${
+										row.balance < 0 ? "text-danger" : "text-foreground"
+									}`}
+									style={{ fontSize: tf.base }}
+									numberOfLines={1}
+								>
+									{hideIncome ? maskAmount(walletUnit) : formatAmount(row.balance, walletUnit)}
+								</Text>
+							</View>
+						))}
+					</View>
+				</Card>
+
+				{/* Month --------------------------------------------------------- */}
 				<Card>
 					<MonthSwitcher value={month} onChange={setMonth} />
 
@@ -219,46 +306,6 @@ export default function DashboardScreen() {
 					</Card>
 				</View>
 
-				{/* Wallets ----------------------------------------------------- */}
-				{balances.length > 0 && (
-					<Card
-						title="Hamyonlar"
-						subtitle="Joriy qoldiq — butun tarix bo'yicha"
-						onPress={() => router.push("/wallets")}
-					>
-						<View className="gap-2.5">
-							{balances.map((row) => (
-								<View key={row.walletId} className="flex-row items-center gap-2">
-									<View
-										style={{
-											width: 10,
-											height: 10,
-											borderRadius: 5,
-											backgroundColor: categoryColorValue(row.color, isDark),
-										}}
-									/>
-									<Text
-										className="flex-1 text-foreground"
-										style={{ fontSize: tf.base }}
-										numberOfLines={1}
-									>
-										{row.name}
-									</Text>
-									<Text
-										className={`font-semibold ${
-											row.balance < 0 ? "text-danger" : "text-foreground"
-										}`}
-										style={{ fontSize: tf.base }}
-										numberOfLines={1}
-									>
-										{hideIncome ? maskAmount(unit) : formatAmount(row.balance, unit)}
-									</Text>
-								</View>
-							))}
-						</View>
-					</Card>
-				)}
-
 				{/* Quick add --------------------------------------------------- */}
 				<View className="flex-row gap-3">
 					<View className="flex-1">
@@ -281,31 +328,29 @@ export default function DashboardScreen() {
 					</View>
 				</View>
 
-				{/* Breakdown --------------------------------------------------- */}
-				<Card title="Kategoriyalar bo'yicha">
-					<SegmentedControl
-						items={[
-							{ key: "expense", label: "Chiqim" },
-							{ key: "income", label: "Kirim" },
-						]}
-						value={breakdownType}
-						onChange={(key) => setBreakdownType(key as TxType)}
-						className="bg-muted mb-4"
-					/>
-					{slices.length === 0 ? (
-						<Text
-							className="text-muted-foreground text-center py-6"
-							style={{ fontSize: tf.base }}
-						>
-							{"Bu oyda yozuv yo'q."}
-						</Text>
-					) : (
-						<CategoryBreakdown
-							slices={slices}
-							unit={unit}
-							hideAmounts={breakdownType === "income" && hideIncome}
-						/>
-					)}
+				{/* Stats --------------------------------------------------------- */}
+				<Card onPress={() => router.push("/stats")}>
+					<View className="flex-row items-center gap-3">
+						<View className="w-10 h-10 rounded-full items-center justify-center bg-primary-highlight">
+							<Ionicons name="stats-chart-outline" size={20} color={tc.primary} />
+						</View>
+						<View className="flex-1">
+							<Text
+								className="font-semibold text-foreground"
+								style={{ fontSize: tf.lg }}
+							>
+								Statistika
+							</Text>
+							<Text
+								className="text-muted-foreground"
+								style={{ fontSize: tf.sm }}
+								numberOfLines={1}
+							>
+								Grafiklar, oylik/yillik tendensiya, kategoriyalar
+							</Text>
+						</View>
+						<Ionicons name="chevron-forward" size={18} color={tc.mutedForeground} />
+					</View>
 				</Card>
 
 			</ScrollView>

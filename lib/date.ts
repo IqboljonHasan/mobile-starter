@@ -65,6 +65,43 @@ export function monthTitle(monthKey: string): string {
 	return `${MONTHS_LONG[m - 1] ?? ""} ${y}`;
 }
 
+/** "2026-09" → "sen" — a trend chart's bar label, too narrow for the full name. */
+export function monthShortLabel(monthKey: string): string {
+	const [, m] = monthKey.split("-").map(Number);
+	return MONTHS_SHORT[(m ?? 1) - 1] ?? "";
+}
+
+/** `count` month keys ending at (and including) `endMonthKey`, oldest first —
+ *  what a trailing trend chart plots along its x-axis. */
+export function lastMonthKeys(
+	count: number,
+	endMonthKey: string = currentMonthKey(),
+): string[] {
+	const keys: string[] = [];
+	for (let i = count - 1; i >= 0; i--) keys.push(shiftMonth(endMonthKey, -i));
+	return keys;
+}
+
+/** "2026-09-18" → "2026" */
+export function yearKeyOf(iso: string): string {
+	return iso.slice(0, 4);
+}
+
+export function currentYearKey(): string {
+	return yearKeyOf(todayISO());
+}
+
+/** `count` year keys ending at (and including) `endYearKey`, oldest first. */
+export function lastYearKeys(
+	count: number,
+	endYearKey: string = currentYearKey(),
+): string[] {
+	const end = Number(endYearKey);
+	const keys: string[] = [];
+	for (let i = count - 1; i >= 0; i--) keys.push(String(end - i));
+	return keys;
+}
+
 /** "18-sen" — the year is only added outside the current year. */
 export function formatDate(iso: string): string {
 	const date = fromISODate(iso);

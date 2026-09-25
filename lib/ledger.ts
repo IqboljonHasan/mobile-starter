@@ -1,5 +1,5 @@
 import type { Category, Transaction, TxType } from "@/lib/types";
-import { monthKeyOf } from "@/lib/date";
+import { monthKeyOf, yearKeyOf } from "@/lib/date";
 import { DEBT_CATEGORY_IDS } from "@/lib/seed";
 
 /**
@@ -15,6 +15,10 @@ export type UnitTotal = { unit: string; amount: number };
 
 export function inMonth(transactions: Transaction[], monthKey: string): Transaction[] {
 	return transactions.filter((t) => monthKeyOf(t.date) === monthKey);
+}
+
+export function inYear(transactions: Transaction[], yearKey: string): Transaction[] {
+	return transactions.filter((t) => yearKeyOf(t.date) === yearKey);
 }
 
 export function ofType(transactions: Transaction[], type: TxType): Transaction[] {
@@ -113,6 +117,34 @@ export function categoryBreakdown(
 			};
 		})
 		.sort((a, b) => b.amount - a.amount);
+}
+
+/**
+ * Folds every slice past the first `maxRows` into one "Boshqa" (other) slice,
+ * rather than dropping them — so a chart's slices still add up to the whole
+ * period's total. Shared by `CategoryBreakdown`'s list and the stats screen's
+ * pie chart, so the two never disagree about which categories are "the small
+ * ones" this period.
+ */
+export function foldCategorySlices(
+	slices: CategorySlice[],
+	maxRows = 6,
+): CategorySlice[] {
+	const head = slices.slice(0, maxRows);
+	const tail = slices.slice(maxRows);
+	if (tail.length === 0) return head;
+
+	return [
+		...head,
+		{
+			categoryId: "__other__",
+			name: `Boshqa (${tail.length})`,
+			color: "blue",
+			amount: tail.reduce((acc, s) => acc + s.amount, 0),
+			share: tail.reduce((acc, s) => acc + s.share, 0),
+			count: tail.reduce((acc, s) => acc + s.count, 0),
+		},
+	];
 }
 
 export type DaySection = {

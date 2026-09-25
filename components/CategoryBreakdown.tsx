@@ -2,7 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";
-import type { CategorySlice } from "@/lib/ledger";
+import { foldCategorySlices, type CategorySlice } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
 
 /**
@@ -32,22 +32,9 @@ export default function CategoryBreakdown({
 	const { tf } = useFont();
 
 	// Past six rows the tail is noise; it's folded into one "Other" bar rather
-	// than being dropped, so the bars still add up to the period's total.
-	const head = slices.slice(0, MAX_ROWS);
-	const tail = slices.slice(MAX_ROWS);
-	const rows: CategorySlice[] = tail.length
-		? [
-				...head,
-				{
-					categoryId: "__other__",
-					name: `Boshqa (${tail.length})`,
-					color: "blue",
-					amount: tail.reduce((acc, s) => acc + s.amount, 0),
-					share: tail.reduce((acc, s) => acc + s.share, 0),
-					count: tail.reduce((acc, s) => acc + s.count, 0),
-				},
-			]
-		: head;
+	// than being dropped, so the bars still add up to the period's total —
+	// shared with the stats screen's pie chart, so the two agree on the cutoff.
+	const rows = foldCategorySlices(slices, MAX_ROWS);
 
 	return (
 		<View className="gap-3">

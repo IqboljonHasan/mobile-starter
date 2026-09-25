@@ -34,7 +34,7 @@ import type {
  */
 
 /** Marks a file as ours. Checked on import before anything else is read. */
-export const BACKUP_FORMAT = "taqsim.backup";
+export const BACKUP_FORMAT = "kirciq.backup";
 
 /**
  * Bump when the shape changes; `parseBackup` refuses anything newer.
