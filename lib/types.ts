@@ -16,6 +16,9 @@ export type Subcategory = {
 	name: string;
 	/** Palette key, not a hex value — see lib/categoryColors.ts. */
 	color: CategoryColor;
+	/** Starred by the user: shown as a one-tap shortcut in the transaction form.
+	 *  Absent reads as false, so older data and backups need no migration. */
+	pinned?: boolean;
 };
 
 export type Category = {

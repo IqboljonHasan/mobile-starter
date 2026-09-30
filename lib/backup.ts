@@ -128,7 +128,12 @@ function parseSubcategory(raw: unknown): Subcategory | null {
 	if (!isRecord(raw)) return null;
 	if (!nonEmptyString(raw.id) || !nonEmptyString(raw.name)) return null;
 	if (typeof raw.color !== "string" || !isCategoryColor(raw.color)) return null;
-	return { id: raw.id, name: raw.name, color: raw.color };
+	return {
+		id: raw.id,
+		name: raw.name,
+		color: raw.color,
+		...(raw.pinned === true ? { pinned: true } : {}),
+	};
 }
 
 function parseCategory(raw: unknown): Category | null {

@@ -360,6 +360,23 @@ export default function CategoriesScreen() {
 													</Pressable>
 													<Pressable
 														accessibilityRole="button"
+														accessibilityLabel={`${subcategory.name} — ${subcategory.pinned ? "tezkor ro'yxatdan olib tashlash" : "tezkor ro'yxatga qo'shish"}`}
+														onPress={() =>
+															updateSubcategory(category.id, subcategory.id, {
+																pinned: !subcategory.pinned,
+															})
+														}
+														hitSlop={6}
+														className="w-7 h-7 items-center justify-center rounded-full active:opacity-60"
+													>
+														<Ionicons
+															name={subcategory.pinned ? "star" : "star-outline"}
+															size={14}
+															color={subcategory.pinned ? tc.primary : tc.mutedForeground}
+														/>
+													</Pressable>
+													<Pressable
+														accessibilityRole="button"
 														accessibilityLabel={`${subcategory.name} — o'chirish`}
 														onPress={() =>
 															confirmDeleteSubcategory(
@@ -415,7 +432,7 @@ export default function CategoriesScreen() {
 					>
 						{reordering
 							? "Dastakni bosib turing va suring. Ichki kategoriyalarni tartiblash uchun kategoriya nomiga bosing."
-							: "Ichki kategoriya nomiga bosing — tahrirlanadi, × tugmasi o'chiradi."}
+							: "Ichki kategoriya nomiga bosing — tahrirlanadi, ★ uni yozuv formasida tezkor tanlashga qo'yadi, × o'chiradi."}
 					</Text>
 				</ScrollView>
 			</View>

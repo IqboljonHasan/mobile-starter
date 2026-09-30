@@ -27,7 +27,7 @@ import { useFont } from "@/hooks/useFont";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
-import { categoryColorValue } from "@/lib/categoryColors";
+import { categoryColorValue, withAlpha } from "@/lib/categoryColors";
 import { formatDayLabel, todayISO } from "@/lib/date";
 import {
 	DEFAULT_METHOD,
@@ -311,6 +311,15 @@ function TransactionForm({
 	const mappedWallets = useMemo(
 		() => wallets.filter((w) => category?.walletIds?.includes(w.id)),
 		[wallets, category],
+	);
+
+	// Starred subcategories of this side of the ledger, across every category.
+	const pinnedShortcuts = useMemo(
+		() =>
+			typeCategories.flatMap((c) =>
+				c.subcategories.filter((s) => s.pinned).map((s) => ({ category: c, sub: s })),
+			),
+		[typeCategories],
 	);
 
 	const changeType = (next: TxType) => {
@@ -638,6 +647,58 @@ function TransactionForm({
 						</Text>
 					)}
 				</View>
+
+				{/* Pinned subcategories: one tap sets category and subcategory ---- */}
+				{pinnedShortcuts.length > 0 && (
+					<View>
+						<Text
+							className="font-medium text-foreground mb-1.5"
+							style={{ fontSize: tf.base }}
+						>
+							Tezkor tanlash
+						</Text>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							keyboardShouldPersistTaps="handled"
+							contentContainerStyle={{ gap: 8 }}
+						>
+							{pinnedShortcuts.map(({ category: c, sub }) => {
+								const selected = categoryId === c.id && subcategoryId === sub.id;
+								const subHex = categoryColorValue(sub.color, isDark);
+								return (
+									<Pressable
+										key={sub.id}
+										accessibilityRole="button"
+										accessibilityState={{ selected }}
+										onPress={() => {
+											if (categoryId !== c.id) changeCategory(c.id);
+											setSubcategoryId(sub.id);
+										}}
+										className="flex-row items-center gap-2 rounded-full px-3 py-2 active:opacity-70"
+										style={{
+											backgroundColor: selected
+												? subHex
+												: withAlpha(subHex, isDark ? 0.22 : 0.14),
+											borderWidth: 1.5,
+											borderColor: selected ? subHex : "transparent",
+										}}
+									>
+										<Text
+											className="font-medium"
+											style={{
+												fontSize: tf.xs,
+												color: selected ? "#fff" : tc.foreground,
+											}}
+										>
+											{sub.name}
+										</Text>
+									</Pressable>
+								);
+							})}
+						</ScrollView>
+					</View>
+				)}
 
 				{/* Subcategory -------------------------------------------------- */}
 				<View>
