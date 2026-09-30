@@ -1,5 +1,5 @@
 import { inMonth, inUnit, inYear, ofType, excludeDebts, sum } from "@/lib/ledger";
-import type { Category, Transaction } from "@/lib/types";
+import type { Category, IconName, Transaction } from "@/lib/types";
 import { categoryColorValue } from "@/lib/categoryColors";
 import { monthKeyOf, monthShortLabel, yearKeyOf } from "@/lib/date";
 
@@ -94,6 +94,9 @@ export type StatSlice = {
 	 */
 	context: string | null;
 	color: string;
+	/** The category's icon — a subcategory borrows its parent's. Absent for
+	 *  rows with no category behind them. */
+	icon?: IconName | null;
 	amount: number;
 	/** 0–1 of the period's total for this type — the bar's length. */
 	share: number;
@@ -134,10 +137,16 @@ function bucketOf(
 ): Bucket {
 	const category = byId.get(t.categoryId);
 	if (!category) {
-		return { key: NONE, name: "Kategoriyasiz", context: null, color: "blue" };
+		return { key: NONE, name: "Kategoriyasiz", context: null, color: "blue", icon: null };
 	}
 	if (level === "category") {
-		return { key: category.id, name: category.name, context: null, color: category.color };
+		return {
+			key: category.id,
+			name: category.name,
+			context: null,
+			color: category.color,
+			icon: category.icon,
+		};
 	}
 	const sub = t.subcategoryId
 		? category.subcategories.find((s) => s.id === t.subcategoryId)
@@ -147,6 +156,7 @@ function bucketOf(
 		name: sub?.name ?? category.name,
 		context: sub ? category.name : "subkategoriyasiz",
 		color: sub?.color ?? category.color,
+		icon: category.icon,
 	};
 }
 

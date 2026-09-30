@@ -1,23 +1,15 @@
-import { Ionicons } from "@expo/vector-icons";
 import { type ReactNode, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import MonthSwitcher from "@/components/MonthSwitcher";
+import AmountText from "@/components/AmountText";
 import PieChart from "@/components/PieChart";
 import StackedBarChart from "@/components/StackedBarChart";
-import YearSwitcher from "@/components/YearSwitcher";
-import { Card, SegmentedControl } from "@/components/ui";
+import StatRow from "@/components/StatRow";
+import { Card, PillTabs } from "@/components/ui";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
-import {
-	currentMonthKey,
-	currentYearKey,
-	lastMonthKeys,
-	lastYearKeys,
-	monthKeyOf,
-	yearKeyOf,
-} from "@/lib/date";
-import { inMonth, inYear, ofType } from "@/lib/ledger";
+import { lastMonthKeys, lastYearKeys, monthKeyOf, monthName, yearKeyOf } from "@/lib/date";
+import { inMonth, inYear, ofType, sum } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
 import {
 	breakdown,
@@ -32,9 +24,9 @@ import {
 	TREND_MONTHS,
 	TREND_YEARS,
 } from "@/lib/stats";
-import type { Category, Transaction, TxType } from "@/lib/types";
+import type { Category, IconName, Transaction, TxType } from "@/lib/types";
 
-type Span = "month" | "year";
+export type Span = "month" | "year";
 
 /** Rows the ranked list shows before it asks to be expanded. */
 const COLLAPSED_ROWS = 10;
@@ -43,17 +35,18 @@ const PIE_ROWS = 6;
 /** Rows a stacked trend tracks on their own; the rest stack as "Boshqa". */
 const TREND_ROWS = 5;
 
-const CHART_KINDS: { kind: ChartKind; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+const CHART_KINDS: { kind: ChartKind; icon: IconName; label: string }[] = [
 	{ kind: "trend", icon: "trending-up-outline", label: "Tendensiya" },
 	{ kind: "bar", icon: "bar-chart-outline", label: "Ustunli diagramma" },
 	{ kind: "pie", icon: "pie-chart-outline", label: "Doiraviy diagramma" },
 ];
 
 /**
- * The Stats screen's breakdown: category or subcategory, by month or year,
- * drawn three ways. The grouping and the chart are remembered across restarts;
- * the period and type start fresh, since they're about what's being looked at
- * right now:
+ * The Stats screen's breakdown: income or expense and category or
+ * subcategory picked in one row above the card, the chart picked in its
+ * header, and the rows drawn three ways. The period is
+ * picked by the screen; the side starts fresh on every visit, while the chart
+ * and grouping are remembered across restarts:
  *
  * - **Pie**: a donut of the period's biggest rows, with the list under it.
  * - **Bar**: every row ranked by length, which reads amounts more precisely
@@ -62,19 +55,24 @@ const CHART_KINDS: { kind: ChartKind; icon: keyof typeof Ionicons.glyphMap; labe
  *   years) ending at the picked period, to see which line of spending is
  *   growing. Tapping a legend item isolates that row.
  *
- * `transactions` arrives already scoped to one unit and filtered for debts;
- * the grouping, period, type, and chart are chosen here.
+ * `transactions` arrives already scoped to one unit and filtered for debts.
  */
 export default function BreakdownStats({
 	transactions,
 	categories,
 	unit,
 	hideIncome,
+	span,
+	month,
+	year,
 }: {
 	transactions: Transaction[];
 	categories: Category[];
 	unit: string;
 	hideIncome: boolean;
+	span: Span;
+	month: string;
+	year: string;
 }) {
 	const { tf } = useFont();
 	const { isDark, tc } = useTheme();
@@ -85,19 +83,21 @@ export default function BreakdownStats({
 		setStatsLevel,
 	} = usePreferences();
 
-	const [span, setSpan] = useState<Span>("month");
-	const [month, setMonth] = useState(currentMonthKey);
-	const [year, setYear] = useState(currentYearKey);
 	const [type, setType] = useState<TxType>("expense");
 	const [selected, setSelected] = useState<string | null>(null);
 	const [focus, setFocus] = useState<string | null>(null);
 	const [expanded, setExpanded] = useState(false);
 
 	const typed = useMemo(() => ofType(transactions, type), [transactions, type]);
-	const rows = useMemo(() => {
-		const inPeriod = span === "month" ? inMonth(typed, month) : inYear(typed, year);
-		return breakdown(inPeriod, categories, level);
-	}, [typed, span, month, year, categories, level]);
+	const inPeriod = useMemo(
+		() => (span === "month" ? inMonth(typed, month) : inYear(typed, year)),
+		[typed, span, month, year],
+	);
+	const rows = useMemo(
+		() => breakdown(inPeriod, categories, level),
+		[inPeriod, categories, level],
+	);
+	const total = useMemo(() => sum(inPeriod), [inPeriod]);
 
 	// Ends at the picked period rather than today, so stepping back through
 	// time keeps the chart about the period being looked at.
@@ -143,36 +143,12 @@ export default function BreakdownStats({
 	);
 
 	const colorOf = (slice: StatSlice) => sliceColor(slice.key, slice.color, isDark, tc.mutedForeground);
+	const iconOf = (slice: StatSlice): IconName =>
+		slice.icon ?? (slice.key === OTHER_KEY ? "ellipsis-horizontal" : "pricetag-outline");
 	const mask = type === "income" && hideIncome;
 
-	const header = (
-		<View className="flex-row gap-1">
-			{CHART_KINDS.map((item) => {
-				const active = item.kind === kind;
-				return (
-					<Pressable
-						key={item.kind}
-						accessibilityRole="button"
-						accessibilityLabel={item.label}
-						accessibilityState={{ selected: active }}
-						onPress={() => setStatsChart(item.kind)}
-						hitSlop={4}
-						className={`w-9 h-9 items-center justify-center rounded-full active:opacity-60 ${
-							active ? "bg-primary-highlight" : "bg-muted"
-						}`}
-					>
-						<Ionicons
-							name={item.icon}
-							size={18}
-							color={active ? tc.primary : tc.mutedForeground}
-						/>
-					</Pressable>
-				);
-			})}
-		</View>
-	);
-
 	const periodWord = span === "month" ? "oy" : "yil";
+	const periodLabel = span === "month" ? monthName(month) : `${year}-yil`;
 	const subtitle =
 		kind === "trend"
 			? `Oxirgi ${periodKeys.length} ${periodWord} · eng kattalari`
@@ -184,6 +160,26 @@ export default function BreakdownStats({
 		<Text className="text-muted-foreground text-center py-6" style={{ fontSize: tf.base }}>
 			{span === "month" ? "Bu oyda yozuv yo'q." : "Bu yilda yozuv yo'q."}
 		</Text>
+	);
+
+	const row = (
+		slice: StatSlice,
+		extra?: { active?: boolean; onPress?: () => void; bar?: boolean },
+	) => (
+		<StatRow
+			name={slice.name}
+			context={slice.context}
+			icon={iconOf(slice)}
+			color={colorOf(slice)}
+			amount={slice.amount}
+			share={slice.share}
+			unit={unit}
+			mask={mask}
+			bar={extra?.bar}
+			showPercent
+			active={extra?.active}
+			onPress={slice.key === OTHER_KEY ? undefined : extra?.onPress}
+		/>
 	);
 
 	let body: ReactNode;
@@ -251,7 +247,7 @@ export default function BreakdownStats({
 				<PieChart slices={slices} unit={unit} hideTotal={mask} />
 				<View className="gap-3 mt-5">
 					{slices.map((slice) => (
-						<Row key={slice.key} slice={slice} color={colorOf(slice)} unit={unit} mask={mask} />
+						<View key={slice.key}>{row(slice, { bar: false })}</View>
 					))}
 				</View>
 			</>
@@ -259,26 +255,20 @@ export default function BreakdownStats({
 	} else {
 		const visible = expanded ? rows : rows.slice(0, COLLAPSED_ROWS);
 		body = (
-			<View className="gap-3">
+			<View className="gap-5">
 				{visible.map((slice) => {
-					const color = colorOf(slice);
 					const open = slice.key === selected;
 					return (
 						<View key={slice.key}>
-							<Row
-								slice={slice}
-								color={color}
-								unit={unit}
-								mask={mask}
-								bar
-								active={open}
-								onPress={() => setSelected(open ? null : slice.key)}
-							/>
+							{row(slice, {
+								active: open,
+								onPress: () => setSelected(open ? null : slice.key),
+							})}
 							{open && (
 								<View className="mt-3 p-3 rounded-2xl bg-muted">
 									<StackedBarChart
 										periods={rowTrend}
-										colors={{ [slice.key]: color }}
+										colors={{ [slice.key]: colorOf(slice) }}
 										height={90}
 									/>
 									<TrendSummary
@@ -311,156 +301,68 @@ export default function BreakdownStats({
 	}
 
 	return (
-		<Card
-			title={level === "category" ? "Kategoriyalar bo'yicha" : "Subkategoriyalar bo'yicha"}
-			subtitle={subtitle}
-			headerRight={header}
-		>
-			<SegmentedControl
-				items={[
-					{ key: "category", label: "Kategoriya" },
-					{ key: "subcategory", label: "Subkategoriya" },
-				]}
-				value={level}
-				onChange={(key) => {
-					// Row keys differ between the two groupings, so an open row or
-					// a focused legend item wouldn't survive the switch anyway.
-					setStatsLevel(key as BreakdownLevel);
-					setSelected(null);
-					setFocus(null);
-					setExpanded(false);
-				}}
-				className="bg-muted mb-2"
-			/>
-			<SegmentedControl
-				items={[
-					{ key: "month", label: "Oylik" },
-					{ key: "year", label: "Yillik" },
-				]}
-				value={span}
-				onChange={(key) => setSpan(key as Span)}
-				className="bg-muted mb-3"
-			/>
-			{span === "month" ? (
-				<MonthSwitcher value={month} onChange={setMonth} />
-			) : (
-				<YearSwitcher value={year} onChange={setYear} />
-			)}
-			<SegmentedControl
-				items={[
-					{ key: "expense", label: "Chiqim" },
-					{ key: "income", label: "Kirim" },
-				]}
-				value={type}
-				onChange={(key) => {
-					setType(key as TxType);
-					setSelected(null);
-					setFocus(null);
-				}}
-				className="bg-muted mt-4 mb-4"
-			/>
-			{body}
-		</Card>
-	);
-}
-
-/**
- * One ranked row: the name (with its category or "subkategoriyasiz" under it
- * at the subcategory level), the amount, and — in the bar view — a bar of its
- * share. Every row is directly labelled, so color never carries identity alone.
- */
-function Row({
-	slice,
-	color,
-	unit,
-	mask,
-	bar = false,
-	active = false,
-	onPress,
-}: {
-	slice: StatSlice;
-	color: string;
-	unit: string;
-	mask: boolean;
-	bar?: boolean;
-	active?: boolean;
-	onPress?: () => void;
-}) {
-	const { tf } = useFont();
-	const percent = slice.share < 0.01 ? "<1%" : `${Math.round(slice.share * 100)}%`;
-	const amountText = mask ? maskAmount(unit) : formatAmount(slice.amount, unit);
-	const interactive = !!onPress && slice.key !== OTHER_KEY;
-
-	return (
-		<Pressable
-			accessibilityRole={interactive ? "button" : "text"}
-			accessibilityState={interactive ? { expanded: active } : undefined}
-			accessibilityLabel={`${slice.name}${slice.context ? `, ${slice.context}` : ""}, ${
-				mask ? "yashirilgan" : formatAmount(slice.amount, unit)
-			}, ${percent}`}
-			disabled={!interactive}
-			onPress={onPress}
-			className={interactive ? "active:opacity-70" : undefined}
-		>
-			<View className="flex-row items-center gap-2">
-				<View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
+		<>
+			{/* Side and grouping share a row: both decide which rows are listed. */}
+			<View className="flex-row gap-3">
 				<View className="flex-1">
-					<Text
-						className={`font-medium ${active ? "text-primary" : "text-foreground"}`}
-						style={{ fontSize: tf.base }}
-						numberOfLines={1}
-					>
-						{slice.name}
-					</Text>
-					{slice.context !== null && (
-						<Text
-							className="text-muted-foreground"
-							style={{ fontSize: tf.xs }}
-							numberOfLines={1}
-						>
-							{`${slice.context} · ${slice.count} ta`}
-						</Text>
-					)}
+					<PillTabs
+						fill
+						items={[
+							{ key: "expense", label: "Chiqim" },
+							{ key: "income", label: "Kirim" },
+						]}
+						value={type}
+						onChange={(key) => {
+							setType(key);
+							setSelected(null);
+							setFocus(null);
+						}}
+					/>
 				</View>
-				<Text
-					className="font-semibold text-foreground"
-					style={{ fontSize: tf.base }}
-					numberOfLines={1}
-				>
-					{amountText}
-				</Text>
-				{!bar && (
-					<Text
-						className="text-muted-foreground text-right"
-						style={{ fontSize: tf.xs, width: 38 }}
-					>
-						{percent}
-					</Text>
-				)}
+				<PillTabs
+					items={[
+						{ key: "category", label: "Kategoriya" },
+						{ key: "subcategory", label: "Sub" },
+					]}
+					value={level}
+					onChange={(key) => {
+						// Row keys differ between the two groupings, so an open row or
+						// a focused legend item wouldn't survive the switch anyway.
+						setStatsLevel(key as BreakdownLevel);
+						setSelected(null);
+						setFocus(null);
+						setExpanded(false);
+					}}
+				/>
 			</View>
-			{bar && (
-				<View className="flex-row items-center gap-2 mt-1.5">
-					<View className="flex-1 rounded-full bg-muted overflow-hidden" style={{ height: 8 }}>
-						<View
-							style={{
-								// A zero-width bar reads as a rendering bug; a hairline
-								// reads as "almost nothing", which is the truth.
-								width: `${Math.max(slice.share * 100, 1.5)}%`,
-								height: 8,
-								borderRadius: 4,
-								backgroundColor: color,
-							}}
-						/>
+
+			{/* Breakdown -------------------------------------------------------- */}
+			<Card
+				title={level === "category" ? "Kategoriyalar bo'yicha" : "Subkategoriyalar bo'yicha"}
+				subtitle={subtitle}
+				headerRight={
+					<PillTabs
+						items={CHART_KINDS.map((c) => ({
+							key: c.kind,
+							icon: c.icon,
+							accessibilityLabel: c.label,
+						}))}
+						value={kind}
+						onChange={setStatsChart}
+					/>
+				}
+			>
+				{kind !== "trend" && (
+					<View className="mb-4">
+						<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
+							{`Jami ${type === "income" ? "kirim" : "chiqim"} · ${periodLabel}`}
+						</Text>
+						<AmountText amount={total} unit={unit} size={tf.xxl} mask={mask} />
 					</View>
-					<Text
-						className="text-muted-foreground text-right"
-						style={{ fontSize: tf.xs, width: 38 }}
-					>
-						{percent}
-					</Text>
-				</View>
-			)}
-		</Pressable>
+				)}
+				{body}
+			</Card>
+		</>
 	);
 }
 

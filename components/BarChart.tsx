@@ -1,7 +1,8 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import type { PeriodTotal } from "@/lib/stats";
+import type { TxType } from "@/lib/types";
 
 /**
  * Income vs. expense per period, as paired vertical bars — plain `View`s
@@ -15,15 +16,30 @@ import type { PeriodTotal } from "@/lib/stats";
 export default function BarChart({
 	periods,
 	height = 120,
+	focus = null,
+	onFocusChange,
 }: {
 	periods: PeriodTotal[];
 	height?: number;
+	/** Draws only this side. Null draws both. */
+	focus?: TxType | null;
+	/** Makes the legend tappable: a tap isolates that side, a second tap
+	 *  brings the other back. */
+	onFocusChange?: (focus: TxType | null) => void;
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
 
-	const peak = Math.max(1, ...periods.flatMap((p) => [p.income, p.expense]));
-	const barWidth = periods.length > 8 ? 5 : 8;
+	const showIncome = focus !== "expense";
+	const showExpense = focus !== "income";
+	// Measured against what is drawn, so an isolated side fills the chart
+	// instead of staying as short as it was beside a taller neighbor.
+	const peak = Math.max(
+		1,
+		...periods.flatMap((p) => [showIncome ? p.income : 0, showExpense ? p.expense : 0]),
+	);
+	const barWidth = (periods.length > 8 ? 5 : 8) * (focus ? 2 : 1);
+	const toggle = (side: TxType) => onFocusChange?.(focus === side ? null : side);
 
 	return (
 		<View>
@@ -38,20 +54,24 @@ export default function BarChart({
 							style={{ height, gap: 2 }}
 							accessibilityLabel={`${period.label}: kirim, chiqim`}
 						>
-							<Bar
-								value={period.income}
-								peak={peak}
-								height={height}
-								width={barWidth}
-								color={tc.success}
-							/>
-							<Bar
-								value={period.expense}
-								peak={peak}
-								height={height}
-								width={barWidth}
-								color={tc.danger}
-							/>
+							{showIncome && (
+								<Bar
+									value={period.income}
+									peak={peak}
+									height={height}
+									width={barWidth}
+									color={tc.success}
+								/>
+							)}
+							{showExpense && (
+								<Bar
+									value={period.expense}
+									peak={peak}
+									height={height}
+									width={barWidth}
+									color={tc.danger}
+								/>
+							)}
 						</View>
 						<Text
 							className="text-muted-foreground mt-1.5"
@@ -64,8 +84,18 @@ export default function BarChart({
 				))}
 			</View>
 			<View className="flex-row items-center justify-center gap-4 mt-3">
-				<Legend color={tc.success} label="Kirim" />
-				<Legend color={tc.danger} label="Chiqim" />
+				<Legend
+					color={tc.success}
+					label="Kirim"
+					dimmed={!showIncome}
+					onPress={onFocusChange ? () => toggle("income") : undefined}
+				/>
+				<Legend
+					color={tc.danger}
+					label="Chiqim"
+					dimmed={!showExpense}
+					onPress={onFocusChange ? () => toggle("expense") : undefined}
+				/>
 			</View>
 		</View>
 	);
@@ -99,14 +129,34 @@ function Bar({
 	);
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function Legend({
+	color,
+	label,
+	dimmed,
+	onPress,
+}: {
+	color: string;
+	label: string;
+	dimmed: boolean;
+	onPress?: () => void;
+}) {
 	const { tf } = useFont();
 	return (
-		<View className="flex-row items-center gap-1.5">
+		<Pressable
+			accessibilityRole={onPress ? "button" : "text"}
+			accessibilityState={onPress ? { selected: !dimmed } : undefined}
+			disabled={!onPress}
+			onPress={onPress}
+			hitSlop={8}
+			className={`flex-row items-center gap-1.5 px-2.5 py-1 rounded-full ${
+				onPress ? "bg-muted active:opacity-60" : ""
+			}`}
+			style={{ opacity: dimmed ? 0.4 : 1 }}
+		>
 			<View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
 			<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
 				{label}
 			</Text>
-		</View>
+		</Pressable>
 	);
 }

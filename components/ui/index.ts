@@ -9,6 +9,7 @@ export {
 	type ButtonVariant,
 } from "./Button";
 export { Card, type CardProps } from "./Card";
+export { CollapsibleCard, type CollapsibleCardProps } from "./CollapsibleCard";
 export { ColorPicker, type ColorPickerProps } from "./ColorPicker";
 export { DateField, type DateFieldProps } from "./DateField";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
@@ -21,6 +22,7 @@ export {
 	type PasswordFieldProps,
 } from "./Input";
 export { ListRow, type ListRowProps } from "./ListRow";
+export { type PillTab, PillTabs, type PillTabsProps } from "./PillTabs";
 export {
 	SegmentedControl,
 	type SegmentedControlProps,

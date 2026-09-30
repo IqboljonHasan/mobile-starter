@@ -65,6 +65,12 @@ export function monthTitle(monthKey: string): string {
 	return `${MONTHS_LONG[m - 1] ?? ""} ${y}`;
 }
 
+/** "2026-09" → "Sentabr" — for a label where the year is already on screen. */
+export function monthName(monthKey: string): string {
+	const [, m] = monthKey.split("-").map(Number);
+	return MONTHS_LONG[(m ?? 1) - 1] ?? "";
+}
+
 /** "2026-09" → "sen" — a trend chart's bar label, too narrow for the full name. */
 export function monthShortLabel(monthKey: string): string {
 	const [, m] = monthKey.split("-").map(Number);
