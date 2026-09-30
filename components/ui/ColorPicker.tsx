@@ -14,15 +14,20 @@ export interface ColorPickerProps {
 	value: CategoryColor;
 	onChange: (color: CategoryColor) => void;
 	label?: string;
+	/** Hues already claimed by a sibling. Shown dimmed and not selectable —
+	 *  unless they cover the whole palette, when reuse is the only way forward. */
+	takenColors?: CategoryColor[];
 }
 
 /**
  * The eight-hue category palette as swatches. The set is deliberately fixed —
  * see lib/categoryColors.ts for why free hex entry isn't offered.
  */
-export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
+export function ColorPicker({ value, onChange, label, takenColors = [] }: ColorPickerProps) {
 	const { isDark } = useTheme();
 	const { tf } = useFont();
+
+	const locked = CATEGORY_COLORS.every((c) => takenColors.includes(c)) ? [] : takenColors;
 
 	return (
 		<View>
@@ -38,12 +43,14 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
 				{CATEGORY_COLORS.map((color) => {
 					const hex = categoryColorValue(color, isDark);
 					const selected = color === value;
+					const taken = !selected && locked.includes(color);
 					return (
 						<Pressable
 							key={color}
 							accessibilityRole="button"
 							accessibilityLabel={CATEGORY_COLOR_LABELS[color]}
-							accessibilityState={{ selected }}
+							accessibilityState={{ selected, disabled: taken }}
+							disabled={taken}
 							onPress={() => onChange(color)}
 							hitSlop={4}
 							className="items-center justify-center rounded-full active:opacity-70"
@@ -51,6 +58,7 @@ export function ColorPicker({ value, onChange, label }: ColorPickerProps) {
 							// surface between — legible on the card in either theme, where a
 							// checkmark alone would be lost on the lighter hues.
 							style={{
+								opacity: taken ? 0.25 : 1,
 								width: 46,
 								height: 46,
 								borderRadius: 23,

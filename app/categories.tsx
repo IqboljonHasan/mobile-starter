@@ -515,6 +515,9 @@ export default function CategoriesScreen() {
 
 						<ColorPicker
 							label="Rang"
+							takenColors={visible
+								.filter((c) => c.id !== categoryDraft.id)
+								.map((c) => c.color)}
 							value={categoryDraft.color}
 							onChange={(color) =>
 								setCategoryDraft((draft) => (draft ? { ...draft, color } : draft))
@@ -583,6 +586,12 @@ export default function CategoriesScreen() {
 
 						<ColorPicker
 							label="Rang"
+							takenColors={
+								categories
+									.find((c) => c.id === subDraft.categoryId)
+									?.subcategories.filter((s) => s.id !== subDraft.id)
+									.map((s) => s.color) ?? []
+							}
 							value={subDraft.color}
 							onChange={(color) =>
 								setSubDraft((draft) => (draft ? { ...draft, color } : draft))

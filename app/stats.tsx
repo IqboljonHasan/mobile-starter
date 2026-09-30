@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import BarChart from "@/components/BarChart";
 import BreakdownStats from "@/components/BreakdownStats";
+import WalletBalanceStats from "@/components/WalletBalanceStats";
 import { Card, SegmentedControl } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -11,6 +12,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { lastMonthKeys, lastYearKeys } from "@/lib/date";
 import { excludeDebts, inUnit, ofType, sum, unitsUsed } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
+import { walletBalances } from "@/lib/wallets";
 import { monthlyTotals, TREND_MONTHS, TREND_YEARS, yearlyTotals } from "@/lib/stats";
 import "../global.css";
 
@@ -27,7 +29,7 @@ type TrendSpan = "month" | "year";
 export default function StatsScreen() {
 	const { tc } = useTheme();
 	const { tf } = useFont();
-	const { ready, transactions, categories, defaultUnit } = useLedger();
+	const { ready, transactions, categories, wallets, transfers, defaultUnit } = useLedger();
 	const { hideIncome, includeDebtsInStats } = usePreferences();
 
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
@@ -62,6 +64,11 @@ export default function StatsScreen() {
 				? monthlyTotals(transactions, lastMonthKeys(TREND_MONTHS), unit, includeDebtsInStats)
 				: yearlyTotals(transactions, lastYearKeys(TREND_YEARS), unit, includeDebtsInStats),
 		[transactions, trendSpan, unit, includeDebtsInStats],
+	);
+
+	const balances = useMemo(
+		() => walletBalances(transactions, transfers, wallets, unit),
+		[transactions, transfers, wallets, unit],
 	);
 
 	if (!ready) {
@@ -160,6 +167,9 @@ export default function StatsScreen() {
 					/>
 					<BarChart periods={trendPeriods} />
 				</Card>
+
+				{/* Wallet balances ------------------------------------------------ */}
+				<WalletBalanceStats balances={balances} unit={unit} hide={hideIncome} />
 
 				{/* Breakdown ------------------------------------------------------ */}
 				<BreakdownStats
