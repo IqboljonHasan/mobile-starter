@@ -14,9 +14,10 @@ import CategoryAvatar from "@/components/CategoryAvatar";
 import TransferSheet from "@/components/TransferSheet";
 import WalletPicker from "@/components/WalletPicker";
 import {
+	AmountField,
 	Button,
 	DateField,
-	InputField,
+	NumberPad,
 	SegmentedControl,
 	Select,
 	Textarea,
@@ -252,6 +253,7 @@ function TransactionForm({
 	// it: the override was a deliberate "this one comes from somewhere else".
 	const [walletTouched, setWalletTouched] = useState(!!existing?.walletId);
 	const [coverOpen, setCoverOpen] = useState(false);
+	const [padOpen, setPadOpen] = useState(false);
 	// Errors only appear once the user has tried to save — a form that turns red
 	// while it's still being filled in is nagging, not helping.
 	const [submitted, setSubmitted] = useState(false);
@@ -475,14 +477,13 @@ function TransactionForm({
 				{/* Amount and unit --------------------------------------------- */}
 				<View className="flex-row items-start gap-3">
 					<View className="flex-1">
-						<InputField
+						<AmountField
 							label="Summa"
 							required
 							value={amountText}
-							onChangeText={setAmountText}
+							onFocus={() => setPadOpen(true)}
+							onBlur={() => setPadOpen(false)}
 							placeholder="0"
-							keyboardType="decimal-pad"
-							inputMode="decimal"
 							error={submitted ? amountError : undefined}
 						/>
 					</View>
@@ -951,6 +952,13 @@ function TransactionForm({
 					) : null}
 				</View>
 			</ScrollView>
+
+			<NumberPad
+				visible={padOpen}
+				value={amountText}
+				onChange={setAmountText}
+				decimals={unitByCode(unit).decimals}
+			/>
 
 			{/* Covering a shortfall: the transfer lands first, then the expense it
 			    was opened for — so the entry is never saved against a balance that

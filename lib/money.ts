@@ -133,3 +133,68 @@ export function parseAmount(input: string): number {
 	if (!cleaned || cleaned === ".") return Number.NaN;
 	return Number(cleaned);
 }
+
+/**
+ * One key of the in-app number pad (components/ui/NumberPad), which is what
+ * money amounts are typed with instead of the system keyboard.
+ */
+export type AmountKey =
+	| "0"
+	| "1"
+	| "2"
+	| "3"
+	| "4"
+	| "5"
+	| "6"
+	| "7"
+	| "8"
+	| "9"
+	| "000"
+	| "."
+	| "back"
+	| "clear";
+
+/**
+ * Twelve whole digits — hundreds of billions of so'm — is more than any entry
+ * here will hold, and stopping there keeps the number well inside what a
+ * double stores exactly.
+ */
+const MAX_WHOLE_DIGITS = 12;
+
+/**
+ * The amount text after one key press.
+ *
+ * The text stays in the plain shape parseAmount reads — digits and at most one
+ * ".", no grouping — so a key that would make it malformed is simply ignored
+ * rather than producing something the form then has to reject. `decimals` is
+ * the unit's: a so'm amount has nowhere to put a point, and a dollar amount
+ * stops at cents.
+ */
+export function pressAmountKey(text: string, key: AmountKey, decimals: number): string {
+	switch (key) {
+		case "clear":
+			return "";
+		case "back":
+			return text.slice(0, -1);
+		case "000": {
+			let next = text;
+			for (let i = 0; i < 3; i++) next = pressAmountKey(next, "0", decimals);
+			return next;
+		}
+		case ".":
+			if (decimals === 0 || text.includes(".")) return text;
+			return `${text || "0"}.`;
+	}
+
+	const dot = text.indexOf(".");
+	if (dot !== -1) return text.length - dot - 1 < decimals ? text + key : text;
+	// A leading zero is replaced, never prefixed: "0" then "5" is 5, not 05.
+	if (text === "0") return key;
+	return text.length < MAX_WHOLE_DIGITS ? text + key : text;
+}
+
+/** "1500000.5" → "1 500 000.5" — amount text as it's shown while being typed. */
+export function groupAmountText(text: string): string {
+	const dot = text.indexOf(".");
+	return dot === -1 ? group(text) : `${group(text.slice(0, dot))}${text.slice(dot)}`;
+}

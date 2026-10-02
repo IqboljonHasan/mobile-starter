@@ -22,6 +22,12 @@ export {
 	type PasswordFieldProps,
 } from "./Input";
 export { ListRow, type ListRowProps } from "./ListRow";
+export {
+	AmountField,
+	type AmountFieldProps,
+	NumberPad,
+	type NumberPadProps,
+} from "./NumberPad";
 export { type PillTab, PillTabs, type PillTabsProps } from "./PillTabs";
 export {
 	SegmentedControl,

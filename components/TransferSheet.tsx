@@ -2,11 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import WalletPicker from "@/components/WalletPicker";
-import { BottomSheet, Button, InputField } from "@/components/ui";
+import {
+	AmountField,
+	BottomSheet,
+	Button,
+	InputField,
+	NumberPad,
+} from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { todayISO } from "@/lib/date";
-import { formatAmount, parseAmount } from "@/lib/money";
+import { formatAmount, parseAmount, unitByCode } from "@/lib/money";
 import type { TransferInput, Wallet } from "@/lib/types";
 import type { WalletBalance } from "@/lib/wallets";
 
@@ -55,6 +61,7 @@ export default function TransferSheet({
 		initialAmount ? String(initialAmount) : "",
 	);
 	const [note, setNote] = useState("");
+	const [padOpen, setPadOpen] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
 
 	const amount = parseAmount(amountText);
@@ -135,14 +142,13 @@ export default function TransferSheet({
 					error={submitted && !toWalletId ? "Qabul qiluvchi hamyonni tanlang" : undefined}
 				/>
 
-				<InputField
+				<AmountField
 					label="Summa"
 					required
 					value={amountText}
-					onChangeText={setAmountText}
+					onFocus={() => setPadOpen(true)}
+					onBlur={() => setPadOpen(false)}
 					placeholder="0"
-					keyboardType="decimal-pad"
-					inputMode="decimal"
 					error={submitted ? amountError : undefined}
 					hint={
 						leavesNegative && fromWalletId
@@ -173,6 +179,13 @@ export default function TransferSheet({
 					</View>
 				</View>
 			</ScrollView>
+
+			<NumberPad
+				visible={padOpen}
+				value={amountText}
+				onChange={setAmountText}
+				decimals={unitByCode(unit).decimals}
+			/>
 		</BottomSheet>
 	);
 }

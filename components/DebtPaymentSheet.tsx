@@ -2,17 +2,25 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import WalletPicker from "@/components/WalletPicker";
 import {
+	AmountField,
 	BottomSheet,
 	Button,
 	DateField,
 	InputField,
+	NumberPad,
 	SegmentedControl,
 } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { todayISO } from "@/lib/date";
 import { DIRECTION_META, paymentType, remainingAmount } from "@/lib/debts";
-import { formatAmount, PAY_METHODS, parseAmount, roundAmount } from "@/lib/money";
+import {
+	formatAmount,
+	PAY_METHODS,
+	parseAmount,
+	roundAmount,
+	unitByCode,
+} from "@/lib/money";
 import type { Debt, DebtPayment, DebtPaymentInput, PayMethod } from "@/lib/types";
 import { walletBalances } from "@/lib/wallets";
 
@@ -68,6 +76,7 @@ export default function DebtPaymentSheet({
 		existing ? existing.walletId : debt.walletId,
 	);
 	const [note, setNote] = useState(existing?.note ?? "");
+	const [padOpen, setPadOpen] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
 
 	const balances = useMemo(
@@ -118,14 +127,13 @@ export default function DebtPaymentSheet({
 				</View>
 
 				<View>
-					<InputField
+					<AmountField
 						label="Summa"
 						required
 						value={amountText}
-						onChangeText={setAmountText}
+						onFocus={() => setPadOpen(true)}
+						onBlur={() => setPadOpen(false)}
 						placeholder="0"
-						keyboardType="decimal-pad"
-						inputMode="decimal"
 						error={submitted ? amountError : undefined}
 						hint={
 							!amountError && cap > 0 && amount === cap
@@ -216,6 +224,13 @@ export default function DebtPaymentSheet({
 					</View>
 				</View>
 			</ScrollView>
+
+			<NumberPad
+				visible={padOpen}
+				value={amountText}
+				onChange={setAmountText}
+				decimals={unitByCode(debt.unit).decimals}
+			/>
 		</BottomSheet>
 	);
 }

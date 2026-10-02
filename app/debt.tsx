@@ -14,11 +14,12 @@ import ContactPicker from "@/components/ContactPicker";
 import DebtPaymentSheet from "@/components/DebtPaymentSheet";
 import WalletPicker from "@/components/WalletPicker";
 import {
+	AmountField,
 	Badge,
 	Button,
 	Card,
 	DateField,
-	InputField,
+	NumberPad,
 	SegmentedControl,
 	Select,
 	Textarea,
@@ -149,6 +150,7 @@ function DebtForm({
 	// Null while adding a new payment; the payment itself while editing one —
 	// the sheet reads this to seed its fields and to know which mutator to call.
 	const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null);
+	const [padOpen, setPadOpen] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
 
 	const today = todayISO();
@@ -416,14 +418,13 @@ function DebtForm({
 				{/* Amount and unit ----------------------------------------------- */}
 				<View className="flex-row items-start gap-3">
 					<View className="flex-1">
-						<InputField
+						<AmountField
 							label="Summa"
 							required
 							value={amountText}
-							onChangeText={setAmountText}
+							onFocus={() => setPadOpen(true)}
+							onBlur={() => setPadOpen(false)}
 							placeholder="0"
-							keyboardType="decimal-pad"
-							inputMode="decimal"
 							error={submitted ? (amountError ?? belowPaid) : undefined}
 						/>
 					</View>
@@ -651,6 +652,13 @@ function DebtForm({
 					/>
 				)}
 			</ScrollView>
+
+			<NumberPad
+				visible={padOpen}
+				value={amountText}
+				onChange={setAmountText}
+				decimals={unitByCode(unit).decimals}
+			/>
 
 			{!!existing && (
 				<DebtPaymentSheet
