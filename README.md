@@ -46,8 +46,29 @@ hooks/
 lib/
   theme.ts               Runtime color values mirroring global.css
   storage.ts             AsyncStorage wrapper for preferences
+  prayers.ts             the prayer record and the qazo rules
+data/
+  loopPrayers.json       prayers extracted from a Loop Habit Tracker backup
+scripts/
+  import-loop-prayers.ts writes data/loopPrayers.json from a Loop .db
 global.css               Tailwind theme + semantic tokens (light & dark)
 ```
+
+## Namoz tab
+
+The first tab lists the five daily prayers from a Loop Habit Tracker backup,
+newest day first. A filter shows only the ones still owed. "O'qildi" marks a
+missed one as made up, and the mark can be taken back. Marks are kept in
+AsyncStorage under `starter:qaza_marks`, keyed by date and prayer.
+
+To refresh the list from a newer backup:
+
+```bash
+bun run import:prayers "Loop Habits Backup <date>.db"
+```
+
+Only entries Loop recorded as "no" or "unknown" count as missed. Prayers with
+no entry at all are left out.
 
 ## Theming
 

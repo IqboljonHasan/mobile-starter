@@ -22,6 +22,7 @@ import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
 import ComponentsScreen from "./components";
 import HomeScreen from "./index";
+import NamozScreen from "./namoz";
 import SettingsScreen from "./settings";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -38,11 +39,17 @@ type TabRoute = {
 
 /**
  * Tabs are rendered through a `PagerView` rather than a tab navigator, so they
- * are swipeable and all three stay mounted (no re-mount cost or lost scroll
+ * are swipeable and all of them stay mounted (no re-mount cost or lost scroll
  * position when switching). Add a tab by dropping a screen file in this folder
  * and adding an entry here.
  */
 const TABS: TabRoute[] = [
+	{
+		key: "namoz",
+		title: "Namoz",
+		icon: { active: "moon", inactive: "moon-outline" },
+		screen: NamozScreen,
+	},
 	{
 		key: "home",
 		title: "Home",
