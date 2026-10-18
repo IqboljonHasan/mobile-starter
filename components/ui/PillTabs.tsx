@@ -87,6 +87,9 @@ export function PillTabs<T extends string = string>({
 								className="font-semibold"
 								style={{ fontSize: compact ? tf.sm : tf.base, color: fg }}
 								numberOfLines={1}
+								// At the largest text size a shared row can run out of room;
+								// a slightly smaller label reads better than a cut-off one.
+								adjustsFontSizeToFit
 							>
 								{item.label}
 							</Text>

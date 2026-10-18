@@ -38,7 +38,12 @@ export default function YearSwitcher({
 				onPress={() => onChange(now)}
 				className="flex-1 items-center active:opacity-60"
 			>
-				<Text className="font-semibold text-foreground" style={{ fontSize: tf.lg }}>
+				<Text
+					className="font-semibold text-foreground"
+					style={{ fontSize: tf.lg }}
+					numberOfLines={1}
+					adjustsFontSizeToFit
+				>
 					{`${value} yil`}
 				</Text>
 			</Pressable>

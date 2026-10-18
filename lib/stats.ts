@@ -1,14 +1,25 @@
-import { inMonth, inUnit, inYear, ofType, excludeDebts, sum } from "@/lib/ledger";
+import { inMonth, inUnit, ofType, excludeDebts, sum } from "@/lib/ledger";
 import type { Category, IconName, Transaction } from "@/lib/types";
 import { categoryColorValue } from "@/lib/categoryColors";
-import { monthKeyOf, monthShortLabel, yearKeyOf } from "@/lib/date";
+import {
+	currentMonthKey,
+	daysBetween,
+	daysInMonth,
+	lastMonthKeys,
+	monthKeyOf,
+	monthShortLabel,
+	monthsOfYear,
+	shiftMonth,
+	todayISO,
+	yearKeyOf,
+} from "@/lib/date";
 
 /**
- * Pure aggregation helpers for the stats screen's trend charts. Nothing here
- * touches storage or React, matching lib/ledger.ts — this file only exists
- * separately because it groups transactions by a *span of periods* (a trailing
- * year of months, a trailing run of years) rather than by one period at a
- * time, which lib/ledger.ts's helpers already cover.
+ * Pure aggregation helpers for the stats views. Nothing here touches storage
+ * or React, matching lib/ledger.ts — this file only exists separately because
+ * it works across *several periods* (a trailing year of months, a period set
+ * against the one before it) rather than one period at a time, which
+ * lib/ledger.ts's helpers already cover.
  *
  * Every total here is scoped to one unit by the caller first, for the same
  * reason as everywhere else: a bar chart that silently added som to dollars
@@ -23,9 +34,32 @@ export type PeriodTotal = {
 	expense: number;
 };
 
-/** How many trailing months/years a trend chart plots. */
+/** How many trailing months a trend chart plots for a picked month. */
 export const TREND_MONTHS = 12;
-export const TREND_YEARS = 6;
+
+/** What a stats view is scoped to: one month, or one whole year. */
+export type Span = "month" | "year";
+
+/**
+ * The months a trend chart plots for the picked period.
+ *
+ * A picked year plots its own twelve months — which months of it were heavy is
+ * the question a year view answers. A picked month plots the trailing year up
+ * to today for as long as the month sits inside it, so tapping a column to
+ * look at another month only moves the highlight instead of sliding the whole
+ * chart out from under the finger; a month older than that ends the window
+ * itself.
+ */
+export function trendMonths(
+	span: Span,
+	month: string,
+	year: string,
+	now: string = currentMonthKey(),
+): string[] {
+	if (span === "year") return monthsOfYear(year);
+	const recent = lastMonthKeys(TREND_MONTHS, now);
+	return recent.includes(month) ? recent : lastMonthKeys(TREND_MONTHS, month);
+}
 
 /**
  * Income and expense per period, in one unit. Debt categories are excluded
@@ -56,19 +90,120 @@ export function monthlyTotals(
 	}));
 }
 
-/** One bar-group per year in `yearKeys`, in the order given. */
-export function yearlyTotals(
+/* Period summary ------------------------------------------------------------ */
+
+export type PeriodSummary = {
+	income: number;
+	expense: number;
+	incomeCount: number;
+	expenseCount: number;
+	/**
+	 * Change against the period before, as a fraction — 0.12 is 12% more.
+	 * Null when the period before had nothing to compare with, or when the
+	 * ledger doesn't reach back to its start.
+	 */
+	incomeChange: number | null;
+	expenseChange: number | null;
+	/** Today falls inside the period, so it hasn't finished yet. */
+	running: boolean;
+	/** Days and months the period has run — all of them once it has finished.
+	 *  What a per-day or per-month average divides by. */
+	days: number;
+	months: number;
+};
+
+const pad2 = (n: number) => `${n}`.padStart(2, "0");
+
+/** First and last day of a month or a year. */
+function bounds(span: Span, key: string): [string, string] {
+	return span === "month"
+		? [`${key}-01`, `${key}-${pad2(daysInMonth(key))}`]
+		: [`${key}-01-01`, `${key}-12-31`];
+}
+
+/** `today`'s place in the period before — the same day of the previous month
+ *  or year, pulled back to that month's last day when it has fewer. */
+function sameDayBefore(span: Span, today: string): string {
+	const month =
+		span === "month"
+			? shiftMonth(monthKeyOf(today), -1)
+			: `${Number(yearKeyOf(today)) - 1}-${today.slice(5, 7)}`;
+	return `${month}-${pad2(Math.min(Number(today.slice(8, 10)), daysInMonth(month)))}`;
+}
+
+function change(current: number, previous: number): number | null {
+	return previous > 0 ? (current - previous) / previous : null;
+}
+
+/**
+ * Totals for one month or year, with how they moved against the period
+ * before. `transactions` comes scoped to one unit and filtered for debts.
+ *
+ * The totals cover the whole period, exactly as the lists do. The comparison
+ * doesn't, while the period is still running: three days into a month, the
+ * month is set against the first three days of the last one rather than all
+ * of it — otherwise every month would look cheap until it ended.
+ *
+ * Nor is there a comparison until the ledger covers the whole of the period
+ * before: a year set against the five months someone had been using the app
+ * the year before would read as a fourfold jump that never happened.
+ */
+export function periodSummary(
 	transactions: Transaction[],
-	yearKeys: string[],
-	unit: string,
-	includeDebts: boolean,
-): PeriodTotal[] {
-	const scoped = inUnit(transactions, unit);
-	return yearKeys.map((key) => ({
-		key,
-		label: key,
-		...totalsOf(inYear(scoped, key), includeDebts),
-	}));
+	span: Span,
+	key: string,
+	today: string = todayISO(),
+): PeriodSummary {
+	const [from, to] = bounds(span, key);
+	const running = today >= from && today <= to;
+	const previousKey = span === "month" ? shiftMonth(key, -1) : `${Number(key) - 1}`;
+	const [previousFrom, previousEnd] = bounds(span, previousKey);
+	const previousTo = running ? sameDayBefore(span, today) : previousEnd;
+
+	let income = 0;
+	let expense = 0;
+	let incomeCount = 0;
+	let expenseCount = 0;
+	let incomeSoFar = 0;
+	let expenseSoFar = 0;
+	let incomeBefore = 0;
+	let expenseBefore = 0;
+	let tracked = false;
+
+	for (const t of transactions) {
+		if (t.date <= previousFrom) tracked = true;
+		const isIncome = t.type === "income";
+		if (t.date >= from && t.date <= to) {
+			if (isIncome) {
+				income += t.amount;
+				incomeCount += 1;
+			} else {
+				expense += t.amount;
+				expenseCount += 1;
+			}
+			// An entry dated later this period is planned, not spent yet — it
+			// counts in the totals but stays out of a like-for-like comparison.
+			if (!running || t.date <= today) {
+				if (isIncome) incomeSoFar += t.amount;
+				else expenseSoFar += t.amount;
+			}
+		} else if (t.date >= previousFrom && t.date <= previousTo) {
+			if (isIncome) incomeBefore += t.amount;
+			else expenseBefore += t.amount;
+		}
+	}
+
+	return {
+		income,
+		expense,
+		incomeCount,
+		expenseCount,
+		incomeChange: tracked ? change(incomeSoFar, incomeBefore) : null,
+		expenseChange: tracked ? change(expenseSoFar, expenseBefore) : null,
+		running,
+		days: daysBetween(from, running ? today : to),
+		months: span === "month" ? 1 : running ? Number(today.slice(5, 7)) : 12,
+	};
 }
 
 /* Breakdowns --------------------------------------------------------------- */
@@ -230,7 +365,7 @@ export function stackedTrend(
 	transactions: Transaction[],
 	categories: Category[],
 	level: BreakdownLevel,
-	span: "month" | "year",
+	span: Span,
 	periodKeys: string[],
 	keys: string[],
 	withOther: boolean,

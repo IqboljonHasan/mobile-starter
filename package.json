@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "prebuild": "expo prebuild",
-    "release": "expo prebuild && cd android && ./gradlew assembleRelease"
+    "release": "node scripts/release.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

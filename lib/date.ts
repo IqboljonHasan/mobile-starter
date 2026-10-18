@@ -18,6 +18,9 @@ const MONTHS_SHORT = [
 	"iyl", "avg", "sen", "okt", "noy", "dek",
 ];
 const WEEKDAYS_SHORT = ["Yak", "Dush", "Sesh", "Chor", "Pay", "Jum", "Shan"];
+const WEEKDAYS_LONG = [
+	"yakshanba", "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba",
+];
 
 /** Monday-first column headers for the calendar grid. */
 export const WEEKDAY_INITIALS = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"];
@@ -77,6 +80,25 @@ export function monthShortLabel(monthKey: string): string {
 	return MONTHS_SHORT[(m ?? 1) - 1] ?? "";
 }
 
+/** 28 to 31 — day 0 of the next month is the last day of this one. */
+export function daysInMonth(monthKey: string): number {
+	const [y, m] = monthKey.split("-").map(Number);
+	return new Date(y, m, 0).getDate();
+}
+
+/** The twelve month keys of `yearKey`, January first. */
+export function monthsOfYear(yearKey: string): string[] {
+	return Array.from({ length: 12 }, (_, i) => `${yearKey}-${`${i + 1}`.padStart(2, "0")}`);
+}
+
+/** Calendar days from `from` to `to`, both included. */
+export function daysBetween(from: string, to: string): number {
+	const ms = fromISODate(to).getTime() - fromISODate(from).getTime();
+	// Rounded rather than floored: across a DST change one day is 23 or 25
+	// hours long.
+	return Math.round(ms / 86_400_000) + 1;
+}
+
 /** `count` month keys ending at (and including) `endMonthKey`, oldest first —
  *  what a trailing trend chart plots along its x-axis. */
 export function lastMonthKeys(
@@ -97,17 +119,6 @@ export function currentYearKey(): string {
 	return yearKeyOf(todayISO());
 }
 
-/** `count` year keys ending at (and including) `endYearKey`, oldest first. */
-export function lastYearKeys(
-	count: number,
-	endYearKey: string = currentYearKey(),
-): string[] {
-	const end = Number(endYearKey);
-	const keys: string[] = [];
-	for (let i = count - 1; i >= 0; i--) keys.push(String(end - i));
-	return keys;
-}
-
 /** "18-sen" — the year is only added outside the current year. */
 export function formatDate(iso: string): string {
 	const date = fromISODate(iso);
@@ -115,6 +126,13 @@ export function formatDate(iso: string): string {
 	return date.getFullYear() === new Date().getFullYear()
 		? base
 		: `${base} ${date.getFullYear()}`;
+}
+
+/** "3-oktabr, shanba" — a day spelled out in full, for a screen header. */
+export function formatLongDate(iso: string): string {
+	const date = fromISODate(iso);
+	const month = MONTHS_LONG[date.getMonth()].toLowerCase();
+	return `${date.getDate()}-${month}, ${WEEKDAYS_LONG[date.getDay()]}`;
 }
 
 /** "Bugun", "Kecha", or "Jum, 18-sen" — for a date field and list headers. */

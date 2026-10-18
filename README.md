@@ -26,8 +26,14 @@ bun run ios
 
 ## What's in it
 
-- **Home** — a month at a time: net, income and expense totals, the split
-  between them, a ranked breakdown by category, and the latest entries.
+- **Home** — the total balance and how it divides across the wallets; then a
+  month at a time: income and expense with their change against last month,
+  how much of the income was spent, the net and the daily average, and the
+  top spending categories. Adding an entry floats at the bottom.
+- **Stats** — one month or year at a time, picked from a bar pinned under the
+  header: the same summary, a 12-month income/expense chart whose columns also
+  pick the month, and a breakdown by category or subcategory as a pie, ranked
+  bars or a stacked trend. All-time totals and the wallets sit below.
 - **Income** / **Expense** — that side of the ledger, grouped by day with a
   per-day total, filterable by category, month by month.
 - **Entry form** — amount + unit, category, subcategory, description, date

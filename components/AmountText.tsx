@@ -15,6 +15,7 @@ export default function AmountText({
 	mask = false,
 	color,
 	fit = false,
+	signed = false,
 	style,
 }: {
 	amount: number;
@@ -25,11 +26,13 @@ export default function AmountText({
 	color?: string;
 	/** Shrinks to fit a narrow column instead of truncating. */
 	fit?: boolean;
+	/** Writes "+" before a positive amount, for a result that can go either way. */
+	signed?: boolean;
 	style?: TextStyle;
 }) {
 	const { tc } = useTheme();
 	const { symbol, position } = unitByCode(unit);
-	const number = mask ? "••••" : formatAmount(amount, unit, { showUnit: false });
+	const number = mask ? "••••" : formatAmount(amount, unit, { showUnit: false, signed });
 	const unitText = (
 		<Text
 			style={{ fontSize: Math.round(size * 0.6), fontWeight: "500", color: tc.mutedForeground }}

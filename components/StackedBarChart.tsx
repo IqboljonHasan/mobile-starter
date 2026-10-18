@@ -1,11 +1,13 @@
 import { Text, View } from "react-native";
 import { useFont } from "@/hooks/useFont";
+import { currentMonthKey } from "@/lib/date";
 import type { StackedPeriod } from "@/lib/stats";
 
 /**
- * One stacked column per period, a segment per tracked row, bottom-up in rank
+ * One stacked column per month, a segment per tracked row, bottom-up in rank
  * order — plain `View`s like `BarChart`, and measured against one ruler (the
- * tallest column in the series) for the same reason.
+ * tallest column in the series) for the same reason. Months still ahead are
+ * labelled faintly, as on `BarChart`.
  *
  * `focus` draws a single row's segments alone, rescaled to that row's own
  * peak: a small line of spending would otherwise be a sliver at the foot of
@@ -24,6 +26,7 @@ export default function StackedBarChart({
 	height?: number;
 }) {
 	const { tf } = useFont();
+	const now = currentMonthKey();
 
 	const visible = periods.map((period) =>
 		focus ? period.segments.filter((s) => s.key === focus) : period.segments,
@@ -72,7 +75,7 @@ export default function StackedBarChart({
 						</View>
 						<Text
 							className="text-muted-foreground mt-1.5"
-							style={{ fontSize: tf.xs }}
+							style={{ fontSize: tf.xs, opacity: period.key > now ? 0.4 : 1 }}
 							numberOfLines={1}
 						>
 							{period.label}

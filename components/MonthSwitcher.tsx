@@ -42,6 +42,8 @@ export default function MonthSwitcher({
 				<Text
 					className="font-semibold text-foreground"
 					style={{ fontSize: tf.lg }}
+					numberOfLines={1}
+					adjustsFontSizeToFit
 				>
 					{monthTitle(value)}
 				</Text>

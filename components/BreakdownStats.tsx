@@ -8,7 +8,7 @@ import { Card, PillTabs } from "@/components/ui";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
-import { lastMonthKeys, lastYearKeys, monthKeyOf, monthName, yearKeyOf } from "@/lib/date";
+import { currentMonthKey, monthKeyOf, monthName } from "@/lib/date";
 import { inMonth, inYear, ofType, sum } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
 import {
@@ -18,15 +18,13 @@ import {
 	foldSlices,
 	OTHER_KEY,
 	sliceColor,
+	type Span,
 	type StackedPeriod,
 	type StatSlice,
 	stackedTrend,
-	TREND_MONTHS,
-	TREND_YEARS,
+	trendMonths,
 } from "@/lib/stats";
 import type { Category, IconName, Transaction, TxType } from "@/lib/types";
-
-export type Span = "month" | "year";
 
 /** Rows the ranked list shows before it asks to be expanded. */
 const COLLAPSED_ROWS = 10;
@@ -51,9 +49,9 @@ const CHART_KINDS: { kind: ChartKind; icon: IconName; label: string }[] = [
  * - **Pie**: a donut of the period's biggest rows, with the list under it.
  * - **Bar**: every row ranked by length, which reads amounts more precisely
  *   than angle. Tapping a row opens its own trend right under it.
- * - **Trend**: the period's top rows stacked over the trailing months (or
- *   years) ending at the picked period, to see which line of spending is
- *   growing. Tapping a legend item isolates that row.
+ * - **Trend**: the period's top rows stacked month by month — over the same
+ *   months the screen's own trend plots (see `trendMonths`) — to see which
+ *   line of spending is growing. Tapping a legend item isolates that row.
  *
  * `transactions` arrives already scoped to one unit and filtered for debts.
  */
@@ -99,13 +97,9 @@ export default function BreakdownStats({
 	);
 	const total = useMemo(() => sum(inPeriod), [inPeriod]);
 
-	// Ends at the picked period rather than today, so stepping back through
-	// time keeps the chart about the period being looked at.
-	const periodKeys = useMemo(
-		() =>
-			span === "month" ? lastMonthKeys(TREND_MONTHS, month) : lastYearKeys(TREND_YEARS, year),
-		[span, month, year],
-	);
+	// Always months, whichever period is picked — the months of a picked year,
+	// or the trailing year around a picked month.
+	const periodKeys = useMemo(() => trendMonths(span, month, year), [span, month, year]);
 
 	// The trend tracks the picked period's biggest rows. An empty period (the
 	// month just started) would leave nothing to track, so it falls back to
@@ -114,11 +108,9 @@ export default function BreakdownStats({
 		if (kind !== "trend") return [];
 		if (rows.length > 0) return rows.slice(0, TREND_ROWS);
 		const inWindow = new Set(periodKeys);
-		const windowed = typed.filter((t) =>
-			inWindow.has(span === "month" ? monthKeyOf(t.date) : yearKeyOf(t.date)),
-		);
+		const windowed = typed.filter((t) => inWindow.has(monthKeyOf(t.date)));
 		return breakdown(windowed, categories, level).slice(0, TREND_ROWS);
-	}, [kind, rows, typed, periodKeys, span, categories, level]);
+	}, [kind, rows, typed, periodKeys, categories, level]);
 	const trend = useMemo(
 		() =>
 			kind === "trend"
@@ -126,20 +118,20 @@ export default function BreakdownStats({
 						typed,
 						categories,
 						level,
-						span,
+						"month",
 						periodKeys,
 						trendRows.map((r) => r.key),
 						true,
 					)
 				: [],
-		[kind, typed, categories, level, span, periodKeys, trendRows],
+		[kind, typed, categories, level, periodKeys, trendRows],
 	);
 	const rowTrend = useMemo(
 		() =>
 			kind === "bar" && selected
-				? stackedTrend(typed, categories, level, span, periodKeys, [selected], false)
+				? stackedTrend(typed, categories, level, "month", periodKeys, [selected], false)
 				: [],
-		[kind, selected, typed, categories, level, span, periodKeys],
+		[kind, selected, typed, categories, level, periodKeys],
 	);
 
 	const colorOf = (slice: StatSlice) => sliceColor(slice.key, slice.color, isDark, tc.mutedForeground);
@@ -147,11 +139,11 @@ export default function BreakdownStats({
 		slice.icon ?? (slice.key === OTHER_KEY ? "ellipsis-horizontal" : "pricetag-outline");
 	const mask = type === "income" && hideIncome;
 
-	const periodWord = span === "month" ? "oy" : "yil";
 	const periodLabel = span === "month" ? monthName(month) : `${year}-yil`;
+	const plotted = span === "month" ? `So'nggi ${periodKeys.length} oy` : `${year}-yil oylari`;
 	const subtitle =
 		kind === "trend"
-			? `Oxirgi ${periodKeys.length} ${periodWord} · eng kattalari`
+			? `${plotted} · eng kattalari`
 			: kind === "bar"
 				? "Qatorni bosing — vaqt bo'yicha o'zgarishi"
 				: undefined;
@@ -231,11 +223,13 @@ export default function BreakdownStats({
 						);
 					})}
 				</View>
-				<TrendSummary periods={trend} focus={activeFocus} span={span} unit={unit} mask={mask} />
+				<TrendSummary periods={trend} focus={activeFocus} unit={unit} mask={mask} />
 			</>
 		) : (
 			<Text className="text-muted-foreground text-center py-6" style={{ fontSize: tf.base }}>
-				{`Oxirgi ${periodKeys.length} ${periodWord}da yozuv yo'q.`}
+				{span === "month"
+					? `So'nggi ${periodKeys.length} oyda yozuv yo'q.`
+					: `${year}-yilda yozuv yo'q.`}
 			</Text>
 		);
 	} else if (rows.length === 0) {
@@ -274,7 +268,6 @@ export default function BreakdownStats({
 									<TrendSummary
 										periods={rowTrend}
 										focus={null}
-										span={span}
 										unit={unit}
 										mask={mask}
 									/>
@@ -366,38 +359,39 @@ export default function BreakdownStats({
 	);
 }
 
-/** Total and per-period average over a trend's window — for one row when
+/** Total and per-month average over a trend's window — for one row when
  *  `focus` names it, otherwise for everything plotted. */
 function TrendSummary({
 	periods,
 	focus,
-	span,
 	unit,
 	mask,
 }: {
 	periods: StackedPeriod[];
 	focus: string | null;
-	span: Span;
 	unit: string;
 	mask: boolean;
 }) {
 	const { tf } = useFont();
-	const total = periods.reduce(
+	// The rest of a running year hasn't happened yet; counting its empty
+	// months would only drag the average down.
+	const now = currentMonthKey();
+	const elapsed = periods.filter((p) => p.key <= now);
+	const total = elapsed.reduce(
 		(acc, p) =>
 			acc + (focus ? (p.segments.find((s) => s.key === focus)?.amount ?? 0) : p.total),
 		0,
 	);
-	// Averaged over every plotted period, empty ones included — a line of
+	// Averaged over every elapsed month, empty ones included — a line of
 	// spending that skips months really does cost less per month.
-	const average = periods.length > 0 ? total / periods.length : 0;
+	const average = elapsed.length > 0 ? total / elapsed.length : 0;
 	const show = (amount: number) => (mask ? maskAmount(unit) : formatAmount(amount, unit));
-	const across = `${periods.length} ${span === "month" ? "oyda" : "yilda"}`;
 
 	return (
 		<View className="flex-row mt-3">
 			<View className="flex-1">
 				<Text className="text-muted-foreground" style={{ fontSize: tf.xs }}>
-					{`Jami, ${across}`}
+					{`Jami, ${elapsed.length} oyda`}
 				</Text>
 				<Text className="font-semibold text-foreground" style={{ fontSize: tf.sm }}>
 					{show(total)}
@@ -405,7 +399,7 @@ function TrendSummary({
 			</View>
 			<View className="flex-1 items-end">
 				<Text className="text-muted-foreground" style={{ fontSize: tf.xs }}>
-					{span === "month" ? "O'rtacha oyiga" : "O'rtacha yiliga"}
+					{"O'rtacha oyiga"}
 				</Text>
 				<Text className="font-semibold text-foreground" style={{ fontSize: tf.sm }}>
 					{show(average)}
