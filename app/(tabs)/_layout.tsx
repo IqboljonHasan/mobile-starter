@@ -17,6 +17,7 @@ import {
 	useActiveTabShadow,
 	useSetActiveShadowKey,
 } from "@/contexts/TabScrollShadowContext";
+import { useDoubleBackToExit } from "@/hooks/useDoubleBackToExit";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
@@ -187,6 +188,7 @@ function TabLayoutInner() {
 	const pagerRef = useRef<PagerView>(null);
 	const [currentPage, setCurrentPage] = useState(0);
 	const setActiveShadowKey = useSetActiveShadowKey();
+	useDoubleBackToExit();
 
 	// Keep the header/tab-bar shadow reading from whichever screen is visible.
 	useEffect(() => {
