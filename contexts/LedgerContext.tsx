@@ -11,7 +11,19 @@ import {
 import type { BackupPayload } from "@/lib/backup";
 import { matchContact, paymentInput, principalInput } from "@/lib/debts";
 import type { PhoneContact } from "@/lib/phoneContacts";
-import { getJSON, getSetting, setJSON, setSetting } from "@/lib/storage";
+import {
+	getJSON,
+	getSetting,
+	KEY_CATEGORIES,
+	KEY_CONTACTS,
+	KEY_DEBTS,
+	KEY_TRANSACTIONS,
+	KEY_TRANSFERS,
+	KEY_UNIT,
+	KEY_WALLETS,
+	setJSON,
+	setSetting,
+} from "@/lib/storage";
 import { asPayMethod, DEFAULT_UNIT, unitByCode } from "@/lib/money";
 import { applyOrder, orderById } from "@/lib/reorder";
 import { SEED_CATEGORIES } from "@/lib/seed";
@@ -52,14 +64,6 @@ import {
  * screen, and it lets every screen derive what it needs with plain array
  * helpers from lib/ledger.ts.
  */
-
-const KEY_CATEGORIES = "categories";
-const KEY_TRANSACTIONS = "transactions";
-const KEY_WALLETS = "wallets";
-const KEY_TRANSFERS = "transfers";
-const KEY_CONTACTS = "contacts";
-const KEY_DEBTS = "debts";
-const KEY_UNIT = "default_unit";
 
 type LedgerContextType = {
 	/** False until the stored ledger has been read — screens show a spinner. */

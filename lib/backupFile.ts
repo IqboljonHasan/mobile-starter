@@ -3,9 +3,13 @@ import {
 	type BackupPayload,
 	backupFileName,
 	isErrorWithCode,
+	isSqliteFile,
+	type ParseResult,
 	parseBackup,
+	parseBackupData,
 	serializeBackup,
 } from "@/lib/backup";
+import { readBackupDb } from "@/lib/backupDb";
 
 /**
  * Getting a backup out of the app and back in, through the system pickers.
@@ -46,7 +50,10 @@ export async function saveBackup(payload: BackupPayload): Promise<SaveResult> {
 	return { status: "saved", fileName };
 }
 
-/** Reads and validates a backup the user picks. Nothing is written here. */
+/**
+ * Reads and validates a backup the user picks — a JSON file from "save to
+ * file", or a .db the Telegram backup sent. Nothing is written here.
+ */
 export async function loadBackup(): Promise<LoadResult> {
 	// Deliberately unfiltered by MIME type: the same file arrives as
 	// application/json, text/plain or application/octet-stream depending on how
@@ -59,15 +66,17 @@ export async function loadBackup(): Promise<LoadResult> {
 	const picked = await File.pickFileAsync();
 	if (picked.canceled) return { status: "canceled" };
 
-	let text: string;
+	let parsed: ParseResult;
 	try {
-		text = await picked.result.text();
+		const bytes = await picked.result.bytes();
+		parsed = isSqliteFile(bytes)
+			? parseBackupData(readBackupDb(bytes))
+			: parseBackup(await picked.result.text());
 	} catch (error) {
 		console.warn("[backup] failed to read the picked file", error);
 		return { status: "invalid", error: "Faylni o'qib bo'lmadi." };
 	}
 
-	const parsed = parseBackup(text);
 	if (!parsed.ok) return { status: "invalid", error: parsed.error };
 	return {
 		status: "loaded",

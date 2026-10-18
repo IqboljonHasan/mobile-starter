@@ -10,6 +10,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const PREFIX = "starter:";
 
+/**
+ * Where LedgerContext keeps each part of the ledger. Shared with the
+ * background backup (lib/backupTask.ts), which has to read the ledger without
+ * the React tree.
+ */
+export const KEY_CATEGORIES = "categories";
+export const KEY_TRANSACTIONS = "transactions";
+export const KEY_WALLETS = "wallets";
+export const KEY_TRANSFERS = "transfers";
+export const KEY_CONTACTS = "contacts";
+export const KEY_DEBTS = "debts";
+export const KEY_UNIT = "default_unit";
+
 export async function getSetting(key: string, fallback: string): Promise<string> {
 	try {
 		const value = await AsyncStorage.getItem(PREFIX + key);

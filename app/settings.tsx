@@ -20,6 +20,7 @@ import {
 } from "@/contexts/FontSizeContext";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
+import { useTelegramBackup } from "@/contexts/TelegramBackupContext";
 import { THEME_MODE_LABELS, type ThemeMode } from "@/contexts/ThemeContext";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
@@ -27,6 +28,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { prepareRestore, type WalletRestoreMode } from "@/lib/backup";
 import { loadBackup, saveBackup } from "@/lib/backupFile";
 import { UNITS, unitByCode } from "@/lib/money";
+import { describeTelegramStatus } from "@/lib/telegramBackup";
 import "../global.css";
 
 const FONT_SCALES = Object.keys(FONT_SCALE_VALUES) as FontSizeScale[];
@@ -63,6 +65,7 @@ export default function SettingsScreen() {
 		resetLedger,
 		replaceLedger,
 	} = useLedger();
+	const telegram = useTelegramBackup();
 
 	// Both rows open a system picker, which leaves the app in the background for
 	// as long as the user browses. Tracking which one is in flight keeps a second
@@ -144,6 +147,15 @@ export default function SettingsScreen() {
 		} finally {
 			setBusy(null);
 		}
+	};
+
+	const runTelegramSend = async () => {
+		if (telegram.sending) return;
+		const result = await telegram.sendNow();
+		Alert.alert(
+			result.ok ? "Yuborildi" : "Yuborilmadi",
+			result.ok ? "Zaxira nusxa Telegramga yuborildi." : result.error,
+		);
 	};
 
 	const confirmReset = () => {
@@ -279,7 +291,7 @@ export default function SettingsScreen() {
 					/>
 					<ListRow
 						title="Fayldan tiklash"
-						subtitle="Zaxira faylini tanlang — hozirgi yozuvlar o'rniga qo'yiladi"
+						subtitle="JSON yoki .db zaxira faylini tanlang — hozirgi yozuvlar o'rniga qo'yiladi"
 						icon="folder-open-outline"
 						divider
 						onPress={runLoad}
@@ -287,6 +299,30 @@ export default function SettingsScreen() {
 							busy === "load" ? <ActivityIndicator color={tc.primary} /> : undefined
 						}
 					/>
+					<ListRow
+						title="Telegram orqali"
+						subtitle={
+							telegram.configured
+								? describeTelegramStatus(telegram.config, telegram.status) +
+									(telegram.config.auto ? " · har kuni" : "")
+								: "Har kuni .db zaxirani o'z Telegram botingizga yuborish"
+						}
+						icon="paper-plane-outline"
+						divider
+						onPress={() => router.push("/telegram")}
+					/>
+					{telegram.configured && (
+						<ListRow
+							title="Telegramga hozir yuborish"
+							subtitle={`${transactions.length} ta yozuv .db fayl qilib chatga yuboriladi`}
+							icon="cloud-upload-outline"
+							divider
+							onPress={runTelegramSend}
+							trailing={
+								telegram.sending ? <ActivityIndicator color={tc.primary} /> : undefined
+							}
+						/>
+					)}
 				</Card>
 
 				{/* Theme ------------------------------------------------------- */}
@@ -368,7 +404,9 @@ export default function SettingsScreen() {
 					className="text-muted-foreground text-center px-6 pt-1"
 					style={{ fontSize: tf.xs }}
 				>
-					Hammasi faqat shu qurilmada saqlanadi.
+					{telegram.configured
+						? "Hammasi shu qurilmada saqlanadi — nusxasi faqat o'zingizning Telegram chatingizga boradi."
+						: "Hammasi faqat shu qurilmada saqlanadi."}
 				</Text>
 			</ScrollView>
 		</>

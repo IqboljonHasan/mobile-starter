@@ -11,6 +11,7 @@ import {
 import { FontSizeProvider } from "@/contexts/FontSizeContext";
 import { LedgerProvider } from "@/contexts/LedgerContext";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
+import { TelegramBackupProvider } from "@/contexts/TelegramBackupContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useTheme } from "@/hooks/useTheme";
 import "../global.css";
@@ -62,6 +63,7 @@ function AppContent() {
 				<Stack.Screen name="debt" options={{ title: "Qarz" }} />
 				<Stack.Screen name="contacts" options={{ title: "Kontaktlar" }} />
 				<Stack.Screen name="settings" options={{ title: "Sozlamalar" }} />
+				<Stack.Screen name="telegram" options={{ title: "Telegram zaxira" }} />
 			</Stack>
 		</View>
 	);
@@ -73,12 +75,15 @@ export default function RootLayout() {
 			<SafeAreaProvider>
 				{/* ThemeProvider sits outermost: FontSizeProvider's consumers read
 				    colors, not the other way round, and LedgerProvider's screens read
-				    both. */}
+				    both. TelegramBackupProvider sends the ledger, so it sits inside
+				    LedgerProvider. */}
 				<ThemeProvider>
 					<FontSizeProvider>
 						<PreferencesProvider>
 							<LedgerProvider>
-								<AppContent />
+								<TelegramBackupProvider>
+									<AppContent />
+								</TelegramBackupProvider>
 							</LedgerProvider>
 						</PreferencesProvider>
 					</FontSizeProvider>

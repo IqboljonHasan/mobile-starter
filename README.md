@@ -4,8 +4,9 @@ A personal income and expense tracker. Built on React Native (Expo) with
 expo-router, NativeWind 5 semantic color tokens, a light/dark/system theme
 switcher and an app-wide text-scale setting.
 
-Everything is stored on the device with AsyncStorage — there is no account, no
-server and no network call anywhere in the app.
+Everything is stored on the device with AsyncStorage — there is no account and
+no server. The one network call is the optional Telegram backup, which sends
+the ledger to a bot and chat the user sets up themselves.
 
 ## Run it
 
@@ -41,16 +42,19 @@ bun run ios
   quick actions; opening an existing entry edits or deletes it.
 - **Categories** — create, edit and delete categories and their subcategories,
   each with a color and an icon.
-- **Settings** — default unit, theme, text size, and erase-all-data.
+- **Settings** — default unit, theme, text size, backup to and restore from a
+  file, the Telegram backup, and erase-all-data.
 
 ## Layout
 
 ```
+index.ts                 entry: expo-router + the background backup task
 app/
   _layout.tsx            root Stack + providers (theme, font size, ledger)
   transaction.tsx        create / edit / delete one entry
   categories.tsx         category + subcategory manager
-  settings.tsx           default unit, theme, text size, erase data
+  settings.tsx           default unit, theme, text size, backup, erase data
+  telegram.tsx           Telegram backup: bot token, chat ID, send now
   (tabs)/
     _layout.tsx          PagerView + custom bottom tab bar
     index.tsx            Home (dashboard)
@@ -66,6 +70,7 @@ components/
   ui/                    the component library (import from "@/components/ui")
 contexts/
   LedgerContext.tsx      categories + transactions + persistence
+  TelegramBackupContext.tsx  Telegram settings + the foreground daily check
   ThemeContext.tsx       persisted light/dark/system preference
   FontSizeContext.tsx    persisted text scale
   TabNavigationContext.tsx   jump to a sibling tab from a screen
@@ -82,6 +87,11 @@ lib/
   seed.ts                the categories a fresh install starts with
   theme.ts               runtime color values mirroring global.css
   storage.ts             AsyncStorage wrapper (preferences + JSON)
+  backup.ts              backup format: JSON writer, validation, restore
+  backupFile.ts          save / pick a backup file (JSON or .db)
+  backupDb.ts            the ledger as an SQLite .db, and back
+  telegramBackup.ts      Telegram settings, sending, the daily rule
+  backupTask.ts          background task that sends the daily backup
 global.css               Tailwind theme + semantic tokens (light & dark)
 ```
 
@@ -115,6 +125,32 @@ Deleting a category does **not** delete the entries filed under it: money that
 moved stays recorded, and those entries read as "Uncategorized" until they're
 re-filed. Deleting a subcategory clears that field on its entries and leaves the
 parent category in place.
+
+## Telegram backup
+
+Settings → **Telegram orqali** takes a bot token (from @BotFather) and a chat
+ID, then sends the ledger to that chat as an SQLite `.db` file: once a day on
+its own, and on demand from the same screen or the Settings row. Saving the
+settings sends a backup straight away, so a wrong token or chat shows up
+immediately. **Fayldan tiklash** restores a `.db` the same way it restores a
+JSON file, and runs it through the same validation.
+
+"Daily" means once per local calendar day, and it's enforced from two places
+because neither is reliable alone:
+
+- **Background** — `lib/backupTask.ts` registers an `expo-background-task` that
+  wakes every few hours (the OS decides exactly when; iOS is especially
+  sparing) and sends only if today's backup is still owed. It runs without the
+  React tree, so it reads the ledger straight from AsyncStorage. It's imported
+  from `index.ts`, not from a route, because no route loads when Android starts
+  the app headless to run it.
+- **Foreground** — `TelegramBackupContext` runs the same check whenever the app
+  comes to the front.
+
+A failed attempt isn't retried for 30 minutes. The `.db` has one table per
+list (`categories`, `transactions`, `wallets`, …) plus `meta`. Nested lists
+(subcategories, allocations, payments) are stored as JSON columns in their
+parent's row.
 
 ## Category colors
 

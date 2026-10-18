@@ -25,7 +25,9 @@
         {
           "contactsPermission": "Taqsim qarzdorlarni tez qo'shish uchun kontaktlaringizni o'qiydi. Ular faqat shu qurilmada saqlanadi."
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,
