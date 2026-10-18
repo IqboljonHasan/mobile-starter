@@ -158,30 +158,7 @@ export default function DashboardScreen() {
 							)}
 						</>
 					}
-				/>
-
-				<Card title="Eng ko'p xarajat" subtitle={`${monthName(month)} · kategoriyalar bo'yicha`}>
-					{topCategories.length === 0 ? (
-						<Text className="text-muted-foreground py-2" style={{ fontSize: tf.sm }}>
-							{"Bu oyda chiqim yo'q."}
-						</Text>
-					) : (
-						<View className="gap-4">
-							{topCategories.map((slice) => (
-								<StatRow
-									key={slice.key}
-									name={slice.name}
-									icon={slice.icon ?? "pricetag-outline"}
-									color={sliceColor(slice.key, slice.color, isDark, tc.mutedForeground)}
-									amount={slice.amount}
-									share={slice.share}
-									unit={unit}
-									mask={false}
-								/>
-							))}
-						</View>
-					)}
-					<View className="mt-4">
+					footer={
 						<Button
 							label="Batafsil statistika"
 							variant="soft"
@@ -189,8 +166,10 @@ export default function DashboardScreen() {
 							startIcon={<Ionicons name="stats-chart-outline" size={18} color={tc.primary} />}
 							onPress={() => router.push(`/stats?month=${month}`)}
 						/>
-					</View>
-				</Card>
+					}
+				/>
+
+				
 			</ScrollView>
 
 			{/* The most common thing done here, so it floats rather than scrolls —

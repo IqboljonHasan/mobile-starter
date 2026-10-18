@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import AmountText from "@/components/AmountText";
 import { Card, PillTabs } from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
@@ -15,7 +15,7 @@ import { UNALLOCATED_ID, type WalletBalance } from "@/lib/wallets";
  *
  * The bar is the shape of the money at a glance; the rows under it are the
  * figures, each named and with its own icon, so a wallet is never told apart
- * by color alone.
+ * by color alone. The whole card is the way into the wallets screen.
  */
 export default function BalanceCard({
 	balances,
@@ -31,7 +31,7 @@ export default function BalanceCard({
 	units: string[];
 	onUnitChange: (unit: string) => void;
 	hide: boolean;
-	/** Opens the wallets screen. */
+	/** Opens the wallets screen — fired by a tap anywhere on the card. */
 	onOpen: () => void;
 }) {
 	const { tc, isDark } = useTheme();
@@ -50,11 +50,13 @@ export default function BalanceCard({
 		b.walletId === UNALLOCATED_ID ? tc.mutedForeground : categoryColorValue(b.color, isDark);
 
 	return (
-		<Card>
-			<View className="flex-row items-center justify-between gap-3" style={{ minHeight: 36 }}>
-				<Text className="font-medium text-muted-foreground" style={{ fontSize: tf.sm }}>
+		<Card onPress={onOpen}>
+			<View className="flex-row items-center gap-3" style={{ minHeight: 36 }}>
+				<Text className="flex-1 font-medium text-muted-foreground" style={{ fontSize: tf.sm }}>
 					Jami balans
 				</Text>
+				{/* Takes its own taps, so switching the unit doesn't also open
+				    the wallets screen. */}
 				{units.length > 1 && (
 					<PillTabs
 						compact
@@ -63,6 +65,7 @@ export default function BalanceCard({
 						onChange={onUnitChange}
 					/>
 				)}
+				<Ionicons name="chevron-forward" size={16} color={tc.mutedForeground} />
 			</View>
 			<AmountText
 				amount={total}
@@ -99,12 +102,11 @@ export default function BalanceCard({
 					{balances.map((b) => {
 						const color = colorOf(b);
 						return (
-							<Pressable
+							<View
 								key={b.walletId}
-								accessibilityRole="button"
+								accessible
 								accessibilityLabel={`${b.name}, ${hide ? "yashirilgan" : formatAmount(b.balance, unit)}`}
-								onPress={onOpen}
-								className="flex-row items-center gap-3 py-1.5 active:opacity-70"
+								className="flex-row items-center gap-3 py-1.5"
 							>
 								<View
 									className="items-center justify-center"
@@ -131,22 +133,11 @@ export default function BalanceCard({
 									mask={hide}
 									color={!hide && b.balance < 0 ? tc.danger : undefined}
 								/>
-							</Pressable>
+							</View>
 						);
 					})}
 				</View>
 			)}
-
-			<Pressable
-				accessibilityRole="button"
-				onPress={onOpen}
-				className="flex-row items-center justify-center gap-1 border-t border-border pt-3 mt-2 active:opacity-70"
-			>
-				<Text className="font-semibold text-primary" style={{ fontSize: tf.sm }}>
-					Hamyonlarni boshqarish
-				</Text>
-				<Ionicons name="chevron-forward" size={16} color={tc.primary} />
-			</Pressable>
 		</Card>
 	);
 }

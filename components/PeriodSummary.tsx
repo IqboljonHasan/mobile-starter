@@ -31,6 +31,7 @@ export default function PeriodSummary({
 	span,
 	hideIncome,
 	header,
+	footer,
 	onPressSide,
 }: {
 	summary: Summary;
@@ -39,6 +40,9 @@ export default function PeriodSummary({
 	hideIncome: boolean;
 	/** Drawn above the totals — Home puts its month switcher here. */
 	header?: ReactNode;
+	/** Drawn last, in place of the note on what the percentages compare
+	 *  against — Home puts its link to Stats here and keeps the card to that. */
+	footer?: ReactNode;
 	/** Makes the income and expense tiles tappable. */
 	onPressSide?: (type: TxType) => void;
 }) {
@@ -76,16 +80,6 @@ export default function PeriodSummary({
 				/>
 			</View>
 
-			{empty ? (
-				<Text className="text-muted-foreground text-center mt-4" style={{ fontSize: tf.sm }}>
-					{`Bu ${periodWord}da hali yozuv yo'q`}
-				</Text>
-			) : (
-				!hideIncome && income > 0 && <SpendMeter income={income} expense={expense} unit={unit} />
-			)}
-
-			<View className="h-px bg-border my-4" />
-
 			<View className="gap-2.5">
 				<View className="flex-row items-center justify-between gap-3">
 					<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
@@ -100,20 +94,18 @@ export default function PeriodSummary({
 						color={hideIncome || net === 0 ? undefined : net > 0 ? tc.success : tc.danger}
 					/>
 				</View>
-				<View className="flex-row items-center justify-between gap-3">
-					<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
-						{span === "month" ? "Kunlik o'rtacha chiqim" : "Oylik o'rtacha chiqim"}
-					</Text>
-					<AmountText amount={average} unit={unit} size={tf.base} />
-				</View>
 			</View>
 
-			{compared && (
-				<Text className="text-muted-foreground mt-3" style={{ fontSize: tf.xs }}>
-					{summary.running
-						? `Foizlar o'tgan ${periodWord}ning shu davriga nisbatan`
-						: `Foizlar o'tgan ${periodWord}ga nisbatan`}
-				</Text>
+			{footer ? (
+				<View className="mt-4">{footer}</View>
+			) : (
+				compared && (
+					<Text className="text-muted-foreground mt-3" style={{ fontSize: tf.xs }}>
+						{summary.running
+							? `Foizlar o'tgan ${periodWord}ning shu davriga nisbatan`
+							: `Foizlar o'tgan ${periodWord}ga nisbatan`}
+					</Text>
+				)
 			)}
 		</Card>
 	);
