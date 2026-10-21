@@ -62,7 +62,7 @@ type WalletDraftState = {
 export default function WalletsScreen() {
 	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
-	const { hideIncome, toggleHideIncome } = usePreferences();
+	const { hideIncome, toggleHideIncome, splitIncome } = usePreferences();
 	const {
 		wallets,
 		categories,
@@ -196,7 +196,7 @@ export default function WalletsScreen() {
 	const confirmRedistribute = () => {
 		Alert.alert(
 			"Tarix qayta taqsimlansinmi?",
-			`Barcha ${transactions.length} ta yozuv hozirgi foizlar va kategoriya biriktirmalari bo'yicha qaytadan hisoblanadi. Alohida yozuvlarda qo'lda tanlangan hamyonlar ham kategoriyanikiga qaytariladi.`,
+			`Barcha ${transactions.length} ta yozuv hozirgi foizlar va kategoriya biriktirmalari bo'yicha qaytadan hisoblanadi. Chiqimlarda qo'lda tanlangan hamyonlar kategoriyanikiga qaytariladi; bo'linmasdan bitta hamyonga tushirilgan kirimlar esa o'z hamyonida qoladi.`,
 			[
 				{ text: "Bekor qilish", style: "cancel" },
 				{ text: "Qayta taqsimlash", onPress: redistributeHistory },
@@ -651,7 +651,9 @@ export default function WalletsScreen() {
 						className="text-muted-foreground mt-3"
 						style={{ fontSize: tf.xs }}
 					>
-						{`O'chirilgan kategoriyalarning puli "${UNALLOCATED_NAME}" ga tushadi.`}
+						{splitIncome
+							? "O'chirilgan kategoriyalarning puli kirim formasida tanlangan hamyonga tushadi, tanlanmasa hech qaysi hamyonga yozilmaydi."
+							: "Kirimni bo'lish Sozlamalarda o'chirilgan — hozir hech bir kirim bo'linmaydi."}
 					</Text>
 				</Card>
 

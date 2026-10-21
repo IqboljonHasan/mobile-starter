@@ -8,6 +8,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import type { BackupPayload } from "@/lib/backup";
 import { matchContact, paymentInput, principalInput } from "@/lib/debts";
 import type { PhoneContact } from "@/lib/phoneContacts";
@@ -140,6 +141,7 @@ type LedgerContextType = {
 const LedgerContext = createContext<LedgerContextType | null>(null);
 
 export function LedgerProvider({ children }: { children: ReactNode }) {
+	const { splitIncome } = usePreferences();
 	const [ready, setReady] = useState(false);
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -376,11 +378,11 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 	const buildTransaction = useCallback(
 		(input: TransactionInput): Transaction => ({
 			...input,
-			allocations: allocationFor(input, categories, wallets),
+			allocations: allocationFor(input, categories, wallets, splitIncome),
 			id: uid("tx_"),
 			createdAt: Date.now(),
 		}),
-		[categories, wallets],
+		[categories, wallets, splitIncome],
 	);
 
 	const addTransaction = useCallback(
@@ -402,12 +404,12 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 					// them changes what the entry should be divided into.
 					return {
 						...next,
-						allocations: allocationFor(next, categories, wallets),
+						allocations: allocationFor(next, categories, wallets, splitIncome),
 					};
 				}),
 			);
 		},
-		[categories, wallets],
+		[categories, wallets, splitIncome],
 	);
 
 	const deleteTransaction = useCallback((id: string) => {
@@ -441,10 +443,17 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		);
 		setTransactions((prev) =>
 			prev.map((t) => {
-				if (t.walletId === id) return { ...t, walletId: null };
-				if (!t.allocations.some((a) => a.walletId === id)) return t;
+				// An income that named the jar keeps naming a place for its money:
+				// the pool, which is where its allocation goes below. Left null it
+				// would read as "divide me" the next time the entry is saved.
+				const walletId =
+					t.walletId !== id ? t.walletId : t.type === "income" ? UNALLOCATED_ID : null;
+				if (!t.allocations.some((a) => a.walletId === id)) {
+					return walletId === t.walletId ? t : { ...t, walletId };
+				}
 				return {
 					...t,
+					walletId,
 					allocations: t.allocations.map((a) =>
 						a.walletId === id ? { ...a, walletId: UNALLOCATED_ID } : a,
 					),
@@ -710,8 +719,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 	);
 
 	const redistributeHistory = useCallback(() => {
-		setTransactions((prev) => redistribute(prev, categories, wallets));
-	}, [categories, wallets]);
+		setTransactions((prev) => redistribute(prev, categories, wallets, splitIncome));
+	}, [categories, wallets, splitIncome]);
 
 	const resetLedger = useCallback(() => {
 		setTransactions([]);

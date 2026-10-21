@@ -52,7 +52,8 @@ export default function SettingsScreen() {
 	const { tc, isDark, mode, setMode } = useTheme();
 	const { tf } = useFont();
 	const { scale, setScale } = useFontSize();
-	const { includeDebtsInStats, setIncludeDebtsInStats } = usePreferences();
+	const { includeDebtsInStats, setIncludeDebtsInStats, splitIncome, setSplitIncome } =
+		usePreferences();
 	const {
 		categories,
 		transactions,
@@ -259,6 +260,23 @@ export default function SettingsScreen() {
 							)}
 						/>
 					</View>
+				</Card>
+
+				{/* Wallets ------------------------------------------------------- */}
+				<Card flush title="Hamyonlar">
+					<ListRow
+						title="Kirimni hamyonlarga bo'lish"
+						subtitle="O'chirilsa, yangi kirimlar bo'linmaydi — kirim formasida pul tushadigan hamyonni o'zingiz tanlaysiz. Eski yozuvlar o'zgarmaydi"
+						icon="wallet-outline"
+						trailing={
+							<Switch
+								value={splitIncome}
+								onValueChange={setSplitIncome}
+								trackColor={{ false: tc.muted, true: tc.primary }}
+								thumbColor="#fff"
+							/>
+						}
+					/>
 				</Card>
 
 				{/* Stats --------------------------------------------------------- */}

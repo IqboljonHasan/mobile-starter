@@ -11,6 +11,7 @@ import { getSetting, setSetting } from "@/lib/storage";
 
 const KEY_HIDE_INCOME = "hide_income";
 const KEY_INCLUDE_DEBTS = "include_debts_in_stats";
+const KEY_SPLIT_INCOME = "split_income";
 const KEY_STATS_CHART = "stats_chart";
 const KEY_STATS_LEVEL = "stats_level";
 
@@ -36,6 +37,11 @@ type PreferencesContextType = {
 	 *  DEBT_CATEGORY_IDS in lib/seed.ts for which categories these are. */
 	includeDebtsInStats: boolean;
 	setIncludeDebtsInStats: (value: boolean) => void;
+	/** Whether income is divided across the wallets by default. On unless the
+	 *  user turns it off; an individual entry can still opt out (or, with it
+	 *  off, name a wallet to receive the whole amount). */
+	splitIncome: boolean;
+	setSplitIncome: (value: boolean) => void;
 	/** How the Stats breakdown draws itself, and whether it groups by
 	 *  category or subcategory — whichever the user last picked, remembered
 	 *  across restarts. */
@@ -50,6 +56,8 @@ const PreferencesContext = createContext<PreferencesContextType>({
 	toggleHideIncome: () => {},
 	includeDebtsInStats: false,
 	setIncludeDebtsInStats: () => {},
+	splitIncome: true,
+	setSplitIncome: () => {},
 	statsChart: DEFAULT_STATS_CHART,
 	setStatsChart: () => {},
 	statsLevel: DEFAULT_STATS_LEVEL,
@@ -59,6 +67,7 @@ const PreferencesContext = createContext<PreferencesContextType>({
 export function PreferencesProvider({ children }: { children: ReactNode }) {
 	const [hideIncome, setHideIncomeState] = useState(false);
 	const [includeDebtsInStats, setIncludeDebtsInStatsState] = useState(false);
+	const [splitIncome, setSplitIncomeState] = useState(true);
 	const [statsChart, setStatsChartState] = useState(DEFAULT_STATS_CHART);
 	const [statsLevel, setStatsLevelState] = useState(DEFAULT_STATS_LEVEL);
 
@@ -67,6 +76,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 		getSetting(KEY_INCLUDE_DEBTS, "0").then((value) =>
 			setIncludeDebtsInStatsState(value === "1"),
 		);
+		getSetting(KEY_SPLIT_INCOME, "1").then((value) => setSplitIncomeState(value !== "0"));
 		getSetting(KEY_STATS_CHART, DEFAULT_STATS_CHART).then((value) =>
 			setStatsChartState(asChartKind(value)),
 		);
@@ -88,6 +98,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 		setSetting(KEY_INCLUDE_DEBTS, value ? "1" : "0");
 	}, []);
 
+	const setSplitIncome = useCallback((value: boolean) => {
+		setSplitIncomeState(value);
+		setSetting(KEY_SPLIT_INCOME, value ? "1" : "0");
+	}, []);
+
 	const setStatsChart = useCallback((kind: ChartKind) => {
 		setStatsChartState(kind);
 		setSetting(KEY_STATS_CHART, kind);
@@ -105,6 +120,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 				toggleHideIncome,
 				includeDebtsInStats,
 				setIncludeDebtsInStats,
+				splitIncome,
+				setSplitIncome,
 				statsChart,
 				setStatsChart,
 				statsLevel,

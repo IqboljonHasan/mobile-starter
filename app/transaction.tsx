@@ -6,6 +6,7 @@ import {
 	Alert,
 	Pressable,
 	ScrollView,
+	Switch,
 	Text,
 	View,
 } from "react-native";
@@ -230,7 +231,7 @@ function TransactionForm({
 		deleteTransaction,
 		addTransfer,
 	} = useLedger();
-	const { hideIncome } = usePreferences();
+	const { hideIncome, splitIncome } = usePreferences();
 
 	const [type, setType] = useState<TxType>(existing?.type ?? initialType);
 	const [amountText, setAmountText] = useState(
@@ -252,6 +253,12 @@ function TransactionForm({
 	// Once the wallet has been set by hand, changing the category stops moving
 	// it: the override was a deliberate "this one comes from somewhere else".
 	const [walletTouched, setWalletTouched] = useState(!!existing?.walletId);
+	// Income side: whether this entry is divided across the wallets. An income
+	// that names a wallet is the opt-out — the whole amount goes there instead.
+	const [splitThis, setSplitThis] = useState(!existing?.walletId);
+	const [incomeWalletId, setIncomeWalletId] = useState<string | null>(
+		type === "income" ? (existing?.walletId ?? null) : null,
+	);
 	const [coverOpen, setCoverOpen] = useState(false);
 	const [padOpen, setPadOpen] = useState(false);
 	// Errors only appear once the user has tried to save — a form that turns red
@@ -300,12 +307,19 @@ function TransactionForm({
 	// The stored split for an entry as it stands, and the split it is about to
 	// get once an edit is saved — history shows what actually happened, the form
 	// shows what saving would make happen.
+	// Whether the category (and the user-wide switch) would divide this income
+	// on its own; only then is there a split for the entry to opt out of.
+	const splitsByDefault = type === "income" && splitsIncome(category, splitIncome);
+	const dividing = splitsByDefault && splitThis;
+
 	const preview = useMemo(() => {
-		if (splitUnchanged && existing.allocations.length > 0) return existing.allocations;
-		if (type !== "income" || !splitsIncome(category)) return [];
+		if (!dividing) return [];
+		if (splitUnchanged && existing.allocations.length > 0 && !existing.walletId) {
+			return existing.allocations;
+		}
 		if (!Number.isFinite(amount) || amount <= 0) return [];
 		return splitAmount(amount, unit, wallets);
-	}, [splitUnchanged, existing, type, category, amount, unit, wallets]);
+	}, [dividing, splitUnchanged, existing, amount, unit, wallets]);
 
 	// Only surfaced as quick-pick chips once there's an actual choice to make —
 	// a category mapped to none or one wallet is already handled by the
@@ -333,6 +347,8 @@ function TransactionForm({
 		setSubcategoryId(null);
 		setWalletId(null);
 		setWalletTouched(false);
+		setIncomeWalletId(null);
+		setSplitThis(true);
 	};
 
 	const changeCategory = (next: string | null) => {
@@ -356,9 +372,12 @@ function TransactionForm({
 			subcategoryId,
 			description: description.trim(),
 			date,
-			// Only an expense is paid out of a wallet; an income is divided into
-			// all of them, which the store works out from the category.
-			walletId: type === "expense" ? walletId : null,
+			// An expense is paid out of one wallet. An income is divided across
+			// all of them, which the store works out from the category — unless
+			// it isn't being divided, in which case it names the wallet that
+			// receives it whole (or none, and touches no wallet).
+			walletId:
+				type === "expense" ? walletId : dividing ? null : incomeWalletId,
 		};
 
 		if (existing) updateTransaction(existing.id, input);
@@ -850,66 +869,110 @@ function TransactionForm({
 							</Text>
 						) : null}
 					</View>
-				) : preview.length > 0 ? (
-					<View>
-						<Text
-							className="font-medium text-foreground mb-1.5"
-							style={{ fontSize: tf.base }}
-						>
-							{splitUnchanged ? "Hamyonlarga taqsimlangan" : "Hamyonlarga taqsimlanadi"}
-						</Text>
-						<View
-							className="rounded-xl px-4 py-3 gap-2"
-							style={{
-								backgroundColor: tc.card,
-								borderWidth: 1,
-								borderColor: tc.border,
-							}}
-						>
-							{preview.map((allocation) => {
-								const share = amount > 0 ? allocation.amount / amount : 0;
-								return (
-									<View
-										key={allocation.walletId}
-										className="flex-row items-center gap-2"
+				) : category ? (
+					<View className="gap-3">
+						{splitsByDefault && (
+							<View className="flex-row items-center gap-3">
+								<View className="flex-1">
+									<Text
+										className="font-medium text-foreground"
+										style={{ fontSize: tf.base }}
 									>
-										<View
-											style={{
-												width: 8,
-												height: 8,
-												borderRadius: 4,
-												backgroundColor: categoryColorValue(
-													walletColor(wallets, allocation.walletId),
-													isDark,
-												),
-											}}
-										/>
-										<Text
-											className="flex-1 text-foreground"
-											style={{ fontSize: tf.sm }}
-											numberOfLines={1}
-										>
-											{walletName(wallets, allocation.walletId)}
-										</Text>
-										<Text
-											className="text-muted-foreground"
-											style={{ fontSize: tf.sm }}
-										>
-											{Math.round(share * 100)}%
-										</Text>
-										<Text
-											className="font-semibold text-foreground text-right"
-											style={{ fontSize: tf.sm, minWidth: 96 }}
-											numberOfLines={1}
-										>
-											{hideIncome
-												? maskAmount(unit)
-												: formatAmount(allocation.amount, unit)}
-										</Text>
-									</View>
-								);
-							})}
-						</View>
+										{"Hamyonlarga bo'lish"}
+									</Text>
+									<Text
+										className="text-muted-foreground"
+										style={{ fontSize: tf.xs }}
+									>
+										{splitThis
+											? "Kirim hamyonlar orasida foizlar bo'yicha bo'linadi"
+											: "Kirim bo'linmaydi — bitta hamyonga tushadi"}
+									</Text>
+								</View>
+								<Switch
+									value={splitThis}
+									onValueChange={setSplitThis}
+									trackColor={{ false: tc.muted, true: tc.primary }}
+									thumbColor="#fff"
+								/>
+							</View>
+						)}
+						{!dividing && (
+							<WalletPicker
+								label="Qaysi hamyonga tushadi"
+								value={incomeWalletId}
+								onChange={setIncomeWalletId}
+								wallets={wallets}
+								balances={balances}
+								unit={unit}
+								allowNone
+								noneLabel="Hamyonsiz"
+								includeUnallocated
+								hideAmounts={hideIncome}
+							/>
+						)}
+						{preview.length > 0 && (
+							<View>
+								<Text
+									className="font-medium text-foreground mb-1.5"
+									style={{ fontSize: tf.base }}
+								>
+									{splitUnchanged ? "Hamyonlarga taqsimlangan" : "Hamyonlarga taqsimlanadi"}
+								</Text>
+								<View
+									className="rounded-xl px-4 py-3 gap-2"
+									style={{
+										backgroundColor: tc.card,
+										borderWidth: 1,
+										borderColor: tc.border,
+									}}
+								>
+									{preview.map((allocation) => {
+										const share = amount > 0 ? allocation.amount / amount : 0;
+										return (
+											<View
+												key={allocation.walletId}
+												className="flex-row items-center gap-2"
+											>
+												<View
+													style={{
+														width: 8,
+														height: 8,
+														borderRadius: 4,
+														backgroundColor: categoryColorValue(
+															walletColor(wallets, allocation.walletId),
+															isDark,
+														),
+													}}
+												/>
+												<Text
+													className="flex-1 text-foreground"
+													style={{ fontSize: tf.sm }}
+													numberOfLines={1}
+												>
+													{walletName(wallets, allocation.walletId)}
+												</Text>
+												<Text
+													className="text-muted-foreground"
+													style={{ fontSize: tf.sm }}
+												>
+													{Math.round(share * 100)}%
+												</Text>
+												<Text
+													className="font-semibold text-foreground text-right"
+													style={{ fontSize: tf.sm, minWidth: 96 }}
+													numberOfLines={1}
+												>
+													{hideIncome
+														? maskAmount(unit)
+														: formatAmount(allocation.amount, unit)}
+												</Text>
+											</View>
+										);
+									})}
+								</View>
+							</View>
+						)}
 					</View>
 				) : null}
 

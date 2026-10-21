@@ -135,8 +135,13 @@ export function unallocatedPercent(wallets: Wallet[]): number {
  *
  * Debt categories never are: borrowed money and money collected on a loan
  * aren't earnings, which is the same reason they sit out of the stats.
+ *
+ * `enabled` is the user-wide switch for splitting at all. When it's off no
+ * category splits, whatever its own toggle says — the per-category toggle is
+ * kept as it was, so switching splitting back on restores the old setup.
  */
-export function splitsIncome(category: Category | null): boolean {
+export function splitsIncome(category: Category | null, enabled = true): boolean {
+	if (!enabled) return false;
 	if (!category || category.type !== "income") return false;
 	if (DEBT_CATEGORY_IDS.has(category.id)) return false;
 	return category.splitIncome !== false;
@@ -200,13 +205,18 @@ export function splitAmount(
  * The allocation an income entry should carry, given the category it's filed
  * under. Expenses and non-split income get none.
  *
- * Debt income is the one income that names a single wallet instead of being
- * divided: money borrowed, or collected on a loan, goes into the one jar that
- * actually received it. It would be wrong to split it — it isn't earnings to
- * apportion — but wrong too to leave it allocated to nothing, because paying
- * that same debt back *does* come out of a jar. An unallocated borrowing plus
- * a charged repayment would leave the balance lower than before the money was
- * ever borrowed.
+ * An income that names a wallet isn't divided: the whole amount lands in that
+ * one jar. Debt income always works this way — money borrowed, or collected on
+ * a loan, goes into the one jar that actually received it. It would be wrong
+ * to split it — it isn't earnings to apportion — but wrong too to leave it
+ * allocated to nothing, because paying that same debt back *does* come out of
+ * a jar. An unallocated borrowing plus a charged repayment would leave the
+ * balance lower than before the money was ever borrowed.
+ *
+ * Ordinary income can opt out of the split the same way, entry by entry: naming
+ * a wallet is how "don't divide this one, put it all here" is recorded. An
+ * income that names none is divided if its category (and `splitByDefault`, the
+ * user-wide switch) says so, and otherwise touches no wallet at all.
  */
 export function allocationFor(
 	transaction: {
@@ -218,15 +228,16 @@ export function allocationFor(
 	},
 	categories: Category[],
 	wallets: Wallet[],
+	splitByDefault = true,
 ): Allocation[] {
 	if (transaction.type !== "income") return [];
-	if (DEBT_CATEGORY_IDS.has(transaction.categoryId)) {
-		if (!transaction.walletId) return [];
+	if (transaction.walletId) {
 		if (!Number.isFinite(transaction.amount) || transaction.amount <= 0) return [];
 		return [{ walletId: transaction.walletId, amount: transaction.amount }];
 	}
+	if (DEBT_CATEGORY_IDS.has(transaction.categoryId)) return [];
 	const category = categories.find((c) => c.id === transaction.categoryId) ?? null;
-	if (!splitsIncome(category)) return [];
+	if (!splitsIncome(category, splitByDefault)) return [];
 	return splitAmount(transaction.amount, transaction.unit, wallets);
 }
 
@@ -269,17 +280,19 @@ export function redistribute(
 	transactions: Transaction[],
 	categories: Category[],
 	wallets: Wallet[],
+	splitByDefault = true,
 ): Transaction[] {
 	const byId = new Map(categories.map((c) => [c.id, c]));
 	return transactions.map((t) =>
 		t.type === "income"
 			? {
 					...t,
-					allocations: allocationFor(t, categories, wallets),
-					// Debt income keeps the wallet it named — that is not a mapping
-					// derived from the category, it's the jar the money went into,
-					// and re-applying today's rules must not forget it.
-					walletId: DEBT_CATEGORY_IDS.has(t.categoryId) ? t.walletId : null,
+					allocations: allocationFor(t, categories, wallets, splitByDefault),
+					// Income keeps the wallet it named — that is not a mapping
+					// derived from the category, it's the jar the money went into
+					// (a debt's, or an entry the user chose not to divide), and
+					// re-applying today's rules must not forget it.
+					walletId: t.walletId,
 				}
 			: {
 					...t,
