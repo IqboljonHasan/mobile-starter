@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";

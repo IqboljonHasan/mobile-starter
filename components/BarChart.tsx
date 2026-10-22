@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { currentMonthKey, monthTitle } from "@/lib/date";

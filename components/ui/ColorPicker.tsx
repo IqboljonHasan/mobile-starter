@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import {
 	CATEGORY_COLOR_LABELS,
 	CATEGORY_COLORS,
@@ -33,8 +34,8 @@ export function ColorPicker({ value, onChange, label, takenColors = [] }: ColorP
 		<View>
 			{!!label && (
 				<Text
-					className="font-medium text-foreground mb-1.5"
-					style={{ fontSize: tf.base }}
+					className="font-bold text-muted-foreground mb-2 ml-1"
+					style={{ fontSize: tf.sm }}
 				>
 					{label}
 				</Text>

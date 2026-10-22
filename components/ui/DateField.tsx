@@ -1,14 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Keyboard, Pressable, Text, View } from "react-native";
+import { Keyboard, Pressable, View } from "react-native";
 import BottomSheet from "@/components/ui/BottomSheet";
+import { FieldLabel } from "@/components/ui/FieldLabel";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import {
 	addDaysISO,
 	buildMonthGrid,
-	formatDate,
-	formatDayLabel,
+	formatFieldDate,
 	monthKeyOf,
 	monthTitle,
 	shiftMonth,
@@ -25,6 +26,12 @@ export interface DateFieldProps {
 	required?: boolean;
 	/** Days after this are not selectable — a ledger entry can't be filed in the future. */
 	maxDate?: string;
+	/** Days before this are not selectable — a due date can't come before the loan. */
+	minDate?: string;
+	/** Text drawn in the field in place of the date — "Muddatsiz", say. */
+	placeholder?: string;
+	/** The quick picks under the calendar. Defaults to today and yesterday. */
+	quickPicks?: { label: string; iso: string }[];
 }
 
 /**
@@ -38,6 +45,9 @@ export function DateField({
 	label,
 	required,
 	maxDate,
+	minDate,
+	placeholder,
+	quickPicks,
 }: DateFieldProps) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
@@ -53,50 +63,43 @@ export function DateField({
 		setOpen(true);
 	};
 
+	const outOfRange = (iso: string) =>
+		(!!maxDate && iso > maxDate) || (!!minDate && iso < minDate);
+
 	const pick = (iso: string) => {
-		if (maxDate && iso > maxDate) return;
+		if (outOfRange(iso)) return;
 		onChange(iso);
 		setOpen(false);
 	};
 
-	const quickPicks = [
-		{ label: "Bugun", iso: today },
-		{ label: "Kecha", iso: addDaysISO(today, -1) },
-	];
+	const quick = (
+		quickPicks ?? [
+			{ label: "Bugun", iso: today },
+			{ label: "Kecha", iso: addDaysISO(today, -1) },
+		]
+	).filter((q) => !outOfRange(q.iso));
+
+	const shown = placeholder ?? formatFieldDate(value);
 
 	return (
 		<View>
-			{!!label && (
-				<Text
-					className="font-medium text-foreground mb-1.5"
-					style={{ fontSize: tf.base }}
-				>
-					{label}
-					{required && <Text className="text-danger"> *</Text>}
-				</Text>
-			)}
+			{!!label && <FieldLabel required={required}>{label}</FieldLabel>}
 
 			<Pressable
 				accessibilityRole="button"
-				accessibilityLabel={`Sana: ${formatDayLabel(value)}`}
+				accessibilityLabel={`${label ? `${label}: ` : ""}${shown}`}
 				onPress={openSheet}
-				className="flex-row items-center gap-3 rounded-xl px-5 active:opacity-70"
-				style={{
-					backgroundColor: tc.card,
-					borderWidth: 1,
-					borderColor: tc.border,
-					minHeight: 56,
-				}}
+				className="flex-row items-center gap-2 pl-4 pr-3 active:opacity-70"
+				style={{ backgroundColor: tc.card, borderRadius: 16, minHeight: 52 }}
 			>
-				<Ionicons name="calendar-outline" size={20} color={tc.mutedForeground} />
-				<Text className="flex-1 text-foreground" style={{ fontSize: tf.lg }}>
-					{formatDayLabel(value)}
+				<Text
+					className="flex-1 font-bold"
+					style={{ fontSize: tf.base, color: placeholder ? tc.placeholder : tc.foreground }}
+					numberOfLines={1}
+				>
+					{shown}
 				</Text>
-				{/* The relative label alone is ambiguous once it says "Fri, 18 Sep" in
-				    a different year, so the absolute date always rides along. */}
-				<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
-					{formatDate(value)}
-				</Text>
+				<Ionicons name="calendar-clear-outline" size={18} color={tc.mutedForeground} />
 			</Pressable>
 
 			<BottomSheet visible={open} onClose={() => setOpen(false)} backdrop="faint">
@@ -106,33 +109,28 @@ export function DateField({
 							accessibilityRole="button"
 							accessibilityLabel="Oldingi oy"
 							onPress={() => setMonth((m) => shiftMonth(m, -1))}
-							hitSlop={8}
-							className="w-10 h-10 items-center justify-center rounded-full active:opacity-60"
+							className="w-11 h-11 items-center justify-center rounded-full bg-muted active:opacity-60"
 						>
-							<Ionicons name="chevron-back" size={20} color={tc.foreground} />
+							<Ionicons name="chevron-back" size={18} color={tc.foreground} />
 						</Pressable>
-						<Text
-							className="font-bold text-foreground"
-							style={{ fontSize: tf.lg }}
-						>
+						<Text className="font-extrabold text-foreground" style={{ fontSize: tf.lg }}>
 							{monthTitle(month)}
 						</Text>
 						<Pressable
 							accessibilityRole="button"
 							accessibilityLabel="Keyingi oy"
 							onPress={() => setMonth((m) => shiftMonth(m, 1))}
-							hitSlop={8}
-							className="w-10 h-10 items-center justify-center rounded-full active:opacity-60"
+							className="w-11 h-11 items-center justify-center rounded-full bg-muted active:opacity-60"
 						>
-							<Ionicons name="chevron-forward" size={20} color={tc.foreground} />
+							<Ionicons name="chevron-forward" size={18} color={tc.foreground} />
 						</Pressable>
 					</View>
 
-					<View className="flex-row">
+					<View className="flex-row mt-1">
 						{WEEKDAY_INITIALS.map((day, i) => (
 							<Text
 								key={`${day}-${i}`}
-								className="flex-1 text-center font-semibold text-muted-foreground py-1"
+								className="flex-1 text-center font-bold text-muted-foreground py-1"
 								style={{ fontSize: tf.xs }}
 							>
 								{day}
@@ -145,7 +143,7 @@ export function DateField({
 							{week.map((cell) => {
 								const selected = cell.iso === value;
 								const isToday = cell.iso === today;
-								const disabled = !!maxDate && cell.iso > maxDate;
+								const disabled = outOfRange(cell.iso);
 								return (
 									<Pressable
 										key={cell.iso}
@@ -153,22 +151,22 @@ export function DateField({
 										accessibilityState={{ selected, disabled }}
 										disabled={disabled}
 										onPress={() => pick(cell.iso)}
-										className="flex-1 items-center justify-center py-1"
+										className="flex-1 items-center justify-center py-0.5"
 									>
 										<View
 											className="w-10 h-10 items-center justify-center rounded-full"
 											style={{
 												backgroundColor: selected ? tc.primary : "transparent",
-												borderWidth: !selected && isToday ? 1 : 0,
+												borderWidth: !selected && isToday ? 1.5 : 0,
 												borderColor: tc.primary,
 											}}
 										>
 											<Text
 												style={{
 													fontSize: tf.base,
-													fontWeight: selected || isToday ? "700" : "400",
+													fontWeight: selected || isToday ? "800" : "600",
 													color: selected
-														? "#fff"
+														? tc.primaryFg
 														: disabled
 															? tc.disabled
 															: cell.inMonth
@@ -185,27 +183,31 @@ export function DateField({
 						</View>
 					))}
 
-					<View className="flex-row gap-2 pt-3">
-						{quickPicks.map((quick) => (
-							<Pressable
-								key={quick.label}
-								accessibilityRole="button"
-								onPress={() => pick(quick.iso)}
-								className={`flex-1 h-11 rounded-full items-center justify-center active:opacity-70 ${
-									value === quick.iso ? "bg-primary-highlight" : "bg-muted"
-								}`}
-							>
-								<Text
-									className={`font-semibold ${
-										value === quick.iso ? "text-primary" : "text-foreground"
-									}`}
-									style={{ fontSize: tf.base }}
-								>
-									{quick.label}
-								</Text>
-							</Pressable>
-						))}
-					</View>
+					{quick.length > 0 && (
+						<View className="flex-row gap-2 pt-3">
+							{quick.map((q) => {
+								const active = value === q.iso && !placeholder;
+								return (
+									<Pressable
+										key={q.label}
+										accessibilityRole="button"
+										accessibilityState={{ selected: active }}
+										onPress={() => pick(q.iso)}
+										className={`flex-1 h-11 rounded-full items-center justify-center active:opacity-70 ${
+											active ? "bg-primary" : "bg-muted"
+										}`}
+									>
+										<Text
+											className={`font-bold ${active ? "text-primary-fg" : "text-foreground"}`}
+											style={{ fontSize: tf.sm + 1 }}
+										>
+											{q.label}
+										</Text>
+									</Pressable>
+								);
+							})}
+						</View>
+					)}
 				</View>
 			</BottomSheet>
 		</View>

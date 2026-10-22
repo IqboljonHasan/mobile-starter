@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { Button } from "@/components/ui/Button";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
@@ -26,19 +27,22 @@ export function EmptyState({
 
 	return (
 		<View className="items-center px-8 py-12">
-			<View className="w-16 h-16 rounded-full items-center justify-center bg-muted">
-				<Ionicons name={icon} size={28} color={tc.mutedForeground} />
+			<View
+				className="items-center justify-center bg-card"
+				style={{ width: 56, height: 56, borderRadius: 18 }}
+			>
+				<Ionicons name={icon} size={26} color={tc.mutedForeground} />
 			</View>
 			<Text
-				className="font-semibold text-foreground mt-4 text-center"
-				style={{ fontSize: tf.lg }}
+				className="font-bold text-foreground mt-4 text-center"
+				style={{ fontSize: tf.base }}
 			>
 				{title}
 			</Text>
 			{!!message && (
 				<Text
-					className="text-muted-foreground mt-1 text-center"
-					style={{ fontSize: tf.base }}
+					className="font-semibold text-muted-foreground mt-1.5 text-center"
+					style={{ fontSize: tf.sm, lineHeight: Math.round(tf.sm * 1.4) }}
 				>
 					{message}
 				</Text>
@@ -51,7 +55,7 @@ export function EmptyState({
 						size="sm"
 						shape="pill"
 						onPress={onAction}
-						startIcon={<Ionicons name="add" size={16} color={tc.primary} />}
+						startIcon={<Ionicons name="add" size={16} color={tc.foreground} />}
 					/>
 				</View>
 			)}

@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import ReorderList from "@/components/ReorderList";
 import {
@@ -179,7 +180,7 @@ export default function CategoriesScreen() {
 			<Stack.Screen options={{ title: "Kategoriyalar" }} />
 			<View className="flex-1 bg-background">
 				<ScrollView
-					contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+					contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 12, paddingBottom: 40 }}
 					showsVerticalScrollIndicator={false}
 					scrollEnabled={!dragging}
 				>
@@ -206,7 +207,7 @@ export default function CategoriesScreen() {
 								label="Tayyor"
 								fullWidth
 								onPress={() => setReordering(false)}
-								startIcon={<Ionicons name="checkmark" size={18} color="#fff" />}
+								startIcon={<Ionicons name="checkmark" size={18} color={tc.primaryFg} />}
 							/>
 						) : (
 							<View className="flex-row gap-3">

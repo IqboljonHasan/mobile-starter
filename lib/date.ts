@@ -145,6 +145,50 @@ export function formatDayLabel(iso: string): string {
 	return `${WEEKDAYS_SHORT[date.getDay()]}, ${formatDate(iso)}`;
 }
 
+/**
+ * The same day `months` later — pulled back to the month's last day when it
+ * has fewer, so 31 January plus a month is 28/29 February, not 3 March.
+ */
+export function addMonthsISO(iso: string, months: number): string {
+	const date = fromISODate(iso);
+	const target = new Date(date.getFullYear(), date.getMonth() + months, 1);
+	const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+	target.setDate(Math.min(date.getDate(), last));
+	return toISODate(target);
+}
+
+/** "21-oktabr", with the year only outside the current one — "21-oktabr, 2025". */
+export function formatDayMonth(iso: string): string {
+	const date = fromISODate(iso);
+	const base = `${date.getDate()}-${MONTHS_LONG[date.getMonth()].toLowerCase()}`;
+	return date.getFullYear() === new Date().getFullYear()
+		? base
+		: `${base}, ${date.getFullYear()}`;
+}
+
+/** The word for a day next to today, or null — "Bugun", "Kecha", "Ertaga". */
+function relativeDay(iso: string): string | null {
+	const today = todayISO();
+	if (iso === today) return "Bugun";
+	if (iso === addDaysISO(today, -1)) return "Kecha";
+	if (iso === addDaysISO(today, 1)) return "Ertaga";
+	return null;
+}
+
+/** "Bugun, 21-oktabr" or "18-oktabr, yakshanba" — a picked day shown in a field. */
+export function formatFieldDate(iso: string): string {
+	const relative = relativeDay(iso);
+	if (relative) return `${relative}, ${formatDayMonth(iso)}`;
+	return `${formatDayMonth(iso)}, ${WEEKDAYS_LONG[fromISODate(iso).getDay()]}`;
+}
+
+/** "Bugun · 21-oktabr, chorshanba" — the heading over one day of a list. */
+export function formatSectionDay(iso: string): string {
+	const relative = relativeDay(iso);
+	const day = `${formatDayMonth(iso)}, ${WEEKDAYS_LONG[fromISODate(iso).getDay()]}`;
+	return relative ? `${relative} · ${day}` : day;
+}
+
 export type CalendarCell = {
 	iso: string;
 	day: number;

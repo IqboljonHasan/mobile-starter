@@ -4,7 +4,6 @@ import {
 	type GestureResponderEvent,
 	Pressable,
 	type PressableProps,
-	Text,
 	type TextStyle,
 	type ViewStyle,
 } from "react-native";
@@ -13,6 +12,7 @@ import Animated, {
 	useSharedValue,
 	withTiming,
 } from "react-native-reanimated";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useTheme } from "@/hooks/useTheme";
@@ -31,7 +31,7 @@ export interface ButtonProps extends Omit<PressableProps, "style"> {
 	variant?: ButtonVariant;
 	color?: ButtonColor;
 	size?: ButtonSize;
-	/** "rounded" (default, rounded-xl corners) or "pill" (fully rounded — FABs, chips). */
+	/** "pill" (default — every button in the app is one) or "rounded" (16px corners). */
 	shape?: ButtonShape;
 	/** Stretches the button to fill its parent's cross axis. */
 	fullWidth?: boolean;
@@ -42,16 +42,17 @@ export interface ButtonProps extends Omit<PressableProps, "style"> {
 	children?: ReactNode;
 }
 
-const SIZE_CLASSES: Record<ButtonSize, string> = {
-	sm: "px-4 py-2",
-	md: "px-5 py-3.5",
-	lg: "px-6 py-4.5",
+/** Fixed heights rather than padding, so a row of buttons lines up exactly. */
+const SIZES: Record<ButtonSize, { height: number; paddingHorizontal: number }> = {
+	sm: { height: 40, paddingHorizontal: 16 },
+	md: { height: 52, paddingHorizontal: 20 },
+	lg: { height: 58, paddingHorizontal: 24 },
 };
 
-const FONT_KEYS: Record<ButtonSize, "sm" | "base" | "lg"> = {
+const FONT_KEYS: Record<ButtonSize, "sm" | "base"> = {
 	sm: "sm",
 	md: "base",
-	lg: "lg",
+	lg: "base",
 };
 
 const PALETTE: Record<
@@ -67,9 +68,9 @@ const PALETTE: Record<
 	primary: {
 		bgClass: "bg-primary",
 		fgClass: "text-primary-fg",
-		softClass: "bg-primary-highlight",
+		softClass: "bg-muted",
 		borderClass: "border-primary",
-		tintClass: "text-primary",
+		tintClass: "text-foreground",
 	},
 	secondary: {
 		bgClass: "bg-muted",
@@ -81,14 +82,14 @@ const PALETTE: Record<
 	success: {
 		bgClass: "bg-success",
 		fgClass: "text-success-fg",
-		softClass: "bg-success/15",
+		softClass: "bg-success-soft",
 		borderClass: "border-success",
 		tintClass: "text-success",
 	},
 	danger: {
 		bgClass: "bg-danger",
 		fgClass: "text-danger-fg",
-		softClass: "bg-danger/15",
+		softClass: "bg-danger-soft",
 		borderClass: "border-danger",
 		tintClass: "text-danger",
 	},
@@ -101,7 +102,7 @@ export function Button({
 	variant = "solid",
 	color = "primary",
 	size = "md",
-	shape = "rounded",
+	shape = "pill",
 	fullWidth,
 	startIcon,
 	endIcon,
@@ -129,7 +130,7 @@ export function Button({
 	}));
 
 	const handlePressIn = (e: GestureResponderEvent) => {
-		scale.set(withTiming(0.96, { duration: 100 }));
+		scale.set(withTiming(0.97, { duration: 100 }));
 		onPressIn?.(e);
 	};
 	const handlePressOut = (e: GestureResponderEvent) => {
@@ -139,18 +140,27 @@ export function Button({
 
 	const palette = PALETTE[color];
 	const tint = {
-		primary: tc.primary,
+		primary: tc.foreground,
 		secondary: tc.foreground,
 		success: tc.success,
 		danger: tc.danger,
 	}[color];
-	const solidText: string = color === "secondary" ? tc.foreground : "#fff";
+	const solidText = {
+		primary: tc.primaryFg,
+		secondary: tc.foreground,
+		success: "#fff",
+		danger: "#fff",
+	}[color];
 
 	let containerClassName = `flex-row items-center justify-center gap-2 ${
-		shape === "pill" ? "rounded-full" : "rounded-xl"
-	} ${SIZE_CLASSES[size]} ${fullWidth ? "self-stretch" : ""}`;
-	let textClassName = "font-semibold";
-	const containerStyle: ViewStyle = { opacity: isDisabled ? 0.6 : 1 };
+		fullWidth ? "self-stretch" : ""
+	}`;
+	let textClassName = "font-extrabold";
+	const containerStyle: ViewStyle = {
+		...SIZES[size],
+		borderRadius: shape === "pill" ? SIZES[size].height / 2 : 16,
+		opacity: isDisabled ? 0.5 : 1,
+	};
 	const textStyle: TextStyle = { fontSize: tf[FONT_KEYS[size]] };
 	let spinnerColor = tint;
 
@@ -186,7 +196,7 @@ export function Button({
 				startIcon
 			)}
 			{!!label && (
-				<Text className={textClassName} style={textStyle}>
+				<Text className={textClassName} style={textStyle} numberOfLines={1}>
 					{label}
 				</Text>
 			)}

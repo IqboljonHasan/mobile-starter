@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { BottomSheet, Button, InputField, Textarea } from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
 import type { Contact, ContactDraft } from "@/lib/types";

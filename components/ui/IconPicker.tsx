@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { withAlpha } from "@/lib/categoryColors";
@@ -91,8 +92,8 @@ export function IconPicker({ value, onChange, label, tint }: IconPickerProps) {
 		<View>
 			{!!label && (
 				<Text
-					className="font-medium text-foreground mb-1.5"
-					style={{ fontSize: tf.base }}
+					className="font-bold text-muted-foreground mb-2 ml-1"
+					style={{ fontSize: tf.sm }}
 				>
 					{label}
 				</Text>

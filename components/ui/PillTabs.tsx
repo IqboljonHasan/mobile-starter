@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
@@ -50,7 +51,7 @@ export function PillTabs<T extends string = string>({
 
 	return (
 		<View
-			className={`flex-row rounded-2xl p-1 ${
+			className={`flex-row rounded-full p-1 ${
 				stretch ? "self-stretch" : fill ? "" : "self-start"
 			} ${className ?? ""}`}
 			style={{ backgroundColor: tc.muted }}
@@ -59,8 +60,8 @@ export function PillTabs<T extends string = string>({
 				const active = item.key === value;
 				const fg = active
 					? variant === "inverse"
-						? tc.background
-						: tc.primary
+						? tc.primaryFg
+						: tc.foreground
 					: tc.mutedForeground;
 				return (
 					<Pressable
@@ -69,22 +70,22 @@ export function PillTabs<T extends string = string>({
 						accessibilityLabel={item.accessibilityLabel ?? item.label}
 						accessibilityState={{ selected: active }}
 						onPress={() => onChange(item.key)}
-						className={`flex-row items-center justify-center gap-1.5 rounded-xl active:opacity-70 ${
+						className={`flex-row items-center justify-center gap-1.5 rounded-full active:opacity-70 ${
 							fill ? "flex-1" : ""
 						} ${item.label ? (compact ? "px-2.5" : "px-3.5") : "px-2.5"}`}
 						style={{
 							minHeight: 36,
 							backgroundColor: active
 								? variant === "inverse"
-									? tc.foreground
-									: tc.card
+									? tc.primary
+									: tc.background
 								: "transparent",
 						}}
 					>
 						{item.icon && <Ionicons name={item.icon} size={compact ? 15 : 18} color={fg} />}
 						{!!item.label && (
 							<Text
-								className="font-semibold"
+								className="font-bold"
 								style={{ fontSize: compact ? tf.sm : tf.base, color: fg }}
 								numberOfLines={1}
 								// At the largest text size a shared row can run out of room;

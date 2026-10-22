@@ -16,10 +16,12 @@ bun start
 ```
 
 Then `a` for Android, `i` for iOS. A native build is needed for
-`react-native-pager-view` and `react-native-reanimated` — they aren't in Expo
-Go:
+`react-native-reanimated` and for the Manrope font, which is linked natively —
+neither is in Expo Go. After pulling a change to `app.json`'s plugins, rebuild
+the native projects first:
 
 ```bash
+bun run prebuild --clean
 bun run android
 # or
 bun run ios
@@ -27,60 +29,68 @@ bun run ios
 
 ## What's in it
 
-- **Home** — the total balance and how it divides across the wallets; then a
-  month at a time: income and expense with their change against last month,
-  how much of the income was spent, the net and the daily average, and the
-  top spending categories. Adding an entry floats at the bottom.
-- **Stats** — one month or year at a time, picked from a bar pinned under the
-  header: the same summary, a 12-month income/expense chart whose columns also
-  pick the month, and a breakdown by category or subcategory as a pie, ranked
-  bars or a stacked trend. All-time totals and the wallets sit below.
-- **Income** / **Expense** — that side of the ledger, grouped by day with a
-  per-day total, filterable by category, month by month.
-- **Entry form** — amount + unit, category, subcategory, description, date
-  (today by default). Reached from the tab's **Add** button or the dashboard's
-  quick actions; opening an existing entry edits or deletes it.
-- **Categories** — create, edit and delete categories and their subcategories,
-  each with a color and an icon.
-- **Settings** — default unit, theme, text size, backup to and restore from a
-  file, the Telegram backup, and erase-all-data.
+There is one home screen; everything else is a sheet pushed over it.
+
+- **Home** — the total balance with this month's net under it, a row of
+  wallet tiles, the debts either way, and a link to the report. The month sits
+  in a panel at the bottom with its income, its spending and the two add
+  buttons; swiping the panel up opens the month's entries. Every figure is a
+  way in — a wallet tile opens the entries narrowed to that wallet.
+- **Kirim va chiqimlar** — both sides of the ledger in one list, a month at a
+  time, grouped by day with a per-day net. Two tiles total the month and filter
+  to one side; chips narrow it to a wallet (counting only the share that wallet
+  received) or to a category.
+- **Qarzlar** — what is owed either way, grouped into overdue, open and
+  settled, filterable by direction and state.
+- **Hisobot** (Stats) — one month or year at a time: the summary, a 12-month
+  chart, and a breakdown by category or subcategory.
+- **Entry and debt forms** — amount with pay method and unit, category and
+  subcategory, pinned quick picks, the wallet (or the income's split), note and
+  date; a debt adds the person and a due date with one-tap terms.
+- **Wallets**, **Categories**, **Contacts**, **Settings**, **Telegram backup**.
 
 ## Layout
 
 ```
 index.ts                 entry: expo-router + the background backup task
 app/
-  _layout.tsx            root Stack + providers (theme, font size, ledger)
+  _layout.tsx            root Stack + providers; every screen gets ScreenHeader
+  index.tsx              Home
+  entries.tsx            Kirim va chiqimlar — the month's ledger
+  debts.tsx              Qarzlar
   transaction.tsx        create / edit / delete one entry
+  debt.tsx               create / edit / settle one debt
+  stats.tsx              Hisobot
+  wallets.tsx            wallets, their shares, transfers
   categories.tsx         category + subcategory manager
-  settings.tsx           default unit, theme, text size, backup, erase data
+  contacts.tsx           the people debts are with
+  settings.tsx           look, distribution, privacy, data
   telegram.tsx           Telegram backup: bot token, chat ID, send now
-  (tabs)/
-    _layout.tsx          PagerView + custom bottom tab bar
-    index.tsx            Home (dashboard)
-    income.tsx           Income list
-    expense.tsx          Expense list
 components/
-  TransactionListScreen.tsx  the body both list tabs share
+  ScreenHeader.tsx       the blue strip + rounded sheet top every screen wears
+  HomeSky.tsx            the home screen's gradient backdrop
+  AmountCard.tsx         a form's amount, pay method and unit
+  BottomBar.tsx          actions pinned to the bottom of a sheet
   TransactionRow.tsx     one line of the ledger
-  CategoryBreakdown.tsx  ranked bars, one per category
-  CategoryAvatar.tsx     a category's icon in its own color
+  DebtRow.tsx            one debt
+  WalletIcon.tsx         a wallet's tile — the one thing drawn in colour
+  CategoryAvatar.tsx     a category's icon tile
   MonthSwitcher.tsx      prev / next month control
-  TabHeader.tsx          shared top bar, raises a shadow on scroll
   ui/                    the component library (import from "@/components/ui")
 contexts/
-  LedgerContext.tsx      categories + transactions + persistence
+  LedgerContext.tsx      categories, transactions, wallets, debts + persistence
   TelegramBackupContext.tsx  Telegram settings + the foreground daily check
   ThemeContext.tsx       persisted light/dark/system preference
   FontSizeContext.tsx    persisted text scale
-  TabNavigationContext.tsx   jump to a sibling tab from a screen
-  TabScrollShadowContext.tsx per-screen scroll state for header/tab-bar shadows
+  PreferencesContext.tsx hide income, debts in stats, split income
 hooks/
   useTheme.ts            isDark, tc (runtime colors), mode, setMode
   useFont.ts             tf — font sizes scaled by the user's setting
 lib/
-  types.ts               Category, Subcategory, Transaction
+  types.ts               Category, Transaction, Wallet, Debt, …
   ledger.ts              pure selectors — totals, breakdowns, grouping
+  wallets.ts             splits, balances, redistribution
+  debts.ts               debt status, totals, ledger entries
   money.ts               units, formatting, parsing
   date.ts                calendar-day helpers and the month grid
   categoryColors.ts      the validated category palette
@@ -92,6 +102,7 @@ lib/
   backupDb.ts            the ledger as an SQLite .db, and back
   telegramBackup.ts      Telegram settings, sending, the daily rule
   backupTask.ts          background task that sends the daily backup
+assets/fonts/            Manrope 400–800, linked natively by app.json
 global.css               Tailwind theme + semantic tokens (light & dark)
 ```
 
@@ -170,12 +181,29 @@ category and amount, so color is never the only thing carrying identity.
 Colors are defined once in `global.css` as semantic tokens and mirrored in
 `lib/theme.ts` for runtime use. **Keep the two in sync.**
 
+The design system, in short:
+
+- Every screen is a **white sheet with rounded top corners over the brand
+  blue** (`ScreenHeader` draws it as the stack's header, so a screen only sets
+  its `title` and `headerRight`). Home is the one exception: its own sky.
+- On the sheet, related things sit on **quiet grey groups** (`bg-card`, 20px
+  corners, no border or shadow). Anything inside a group that needs its own
+  surface uses `bg-background`, which reads as white on the grey.
+- **Ink** (`primary`) marks what is picked or pressed: solid buttons, chips that
+  are on, switches that are on. In dark mode it turns over to a light fill with
+  dark text, so put `tc.primaryFg` — never `"#fff"` — on a `primary` fill.
+- **Green and red are for money moving** — income and expense, owed to you and
+  owed by you — and otherwise colour belongs to the **wallets** (`WalletIcon`).
+  Categories and people are drawn neutral in the lists.
+- Buttons are pills; fields are 52px grey panels with 16px corners and a focus
+  ring (`tc.focus`); labels over them are `FieldLabel`.
+
 Use classes wherever a `className` is accepted:
 
 ```tsx
-<View className="bg-card border border-border rounded-2xl">
-  <Text className="text-foreground">Title</Text>
-  <Text className="text-muted-foreground">Subtitle</Text>
+<View className="bg-card rounded-[20px] p-4">
+  <Text className="text-foreground font-bold">Title</Text>
+  <Text className="text-muted-foreground font-semibold">Subtitle</Text>
 </View>
 ```
 
@@ -184,26 +212,34 @@ Use `tc` only for props that can't take a class — icon colors,
 
 ```tsx
 const { tc } = useTheme();
-<Ionicons name="add" size={20} color={tc.primary} />
+<Ionicons name="add" size={20} color={tc.foreground} />
 ```
 
-Available surfaces/text: `background`, `card`, `muted`, `foreground`,
+Available tokens: `background`, `card`, `muted`, `foreground`,
 `secondary-foreground`, `muted-foreground`, `border`, `input`, `disabled`,
-`placeholder`, `primary`, `primary-highlight`, `primary-fg`, `success`,
-`danger`, `warning`. Income wears `success`, expense wears `danger`, everywhere.
+`placeholder`, `primary`, `primary-fg`, `primary-highlight`, `brand`,
+`success` / `success-soft`, `danger` / `danger-soft`, `warning` /
+`warning-soft`. The home screen's sky and frosted panels have their own
+palette, `homePalette()` in `lib/theme.ts`.
 
 > NativeWind 5 preview + Tailwind v4 can silently fail to compile opacity
 > modifiers on core colors (`bg-black/50`). Use inline `rgba()` for those.
 > Custom hex tokens like `bg-danger/15` are fine.
 
-## Text size
+## Text size and font
+
+Import `Text` and `TextInput` from `@/components/ui/Text`, not from
+`react-native`: they are the same components with Manrope laid under the given
+style. The font's five weights are linked natively through the `expo-font`
+plugin in `app.json`, so `font-bold` / `fontWeight` picks the matching file —
+which also means a font change needs a native rebuild (`bun run prebuild`).
 
 Don't use Tailwind's `text-base` / `text-lg` for anything the user should be
 able to scale — those are fixed. Read sizes from `useFont()` instead:
 
 ```tsx
 const { tf } = useFont();
-<Text className="text-foreground font-semibold" style={{ fontSize: tf.lg }}>
+<Text className="text-foreground font-bold" style={{ fontSize: tf.lg }}>
   Heading
 </Text>
 ```
@@ -211,19 +247,13 @@ const { tf } = useFont();
 Keys: `xs`, `sm`, `base`, `lg`, `xl`, `xxl`, `xxxl`. Every component in
 `components/ui` already does this, so the Settings control reaches all of them.
 
-## Adding a tab
+## Adding a screen
 
-1. Add `app/(tabs)/reports.tsx` exporting a default component.
-2. Add an entry to `TABS` in `app/(tabs)/_layout.tsx`, and add the key to
-   `TabKey` in `contexts/TabNavigationContext.tsx`.
-3. Call `useTabScrollShadow("reports")` on the screen's scroll view and spread
-   the result onto it, so the header and tab bar get their shadows.
-
-Tabs render through a `PagerView`, not a tab navigator — they're swipeable and
-all stay mounted, keeping scroll position across switches. Because the pager
-owns which tab is showing, `router.push` cannot reach a sibling tab; use
-`useTabNavigation().goToTab("income")` instead. Pushing a new screen *over* the
-tabs (like `app/transaction.tsx`) is normal routing.
+Drop a file in `app/`, give it a title in the `Stack` in `app/_layout.tsx`, and
+push it with `router.push` (the `useSafeRouter` one, which ignores a doubled
+tap). It gets the sheet header for free; put a screen's extra actions behind a
+`headerRight` that opens an `ActionSheet`, and pin its main buttons to the
+bottom with `BottomBar`.
 
 ## Adding a component
 

@@ -173,17 +173,20 @@ export default function BottomSheet({
 					    indefinite) silently drops the constraint. This keeps the card
 					    a direct child of the flex-1 container above. */}
 					<Animated.View
-						className="rounded-t-3xl"
 						style={{
-							backgroundColor: tc.card,
+							borderTopLeftRadius: 32,
+							borderTopRightRadius: 32,
+							backgroundColor: tc.background,
 							transform: [{ translateY }],
 							paddingBottom: bottomPad,
 							...(maxHeight ? { maxHeight } : {}),
 						}}
 					>
 						{showHandle && (
-							<View className="items-center pt-3 pb-1">
-								<View className="w-10 h-1 rounded-full bg-disabled" />
+							<View className="items-center pt-2.5 pb-2">
+								<View
+									style={{ width: 38, height: 5, borderRadius: 3, backgroundColor: tc.disabled }}
+								/>
 							</View>
 						)}
 						{children}

@@ -6,18 +6,18 @@
    1. PRIMITIVE PALETTE  (static, numbered scale)
    ───────────────────────────────────────────── */
 @theme {
-  /* Primary — orange */
-  --color-primary-50: #fff7f0;
-  --color-primary-100: #ffe8d6;
-  --color-primary-200: #ffcfa0;
-  --color-primary-300: #ffb070;
-  --color-primary-400: #ff9245;
-  --color-primary-500: #ff6a00;
-  --color-primary-600: #e55e0c;
-  --color-primary-700: #be4b09;
-  --color-primary-800: #8f3807;
-  --color-primary-900: #602504;
-  --color-primary-950: #301202;
+  /* Primary — brand blue */
+  --color-primary-50: #eef4fd;
+  --color-primary-100: #dce8fb;
+  --color-primary-200: #b9d1f6;
+  --color-primary-300: #8cb5ef;
+  --color-primary-400: #5b93e6;
+  --color-primary-500: #2468d8;
+  --color-primary-600: #1556c9;
+  --color-primary-700: #1146a4;
+  --color-primary-800: #0e3a85;
+  --color-primary-900: #0b2a63;
+  --color-primary-950: #0b1b2e;
 
   /* Success — green */
   --color-success-50: #f0fdf4;
@@ -62,6 +62,9 @@
 /* ─────────────────────────────────────────────
    2. SEMANTIC TOKENS  (resolved at runtime via var())
       These auto-switch between light & dark.
+      The "Taqsim" design system: ink on white, one brand blue behind the
+      sheets, quiet grey groups, and colour kept for money moving (green in,
+      red out) and for wallets.
    ───────────────────────────────────────────── */
 @theme inline {
   /* Surfaces */
@@ -88,41 +91,55 @@
   /* Brand aliases (keep in sync with lib/theme.ts) */
   --color-primary: var(--primary);
   --color-primary-fg: var(--primary-fg);
+  --color-brand: var(--brand);
+  --color-brand-fg: var(--brand-fg);
   --color-success: var(--success);
   --color-success-fg: var(--success-fg);
+  --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
   --color-danger-fg: var(--danger-fg);
+  --color-danger-soft: var(--danger-soft);
   --color-warning: var(--warning);
   --color-warning-fg: var(--warning-fg);
+  --color-warning-soft: var(--warning-soft);
 }
 
 /* ─────────────────────────────────────────────
    3. LIGHT MODE  (default)
    ───────────────────────────────────────────── */
 :root {
-  --background: #f8f3f1;
-  --card: #ffffff;
-  --muted: #e4e0de;
+  /* The sheet every screen sits on, the grey groups and fields laid on it,
+     and the chips and tracks that sit on either. */
+  --background: #ffffff;
+  --card: #f4f6f9;
+  --muted: #edf0f4;
 
-  --foreground: #111827;
-  --muted-foreground: #6b7280;
-  --secondary-foreground: #1f2937;
+  --foreground: #0b1b2e;
+  --muted-foreground: #5b6b80;
+  --secondary-foreground: #3a4b61;
 
-  --border: #e5e7eb;
-  --input: #f3f4f6;
+  --border: #e5e9ef;
+  --input: #f4f6f9;
 
-  --disabled: #d1d5db;
-  --placeholder: #9ca3af;
-  --primary-highlight: #ffe4cc;
+  --disabled: #cbd3de;
+  --placeholder: #8a97a8;
+  --primary-highlight: #e3e9f2;
 
-  --primary: #ff6a00;
+  /* Ink: solid buttons, picked chips, switches that are on. */
+  --primary: #0b1b2e;
   --primary-fg: #ffffff;
-  --success: #22c55e;
+  /* The blue behind the sheets and on the home screen. */
+  --brand: #1556c9;
+  --brand-fg: #ffffff;
+  --success: #15803d;
   --success-fg: #ffffff;
-  --danger: #ef4444;
+  --success-soft: #e3f6e9;
+  --danger: #c81e1e;
   --danger-fg: #ffffff;
-  --warning: #f59e0b;
+  --danger-soft: #fde8e8;
+  --warning: #b45309;
   --warning-fg: #ffffff;
+  --warning-soft: #fef3c7;
 }
 
 /* ─────────────────────────────────────────────
@@ -130,28 +147,34 @@
    ───────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #030712;
-    --card: #111827;
-    --muted: #1f2937;
+    --background: #0f1722;
+    --card: #18222f;
+    --muted: #222d3b;
 
-    --foreground: #f9fafb;
-    --muted-foreground: #9ca3af;
-    --secondary-foreground: #e5e7eb;
+    --foreground: #e8eef6;
+    --muted-foreground: #8e9db0;
+    --secondary-foreground: #c2ccd8;
 
-    --border: #1f2937;
-    --input: #1f2937;
+    --border: #253142;
+    --input: #18222f;
 
-    --disabled: #374151;
-    --placeholder: #6b7280;
-    --primary-highlight: #4a2010;
+    --disabled: #3a4759;
+    --placeholder: #66768a;
+    --primary-highlight: #26344a;
 
-    --primary: #ff6a00;
-    --primary-fg: #ffffff;
-    --success: #22c55e;
+    /* Ink turns over: a light fill with dark text. */
+    --primary: #e8eef6;
+    --primary-fg: #0b1b2e;
+    --brand: #123b80;
+    --brand-fg: #ffffff;
+    --success: #22a05a;
     --success-fg: #ffffff;
-    --danger: #ef4444;
+    --success-soft: #15301f;
+    --danger: #e5484d;
     --danger-fg: #ffffff;
+    --danger-soft: #3a1a1c;
     --warning: #f59e0b;
     --warning-fg: #ffffff;
+    --warning-soft: #3a2a0c;
   }
 }

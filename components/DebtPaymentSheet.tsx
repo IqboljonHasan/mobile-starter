@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import WalletPicker from "@/components/WalletPicker";
 import {
 	AmountField,
@@ -161,8 +162,8 @@ export default function DebtPaymentSheet({
 
 				<View>
 					<Text
-						className="font-medium text-foreground mb-1.5"
-						style={{ fontSize: tf.base }}
+						className="font-bold text-muted-foreground mb-2 ml-1"
+						style={{ fontSize: tf.sm }}
 					>
 						{"To'lov turi"}
 					</Text>

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { type ReactNode, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
@@ -28,7 +29,7 @@ export function CollapsibleCard({
 	const [open, setOpen] = useState(defaultOpen);
 
 	return (
-		<View className="rounded-2xl bg-card overflow-hidden">
+		<View className="rounded-[20px] bg-card overflow-hidden">
 			<Pressable
 				accessibilityRole="button"
 				accessibilityState={{ expanded: open }}
@@ -36,11 +37,11 @@ export function CollapsibleCard({
 				className="flex-row items-center gap-3 p-4 active:opacity-70"
 			>
 				<View className="flex-1">
-					<Text className="font-semibold text-foreground" style={{ fontSize: tf.lg }}>
+					<Text className="font-extrabold text-foreground" style={{ fontSize: tf.base }}>
 						{title}
 					</Text>
 					{!!subtitle && (
-						<Text className="text-muted-foreground mt-0.5" style={{ fontSize: tf.sm }}>
+						<Text className="font-semibold text-muted-foreground mt-0.5" style={{ fontSize: tf.sm }}>
 							{subtitle}
 						</Text>
 					)}

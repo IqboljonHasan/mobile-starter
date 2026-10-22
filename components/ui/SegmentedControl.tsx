@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Animated, Pressable, Text, View } from "react-native";
+import { Animated, Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
@@ -58,6 +59,7 @@ export function SegmentedControl<T extends string = string>({
 	return (
 		<View
 			className={`flex-row bg-card rounded-full overflow-hidden p-1 ${className ?? ""}`}
+			style={{ minHeight: 46 }}
 			onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
 		>
 			{containerWidth > 0 &&
@@ -78,7 +80,7 @@ export function SegmentedControl<T extends string = string>({
 								bottom: 4,
 								width: pillW,
 								borderRadius: 9999,
-								backgroundColor: tc.primaryHighlight,
+								backgroundColor: tc.primary,
 								transform: [{ translateX }],
 							}}
 						/>
@@ -100,14 +102,12 @@ export function SegmentedControl<T extends string = string>({
 							<Ionicons
 								name={item.icon}
 								size={16}
-								color={active ? tc.primary : tc.mutedForeground}
+								color={active ? tc.primaryFg : tc.foreground}
 							/>
 						)}
 						<Text
-							className={`font-semibold ${
-								active ? "text-primary" : "text-muted-foreground"
-							}`}
-							style={{ fontSize: tf.base }}
+							className={`font-bold ${active ? "text-primary-fg" : "text-foreground"}`}
+							style={{ fontSize: tf.sm + 1 }}
 							numberOfLines={1}
 						>
 							{item.label}

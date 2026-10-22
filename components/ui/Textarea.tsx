@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Text, TextInput, type TextInputProps, View } from "react-native";
+import { type TextInputProps, View } from "react-native";
+import { FieldLabel } from "@/components/ui/FieldLabel";
+import { TextInput } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import "../../global.css";
 
-const PADDING_Y = 16;
+const PADDING_Y = 14;
 
 export interface TextareaProps
 	extends Omit<
@@ -26,7 +28,7 @@ export interface TextareaProps
 }
 
 /**
- * Multi-line counterpart to `<InputField />`, sharing its card/border/focus-ring
+ * Multi-line counterpart to `<InputField />`, sharing its panel/focus-ring
  * chrome so the two line up in a form.
  */
 export function Textarea({
@@ -43,8 +45,8 @@ export function Textarea({
 
 	// Derived from the scaled font size so the box still fits `rows` lines at
 	// every text-size setting.
-	const fontSize = tf.lg;
-	const lineHeight = Math.round(fontSize * 1.35);
+	const fontSize = tf.base;
+	const lineHeight = Math.round(fontSize * 1.45);
 
 	const handleFocus: NonNullable<TextInputProps["onFocus"]> = (e) => {
 		setFocused(true);
@@ -57,27 +59,21 @@ export function Textarea({
 
 	return (
 		<View>
-			{!!label && (
-				<Text
-					className="font-medium text-foreground mb-1.5"
-					style={{ fontSize: tf.base }}
-				>
-					{label}
-					{required && <Text className="text-danger"> *</Text>}
-				</Text>
-			)}
+			{!!label && <FieldLabel required={required}>{label}</FieldLabel>}
 			<View
-				className="rounded-xl px-5"
+				className="px-4"
 				style={{
 					backgroundColor: tc.card,
-					borderWidth: focused ? 1.5 : 1,
-					borderColor: focused ? tc.primary : tc.border,
+					borderRadius: 18,
+					borderWidth: 1.5,
+					borderColor: focused ? tc.focus : "transparent",
 				}}
 			>
 				<TextInput
 					multiline
 					// Without this the text starts vertically centred on Android.
 					textAlignVertical="top"
+					className="font-semibold"
 					style={{
 						color: tc.foreground,
 						fontSize,

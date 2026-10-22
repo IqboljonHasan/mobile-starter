@@ -1,14 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import {
-	ActivityIndicator,
-	Alert,
-	FlatList,
-	Pressable,
-	Text,
-	TextInput,
-	View,
-} from "react-native";
+import { ActivityIndicator, Alert, FlatList, Pressable, View } from "react-native";
+import { Text, TextInput } from "@/components/ui/Text";
 import ContactAvatar from "@/components/ContactAvatar";
 import { BottomSheet, Button, EmptyState } from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
@@ -132,17 +125,12 @@ export default function ContactImportSheet({
 
 				{!loading && !failed && contacts.length > 0 && (
 					<View
-						className="flex-row items-center gap-2 rounded-xl px-4"
-						style={{
-							backgroundColor: tc.card,
-							borderWidth: 1,
-							borderColor: tc.border,
-							minHeight: 48,
-						}}
+						className="flex-row items-center gap-2 px-4"
+						style={{ backgroundColor: tc.card, borderRadius: 16, minHeight: 48 }}
 					>
 						<Ionicons name="search" size={18} color={tc.mutedForeground} />
 						<TextInput
-							className="flex-1 py-3"
+							className="flex-1 py-3 font-semibold"
 							style={{ color: tc.foreground, fontSize: tf.base }}
 							placeholder="Ism yoki raqam"
 							placeholderTextColor={tc.placeholder}
@@ -155,7 +143,7 @@ export default function ContactImportSheet({
 
 			{loading ? (
 				<View className="items-center py-12">
-					<ActivityIndicator color={tc.primary} />
+					<ActivityIndicator color={tc.foreground} />
 					<Text
 						className="text-muted-foreground mt-3"
 						style={{ fontSize: tf.base }}
@@ -222,7 +210,7 @@ export default function ContactImportSheet({
 										borderColor: tc.border,
 									}}
 								>
-									{checked && <Ionicons name="checkmark" size={16} color="#fff" />}
+									{checked && <Ionicons name="checkmark" size={16} color={tc.primaryFg} />}
 								</View>
 							</Pressable>
 						);

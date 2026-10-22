@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import {
@@ -21,13 +22,17 @@ export default function ContactAvatar({
 	name,
 	id,
 	size = 40,
+	mono = false,
 }: {
 	name: string;
 	/** Chooses the hue. Same id, same colour, everywhere. */
 	id: string;
 	size?: number;
+	/** Ink initials on the muted tone — how a person is drawn in the debts
+	 *  list, where colour is left to the amounts. */
+	mono?: boolean;
 }) {
-	const { isDark } = useTheme();
+	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
 	const color = CATEGORY_COLORS[contactColorIndex(id) % CATEGORY_COLORS.length];
 	const hex = categoryColorValue(color, isDark);
@@ -39,12 +44,12 @@ export default function ContactAvatar({
 				width: size,
 				height: size,
 				borderRadius: size / 2,
-				backgroundColor: withAlpha(hex, isDark ? 0.22 : 0.14),
+				backgroundColor: mono ? tc.muted : withAlpha(hex, isDark ? 0.22 : 0.14),
 			}}
 		>
 			<Text
-				className="font-bold"
-				style={{ color: hex, fontSize: Math.round(tf.sm * (size / 40)) }}
+				className="font-extrabold"
+				style={{ color: mono ? tc.foreground : hex, fontSize: Math.round(tf.sm * (size / 40)) }}
 			>
 				{contactInitials(name)}
 			</Text>

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { type ReactNode, useState } from "react";
-import { Keyboard, Pressable, ScrollView, Text, View } from "react-native";
+import { Keyboard, Pressable, ScrollView, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
@@ -89,19 +90,19 @@ export function Select<T extends string | number>({
 			<Pressable
 				key={String(option.key)}
 				onPress={() => pick(option.key, sel)}
-				className="border-b border-border"
+				className="border-b border-border active:opacity-70"
 			>
 				{renderOption ? (
 					renderOption(option, sel)
 				) : (
-					<View className="flex-row items-center py-3">
+					<View className="flex-row items-center py-3.5">
 						<Text
-							className={`flex-1 ${sel ? "font-bold text-primary" : "text-foreground"}`}
+							className={`flex-1 text-foreground ${sel ? "font-extrabold" : "font-semibold"}`}
 							style={{ fontSize: tf.base }}
 						>
 							{option.label}
 						</Text>
-						{sel && <Ionicons name="checkmark" size={20} color={tc.primary} />}
+						{sel && <Ionicons name="checkmark-circle" size={22} color={tc.foreground} />}
 					</View>
 				)}
 			</Pressable>
@@ -117,27 +118,22 @@ export function Select<T extends string | number>({
 					accessibilityRole="button"
 					onPress={openSheet}
 					disabled={disabled}
-					className={`flex-row items-center gap-2 rounded-xl px-5 active:opacity-70 ${
+					className={`flex-row items-center gap-2 pl-4 pr-3 active:opacity-70 ${
 						disabled ? "opacity-50" : ""
 					}`}
-					style={{
-						backgroundColor: tc.card,
-						borderWidth: 1,
-						borderColor: tc.border,
-						minHeight: 56,
-					}}
+					style={{ backgroundColor: tc.card, borderRadius: 16, minHeight: 52 }}
 				>
 					<Text
-						className="flex-1"
+						className="flex-1 font-bold"
 						style={{
 							color: selected ? tc.foreground : tc.placeholder,
-							fontSize: tf.lg,
+							fontSize: tf.base,
 						}}
 						numberOfLines={1}
 					>
 						{selected ? selected.label : label}
 					</Text>
-					<Ionicons name="chevron-down" size={16} color={tc.mutedForeground} />
+					<Ionicons name="chevron-down" size={18} color={tc.mutedForeground} />
 				</Pressable>
 			)}
 
@@ -150,7 +146,7 @@ export function Select<T extends string | number>({
 				<View className="px-4 pb-2">
 					<View className="flex-row items-center justify-between mb-2">
 						<Text
-							className="font-bold text-foreground"
+							className="font-extrabold text-foreground"
 							style={{ fontSize: tf.lg }}
 						>
 							{label}
@@ -162,10 +158,10 @@ export function Select<T extends string | number>({
 										onChange(null);
 										setOpen(false);
 									}}
-									className="px-3 py-1.5 rounded-full bg-muted"
+									className="px-3.5 py-2 rounded-full bg-muted"
 								>
 									<Text
-										className="font-medium text-muted-foreground"
+										className="font-bold text-foreground"
 										style={{ fontSize: tf.sm }}
 									>
 										Tozalash
@@ -191,8 +187,8 @@ export function Select<T extends string | number>({
 						sections.map((section) => (
 							<View key={section.title}>
 								<Text
-									className="font-semibold text-muted-foreground uppercase tracking-wider py-2"
-									style={{ fontSize: tf.xs }}
+									className="font-bold text-muted-foreground pt-4 pb-1"
+									style={{ fontSize: tf.sm }}
 								>
 									{section.title}
 								</Text>

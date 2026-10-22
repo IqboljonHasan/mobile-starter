@@ -7,7 +7,7 @@ const EXIT_WINDOW_MS = 2000;
 
 /**
  * Android's back button on the root screen leaves the app, which is easy to do
- * by accident while swiping between tabs. While the calling screen is focused,
+ * by accident on the way back from a sheet. While the calling screen is focused,
  * the first press only warns, and a second one within EXIT_WINDOW_MS exits as
  * it normally would.
  *

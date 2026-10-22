@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text, View } from "react-native";
-import CategoryAvatar from "@/components/CategoryAvatar";
-import { Select } from "@/components/ui";
+import { View } from "react-native";
+import { Text } from "@/components/ui/Text";
+import WalletIcon from "@/components/WalletIcon";
+import { FieldLabel, PickerField, Select } from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { formatAmount, maskAmount } from "@/lib/money";
@@ -87,12 +88,7 @@ export default function WalletPicker({
 
 	return (
 		<View>
-			<Text
-				className="font-medium text-foreground mb-1.5"
-				style={{ fontSize: tf.base }}
-			>
-				{label}
-			</Text>
+			<FieldLabel>{label}</FieldLabel>
 			<Select
 				label={label}
 				value={value ?? (allowNone ? NONE_KEY : null)}
@@ -101,104 +97,79 @@ export default function WalletPicker({
 				options={options}
 				emptyMessage="Hali hamyon yo'q — avval qo'shing."
 				renderOption={(option, selected) => {
-					if (option.key === NONE_KEY) {
-						return (
-							<View className="flex-row items-center gap-3 py-2.5">
-								<View className="w-[34px] h-[34px] rounded-full items-center justify-center bg-muted">
-									<Ionicons name="remove" size={18} color={tc.mutedForeground} />
-								</View>
-								<Text
-									className={`flex-1 ${selected ? "font-bold text-primary" : "text-foreground"}`}
-									style={{ fontSize: tf.base }}
-								>
-									{option.label}
-								</Text>
-								{selected && <Ionicons name="checkmark" size={20} color={tc.primary} />}
-							</View>
-						);
-					}
-
+					const none = option.key === NONE_KEY;
 					const row = rows.find((r) => r.key === option.key);
-					const balance = balanceOf(option.key);
 					return (
 						<View className="flex-row items-center gap-3 py-2.5">
-							<CategoryAvatar
-								icon={row?.icon ?? "wallet-outline"}
-								color={row?.color ?? "blue"}
-								size={34}
-							/>
+							{none ? (
+								<View
+									className="items-center justify-center bg-muted"
+									style={{ width: 34, height: 34, borderRadius: 11 }}
+								>
+									<Ionicons name="remove" size={18} color={tc.mutedForeground} />
+								</View>
+							) : (
+								<WalletIcon
+									icon={option.key === UNALLOCATED_ID ? null : (row?.icon ?? "wallet-outline")}
+									color={row?.color ?? "blue"}
+									size={34}
+								/>
+							)}
 							<View className="flex-1">
 								<Text
-									className={selected ? "font-bold text-primary" : "text-foreground"}
+									className={`text-foreground ${selected ? "font-extrabold" : "font-semibold"}`}
 									style={{ fontSize: tf.base }}
 									numberOfLines={1}
 								>
 									{option.label}
 								</Text>
-								<Text
-									className={balance < 0 ? "text-danger" : "text-muted-foreground"}
-									style={{ fontSize: tf.sm }}
-									numberOfLines={1}
-								>
-									{balanceText(option.key)}
-								</Text>
+								{!none && (
+									<Text
+										className={`font-semibold ${balanceOf(option.key) < 0 ? "text-danger" : "text-muted-foreground"}`}
+										style={{ fontSize: tf.sm }}
+										numberOfLines={1}
+									>
+										{balanceText(option.key)}
+									</Text>
+								)}
 							</View>
-							{selected && <Ionicons name="checkmark" size={20} color={tc.primary} />}
+							{selected && <Ionicons name="checkmark-circle" size={22} color={tc.foreground} />}
 						</View>
 					);
 				}}
 				trigger={({ open }) => (
-					<Pressable
-						accessibilityRole="button"
+					<PickerField
 						accessibilityLabel={`${label}: ${selectedRow?.name ?? noneLabel}`}
+						text={selectedRow?.name ?? null}
+						placeholder={noneLabel}
 						onPress={open}
-						className="flex-row items-center gap-3 rounded-xl px-4 active:opacity-70"
-						style={{
-							backgroundColor: tc.card,
-							borderWidth: error ? 1.5 : 1,
-							borderColor: error ? tc.danger : tc.border,
-							minHeight: 56,
-						}}
-					>
-						{selectedRow ? (
-							<CategoryAvatar
-								icon={selectedRow.icon}
-								color={selectedRow.color}
-								size={34}
-							/>
-						) : (
-							<Ionicons name="wallet-outline" size={20} color={tc.mutedForeground} />
-						)}
-						<View className="flex-1">
-							<Text
-								style={{
-									fontSize: tf.lg,
-									color: selectedRow ? tc.foreground : tc.placeholder,
-								}}
-								numberOfLines={1}
-							>
-								{selectedRow?.name ?? noneLabel}
-							</Text>
-							{!!selectedRow && (
-								<Text
-									className={
-										balanceOf(selectedRow.key) < 0
-											? "text-danger"
-											: "text-muted-foreground"
-									}
-									style={{ fontSize: tf.sm }}
-									numberOfLines={1}
+						error={!!error}
+						leading={
+							selectedRow ? (
+								<WalletIcon
+									icon={selectedRow.key === UNALLOCATED_ID ? null : selectedRow.icon}
+									color={selectedRow.color}
+									size={32}
+								/>
+							) : (
+								<View
+									className="items-center justify-center bg-background"
+									style={{ width: 32, height: 32, borderRadius: 10 }}
 								>
-									{balanceText(selectedRow.key)}
-								</Text>
-							)}
-						</View>
-						<Ionicons name="chevron-down" size={16} color={tc.mutedForeground} />
-					</Pressable>
+									<Ionicons name="wallet-outline" size={17} color={tc.mutedForeground} />
+								</View>
+							)
+						}
+						detail={
+							selectedRow
+								? { text: balanceText(selectedRow.key), danger: balanceOf(selectedRow.key) < 0 }
+								: null
+						}
+					/>
 				)}
 			/>
 			{!!error && (
-				<Text className="text-danger mt-1.5" style={{ fontSize: tf.sm }}>
+				<Text className="font-semibold text-danger mt-1.5 ml-1" style={{ fontSize: tf.sm }}>
 					{error}
 				</Text>
 			)}

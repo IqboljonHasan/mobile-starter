@@ -1,15 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
-import {
-	Alert,
-	Linking,
-	Pressable,
-	ScrollView,
-	Text,
-	TextInput,
-	View,
-} from "react-native";
+import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
+import { Text, TextInput } from "@/components/ui/Text";
 import ContactAvatar from "@/components/ContactAvatar";
 import ContactImportSheet from "@/components/ContactImportSheet";
 import ContactSheet from "@/components/ContactSheet";
@@ -104,7 +97,7 @@ export default function ContactsScreen() {
 			<Stack.Screen options={{ title: "Kontaktlar" }} />
 			<ScrollView
 				className="flex-1 bg-background"
-				contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+				contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 12, paddingBottom: 40 }}
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}
 			>
@@ -138,17 +131,12 @@ export default function ContactsScreen() {
 
 				{contacts.length > 4 && (
 					<View
-						className="flex-row items-center gap-2 rounded-xl px-4"
-						style={{
-							backgroundColor: tc.card,
-							borderWidth: 1,
-							borderColor: tc.border,
-							minHeight: 48,
-						}}
+						className="flex-row items-center gap-2 px-4"
+						style={{ backgroundColor: tc.card, borderRadius: 16, minHeight: 48 }}
 					>
 						<Ionicons name="search" size={18} color={tc.mutedForeground} />
 						<TextInput
-							className="flex-1 py-3"
+							className="flex-1 py-3 font-semibold"
 							style={{ color: tc.foreground, fontSize: tf.base }}
 							placeholder="Ism yoki raqam"
 							placeholderTextColor={tc.placeholder}

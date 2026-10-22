@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import ContactAvatar from "@/components/ContactAvatar";
 import ContactImportSheet from "@/components/ContactImportSheet";
 import ContactSheet from "@/components/ContactSheet";
-import { Select } from "@/components/ui";
+import { FieldLabel, PickerField, Select } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
@@ -41,13 +42,7 @@ export default function ContactPicker({
 
 	return (
 		<View>
-			<Text
-				className="font-medium text-foreground mb-1.5"
-				style={{ fontSize: tf.base }}
-			>
-				{label}
-				<Text className="text-danger"> *</Text>
-			</Text>
+			<FieldLabel required>{label}</FieldLabel>
 
 			<Select
 				label={label}
@@ -62,15 +57,15 @@ export default function ContactPicker({
 							accessibilityRole="button"
 							accessibilityLabel="Telefondan import qilish"
 							onPress={() => setImporting(true)}
-							className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted active:opacity-70"
+							className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-full bg-muted active:opacity-70"
 						>
 							<Ionicons
 								name="phone-portrait-outline"
 								size={14}
-								color={tc.mutedForeground}
+								color={tc.foreground}
 							/>
 							<Text
-								className="font-medium text-muted-foreground"
+								className="font-bold text-foreground"
 								style={{ fontSize: tf.sm }}
 							>
 								Import
@@ -80,11 +75,11 @@ export default function ContactPicker({
 							accessibilityRole="button"
 							accessibilityLabel="Yangi kontakt qo'shish"
 							onPress={() => setCreating(true)}
-							className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-highlight active:opacity-70"
+							className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary active:opacity-70"
 						>
-							<Ionicons name="add" size={14} color={tc.primary} />
+							<Ionicons name="add" size={14} color={tc.primaryFg} />
 							<Text
-								className="font-medium text-primary"
+								className="font-bold text-primary-fg"
 								style={{ fontSize: tf.sm }}
 							>
 								Yangi
@@ -103,9 +98,7 @@ export default function ContactPicker({
 							/>
 							<View className="flex-1">
 								<Text
-									className={
-										isSelected ? "font-bold text-primary" : "text-foreground"
-									}
+									className={`text-foreground ${isSelected ? "font-extrabold" : "font-semibold"}`}
 									style={{ fontSize: tf.base }}
 									numberOfLines={1}
 								>
@@ -122,56 +115,41 @@ export default function ContactPicker({
 								)}
 							</View>
 							{isSelected && (
-								<Ionicons name="checkmark" size={20} color={tc.primary} />
+								<Ionicons name="checkmark-circle" size={22} color={tc.foreground} />
 							)}
 						</View>
 					);
 				}}
 				trigger={({ open }) => (
-					<Pressable
-						accessibilityRole="button"
+					<PickerField
 						accessibilityLabel={`${label}: ${selected?.name ?? "tanlanmagan"}`}
+						text={selected?.name ?? null}
+						placeholder="Ism yoki telefon raqam"
 						onPress={open}
-						className="flex-row items-center gap-3 rounded-xl px-4 active:opacity-70"
-						style={{
-							backgroundColor: tc.card,
-							borderWidth: error ? 1.5 : 1,
-							borderColor: error ? tc.danger : tc.border,
-							minHeight: 56,
-						}}
-					>
-						{selected ? (
-							<ContactAvatar name={selected.name} id={selected.id} size={34} />
-						) : (
-							<Ionicons name="person-outline" size={20} color={tc.mutedForeground} />
-						)}
-						<View className="flex-1">
-							<Text
-								style={{
-									fontSize: tf.lg,
-									color: selected ? tc.foreground : tc.placeholder,
-								}}
-								numberOfLines={1}
+						error={!!error}
+						leading={
+							selected ? (
+								<ContactAvatar name={selected.name} id={selected.id} size={32} mono />
+							) : undefined
+						}
+						detail={selected?.phone ? { text: selected.phone } : null}
+						trailing={
+							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel="Kontaktlardan tanlash"
+								onPress={() => setImporting(true)}
+								className="items-center justify-center bg-background active:opacity-70"
+								style={{ width: 44, height: 44, borderRadius: 12, marginRight: -8 }}
 							>
-								{selected?.name ?? "Kimni tanlang"}
-							</Text>
-							{!!selected?.phone && (
-								<Text
-									className="text-muted-foreground"
-									style={{ fontSize: tf.sm }}
-									numberOfLines={1}
-								>
-									{selected.phone}
-								</Text>
-							)}
-						</View>
-						<Ionicons name="chevron-down" size={16} color={tc.mutedForeground} />
-					</Pressable>
+								<Ionicons name="id-card-outline" size={20} color={tc.foreground} />
+							</Pressable>
+						}
+					/>
 				)}
 			/>
 
 			{!!error && (
-				<Text className="text-danger mt-1.5" style={{ fontSize: tf.sm }}>
+				<Text className="font-semibold text-danger mt-1.5 ml-1" style={{ fontSize: tf.sm }}>
 					{error}
 				</Text>
 			)}

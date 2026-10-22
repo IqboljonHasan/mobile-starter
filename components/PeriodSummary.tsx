@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { type ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import AmountText from "@/components/AmountText";
 import { Card } from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
@@ -179,12 +180,12 @@ function SideTile({
 			accessibilityRole="button"
 			accessibilityLabel={description}
 			onPress={onPress}
-			className="flex-1 rounded-xl bg-background p-3 active:opacity-70"
+			className="flex-1 rounded-2xl bg-background p-3 active:opacity-70"
 		>
 			{body}
 		</Pressable>
 	) : (
-		<View accessible accessibilityLabel={description} className="flex-1 rounded-xl bg-background p-3">
+		<View accessible accessibilityLabel={description} className="flex-1 rounded-2xl bg-background p-3">
 			{body}
 		</View>
 	);

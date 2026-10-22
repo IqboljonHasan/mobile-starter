@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import AmountText from "@/components/AmountText";
 import BarChart from "@/components/BarChart";
 import BreakdownStats from "@/components/BreakdownStats";
@@ -109,7 +110,7 @@ export default function StatsScreen() {
 			<>
 				<Stack.Screen options={{ title: "Statistika" }} />
 				<View className="flex-1 bg-background items-center justify-center">
-					<ActivityIndicator color={tc.primary} />
+					<ActivityIndicator color={tc.foreground} />
 				</View>
 			</>
 		);
@@ -121,7 +122,7 @@ export default function StatsScreen() {
 			<View className="flex-1 bg-background">
 				{/* Period: scopes everything above the divider ------------------- */}
 				<View
-					className="bg-card px-4 pb-3 gap-3"
+					className="bg-background px-4 pb-3 gap-3"
 					style={
 						scrolled
 							? {
@@ -166,7 +167,7 @@ export default function StatsScreen() {
 
 				<ScrollView
 					className="flex-1"
-					contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
+					contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 14, paddingBottom: 40 }}
 					showsVerticalScrollIndicator={false}
 					scrollEventThrottle={16}
 					onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 4)}

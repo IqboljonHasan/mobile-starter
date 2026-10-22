@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import Svg, { Circle, G } from "react-native-svg";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";

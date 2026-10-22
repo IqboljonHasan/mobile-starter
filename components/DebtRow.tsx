@@ -1,17 +1,12 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import ContactAvatar from "@/components/ContactAvatar";
+import { Text } from "@/components/ui/Text";
+import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useTheme } from "@/hooks/useTheme";
-import { formatDate } from "@/lib/date";
-import {
-	DIRECTION_META,
-	daysUntilDue,
-	debtStatus,
-	paidShare,
-	remainingAmount,
-} from "@/lib/debts";
+import { formatDayMonth } from "@/lib/date";
+import { debtStatus, paidShare, remainingAmount } from "@/lib/debts";
 import { formatAmount } from "@/lib/money";
 import type { Contact, Debt } from "@/lib/types";
 
@@ -19,10 +14,10 @@ import type { Contact, Debt } from "@/lib/types";
  * One debt in the list.
  *
  * The figure on the right is what is still outstanding, not the principal:
- * "how much of this is left" is the question the tab exists to answer, and the
- * original amount is one tap away on the debt's own screen. The bar underneath
- * shows how far along it is, so a debt mostly paid off reads differently from
- * one untouched even though both are still open.
+ * "how much of this is left" is the question the screen exists to answer, and
+ * the original amount is one tap away on the debt's own screen. A bar shows
+ * how much has come back so far, so a debt mostly paid off reads differently
+ * from one untouched even though both are still open.
  */
 export default function DebtRow({
 	debt,
@@ -41,120 +36,107 @@ export default function DebtRow({
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
+	const { defaultUnit } = useLedger();
 	const handlePress = useGuardedPress(onPress);
+	// The main currency goes bare, as everywhere in the lists; any other keeps
+	// its symbol so a dollar loan never reads as som.
+	const money = { showUnit: debt.unit !== defaultUnit };
 
-	const meta = DIRECTION_META[debt.direction];
 	const status = debtStatus(debt, today);
 	const remaining = remainingAmount(debt);
 	const share = paidShare(debt);
-	const days = daysUntilDue(debt, today);
 	const name = contact?.name ?? "Noma'lum";
+	const given = debt.direction === "lent";
+	const settled = status === "settled";
+
+	// The day the last of it came back — what "closed" is dated by.
+	const closedOn = settled
+		? debt.payments.reduce((latest, p) => (p.date > latest ? p.date : latest), debt.date)
+		: null;
+
+	const sub = settled
+		? `Yopilgan · ${formatDayMonth(closedOn ?? debt.date)}`
+		: status === "overdue" && debt.dueDate
+			? `Muddati o'tgan · ${formatDayMonth(debt.dueDate)}`
+			: debt.dueDate
+				? `Muddat: ${formatDayMonth(debt.dueDate)}`
+				: "Muddat belgilanmagan";
 
 	// Money owed *to* the user reads as something coming back, money owed *by*
 	// them as something going out — the same green/red the ledger uses.
-	const amountClass =
-		status === "settled"
-			? "text-muted-foreground"
-			: debt.direction === "lent"
-				? "text-success"
-				: "text-danger";
-
-	const due =
-		status === "settled"
-			? "Yopilgan"
-			: days === null
-				? debt.description || formatDate(debt.date)
-				: days < 0
-					? `${Math.abs(days)} kun kechikdi`
-					: days === 0
-						? "Bugun muddati"
-						: `${days} kun qoldi`;
+	const color = settled ? tc.mutedForeground : given ? tc.success : tc.danger;
+	const percent = Math.round(share * 100);
 
 	return (
 		<Pressable
 			accessibilityRole="button"
-			accessibilityLabel={`${name}, ${meta.label}, qoldiq ${formatAmount(remaining, debt.unit)}`}
+			accessibilityLabel={`${name}, ${given ? "berilgan" : "olingan"}, ${
+				settled ? "yopilgan" : `qoldiq ${formatAmount(remaining, debt.unit)}`
+			}, ${sub}`}
 			onPress={handlePress}
 			className="active:opacity-70"
 		>
 			<View
-				className={`flex-row items-center gap-3 px-4 py-3 ${
-					divider ? "border-t border-border" : ""
-				}`}
+				className={`flex-row items-center gap-3 py-3 ${divider ? "border-t border-border" : ""}`}
 			>
-				<ContactAvatar name={name} id={debt.contactId} />
+				<ContactAvatar name={name} id={debt.contactId} mono />
 
-				<View className="flex-1">
-					<View className="flex-row items-center gap-1.5">
-						<Ionicons
-							name={meta.icon}
-							size={13}
-							color={
-								debt.direction === "lent" ? tc.success : tc.danger
-							}
-							accessibilityLabel={meta.label}
-						/>
-						<Text
-							className="flex-1 font-medium text-foreground"
-							style={{ fontSize: tf.base }}
-							numberOfLines={1}
-						>
-							{name}
-						</Text>
-					</View>
-
+				<View className="flex-1 gap-px">
 					<Text
-						className={
-							status === "overdue" ? "text-danger" : "text-muted-foreground"
-						}
-						style={{ fontSize: tf.sm }}
+						className="font-bold text-foreground"
+						style={{ fontSize: tf.base }}
 						numberOfLines={1}
 					>
-						{due}
+						{name}
+					</Text>
+					<Text
+						className="font-semibold"
+						style={{ fontSize: tf.sm - 1, color: status === "overdue" ? tc.danger : tc.mutedForeground }}
+						numberOfLines={1}
+					>
+						{sub}
 					</Text>
 
 					{/* Only while something is still owed: a full bar under a settled
-					    debt says nothing the amount above it hasn't already said. */}
-					{status !== "settled" && share > 0 && (
-						<View
-							className="rounded-full bg-muted mt-1.5 overflow-hidden"
-							style={{ height: 4 }}
-							accessibilityLabel={`${Math.round(share * 100)}% to'langan`}
-						>
+					    debt says nothing the "Yopilgan" above it hasn't already said. */}
+					{!settled && share > 0 && (
+						<View className="flex-row items-center gap-2 mt-1.5">
 							<View
-								style={{
-									width: `${Math.round(share * 100)}%`,
-									height: "100%",
-									borderRadius: 2,
-									backgroundColor: tc.primary,
-								}}
-							/>
+								className="flex-1 rounded-full bg-muted overflow-hidden"
+								style={{ height: 4 }}
+							>
+								<View
+									style={{
+										width: `${percent}%`,
+										height: 4,
+										borderRadius: 2,
+										backgroundColor: color,
+									}}
+								/>
+							</View>
+							<Text
+								className="font-semibold text-muted-foreground"
+								style={{ fontSize: tf.xs }}
+							>
+								{`${percent}% qaytarildi`}
+							</Text>
 						</View>
 					)}
 				</View>
 
-				<View className="items-end">
+				<View className="items-end gap-px">
 					<Text
-						className={`font-bold ${amountClass}`}
-						style={{ fontSize: tf.base }}
+						className="font-extrabold"
+						style={{ fontSize: tf.base, color }}
 						numberOfLines={1}
 					>
-						{status === "settled"
-							? formatAmount(debt.amount, debt.unit)
-							: formatAmount(remaining, debt.unit)}
+						{settled
+							? formatAmount(debt.amount, debt.unit, money)
+							: `${given ? "+" : "−"}${formatAmount(remaining, debt.unit, money)}`}
 					</Text>
-					{status === "settled" ? (
-						<View className="flex-row items-center gap-1 mt-0.5">
-							<Ionicons name="checkmark-circle" size={12} color={tc.success} />
-							<Text className="text-success" style={{ fontSize: tf.xs }}>
-								Yopildi
-							</Text>
-						</View>
-					) : share > 0 ? (
-						<Text className="text-muted-foreground" style={{ fontSize: tf.xs }}>
-							{`${formatAmount(debt.amount, debt.unit)} dan`}
-						</Text>
-					) : null}
+					<Text className="font-semibold text-muted-foreground" style={{ fontSize: tf.xs }}>
+						{given ? "Berilgan" : "Olingan"}
+					</Text>
 				</View>
 			</View>
 		</Pressable>

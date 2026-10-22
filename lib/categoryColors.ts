@@ -81,3 +81,17 @@ export function withAlpha(hex: string, alpha: number): string {
 		.padStart(2, "0");
 	return `${hex}${a}`;
 }
+
+/**
+ * A solid pastel of the hue — the fill of a wallet's icon tile, with the hue
+ * itself as the icon. Solid rather than translucent, so the tile reads the
+ * same on the frosted home panels as on a plain sheet.
+ */
+export function softTint(hex: string, isDark: boolean): string {
+	const base = isDark ? [0x0f, 0x17, 0x22] : [0xff, 0xff, 0xff];
+	const keep = isDark ? 0.3 : 0.17;
+	const rgb = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+	return `#${rgb
+		.map((c, i) => Math.round(c * keep + base[i] * (1 - keep)).toString(16).padStart(2, "0"))
+		.join("")}`;
+}

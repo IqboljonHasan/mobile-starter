@@ -1,15 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
-import {
-	Alert,
-	Pressable,
-	ScrollView,
-	Switch,
-	Text,
-	TextInput,
-	View,
-} from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Text, TextInput } from "@/components/ui/Text";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import TransferHistory from "@/components/TransferHistory";
 import TransferSheet from "@/components/TransferSheet";
@@ -21,6 +14,7 @@ import {
 	IconButton,
 	IconPicker,
 	InputField,
+	Toggle,
 } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -222,6 +216,7 @@ export default function WalletsScreen() {
 					title: "Hamyonlar",
 					headerRight: () => (
 						<IconButton
+							variant="filled"
 							icon={hideIncome ? "eye-off-outline" : "eye-outline"}
 							accessibilityLabel={
 								hideIncome ? "Summalarni ko'rsatish" : "Summalarni yashirish"
@@ -233,7 +228,7 @@ export default function WalletsScreen() {
 			/>
 			<ScrollView
 				className="flex-1 bg-background"
-				contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+				contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 12, paddingBottom: 40 }}
 				showsVerticalScrollIndicator={false}
 			>
 				{/* Balances ------------------------------------------------------ */}
@@ -426,18 +421,12 @@ export default function WalletsScreen() {
 								</Pressable>
 
 								<View
-									className="flex-row items-center rounded-xl px-3"
-									style={{
-										backgroundColor: tc.input,
-										borderWidth: 1,
-										borderColor: tc.border,
-										minHeight: 44,
-										width: 86,
-									}}
+									className="flex-row items-center bg-background px-3"
+									style={{ borderRadius: 14, minHeight: 44, width: 86 }}
 								>
 									<TextInput
-										className="flex-1"
-										style={{ color: tc.foreground, fontSize: tf.lg, textAlign: "right" }}
+										className="flex-1 font-extrabold"
+										style={{ color: tc.foreground, fontSize: tf.base, textAlign: "right" }}
 										value={String(wallet.percent)}
 										onChangeText={(text) => setPercent(wallet, text)}
 										keyboardType="number-pad"
@@ -634,14 +623,11 @@ export default function WalletsScreen() {
 											</Text>
 										)}
 									</View>
-									<Switch
+									<Toggle
 										value={!isDebt && category.splitIncome !== false}
 										disabled={isDebt}
-										onValueChange={(next) =>
-											updateCategory(category.id, { splitIncome: next })
-										}
-										trackColor={{ false: tc.muted, true: tc.primary }}
-										thumbColor="#fff"
+										accessibilityLabel={`${category.name} kirimini bo'lish`}
+										onValueChange={(next) => updateCategory(category.id, { splitIncome: next })}
 									/>
 								</View>
 							);

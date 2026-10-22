@@ -1,4 +1,5 @@
-import { Text, type TextStyle } from "react-native";
+import { type TextStyle } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useTheme } from "@/hooks/useTheme";
 import { formatAmount, unitByCode } from "@/lib/money";
 

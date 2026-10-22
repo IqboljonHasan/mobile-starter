@@ -1,17 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { Stack } from "expo-router";
-import { useState } from "react";
-import {
-	ActivityIndicator,
-	Alert,
-	Pressable,
-	ScrollView,
-	Switch,
-	Text,
-	View,
-} from "react-native";
-import { Badge, Card, ListRow, SegmentedControl, Select } from "@/components/ui";
+import { type ReactNode, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
+import { Text } from "@/components/ui/Text";
+import { Card, ListRow, SegmentedControl, Select, Toggle } from "@/components/ui";
 import {
 	FONT_SCALE_LABELS,
 	FONT_SCALE_VALUES,
@@ -33,27 +26,30 @@ import "../global.css";
 
 const FONT_SCALES = Object.keys(FONT_SCALE_VALUES) as FontSizeScale[];
 
-const THEME_ITEMS: {
-	key: ThemeMode;
-	label: string;
-	icon: keyof typeof Ionicons.glyphMap;
-}[] = [
-	{ key: "light", label: THEME_MODE_LABELS.light, icon: "sunny-outline" },
-	{ key: "dark", label: THEME_MODE_LABELS.dark, icon: "moon-outline" },
-	{
-		key: "system",
-		label: THEME_MODE_LABELS.system,
-		icon: "phone-portrait-outline",
-	},
+const THEME_ITEMS: { key: ThemeMode; label: string }[] = [
+	{ key: "light", label: THEME_MODE_LABELS.light },
+	{ key: "dark", label: THEME_MODE_LABELS.dark },
+	{ key: "system", label: THEME_MODE_LABELS.system },
 ];
 
+/**
+ * Settings, in the groups the prototype draws — Ko'rinish, Taqsimot,
+ * Maxfiylik, Ma'lumotlar — with every setting the app already had placed in
+ * the group it belongs to.
+ */
 export default function SettingsScreen() {
 	const router = useRouter();
 	const { tc, isDark, mode, setMode } = useTheme();
 	const { tf } = useFont();
 	const { scale, setScale } = useFontSize();
-	const { includeDebtsInStats, setIncludeDebtsInStats, splitIncome, setSplitIncome } =
-		usePreferences();
+	const {
+		hideIncome,
+		toggleHideIncome,
+		includeDebtsInStats,
+		setIncludeDebtsInStats,
+		splitIncome,
+		setSplitIncome,
+	} = usePreferences();
 	const {
 		categories,
 		transactions,
@@ -170,256 +166,206 @@ export default function SettingsScreen() {
 		);
 	};
 
+	const unit = unitByCode(defaultUnit);
+	const subcategoryCount = categories.reduce((n, c) => n + c.subcategories.length, 0);
+
 	return (
 		<>
 			<Stack.Screen options={{ title: "Sozlamalar" }} />
 			<ScrollView
 				className="flex-1 bg-background"
-				contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+				contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 40 }}
 				showsVerticalScrollIndicator={false}
 			>
-				{/* Ledger ------------------------------------------------------ */}
-				<Card flush title="Hisob-kitob">
-					<ListRow
-						title="Kategoriyalar"
-						subtitle={`${categories.length} ta kategoriya · ${categories.reduce(
-							(n, c) => n + c.subcategories.length,
-							0,
-						)} ta ichki kategoriya`}
-						icon="pricetags-outline"
-						onPress={() => router.push("/categories")}
+				{/* Look ---------------------------------------------------------- */}
+				<Section title="Ko'rinish" first>
+					<View className="gap-3" style={{ padding: 12, paddingLeft: 14 }}>
+						<RowHeading
+							icon="sunny-outline"
+							title="Mavzu"
+							subtitle={
+								mode === "system"
+									? `Tizimga mos — hozir ${THEME_MODE_LABELS[isDark ? "dark" : "light"].toLowerCase()}`
+									: undefined
+							}
+						/>
+						<SegmentedControl
+							items={THEME_ITEMS}
+							value={mode}
+							onChange={setMode}
+							className="bg-background"
+						/>
+					</View>
+					<View
+						className="gap-3 border-t border-border"
+						style={{ padding: 12, paddingLeft: 14 }}
+					>
+						<RowHeading
+							icon="text-outline"
+							title="Matn o'lchami"
+							subtitle="Barcha ekranlarga qo'llanadi"
+						/>
+						<SegmentedControl
+							items={FONT_SCALES.map((s) => ({ key: s, label: FONT_SCALE_LABELS[s] }))}
+							value={scale}
+							onChange={setScale}
+							className="bg-background"
+						/>
+					</View>
+					<Select
+						label="Standart valyuta"
+						value={defaultUnit}
+						toggleOff={false}
+						onChange={(next) => next && setDefaultUnit(next)}
+						options={UNITS.map((u) => ({ key: u.code, label: `${u.code} — ${u.name}` }))}
+						trigger={({ open }) => (
+							<ListRow
+								title="Valyuta"
+								subtitle="Yangi yozuv shu valyuta bilan boshlanadi"
+								icon="cash-outline"
+								value={`${unit.symbol} (${unit.code})`}
+								divider
+								onPress={open}
+							/>
+						)}
 					/>
+				</Section>
+
+				{/* Distribution --------------------------------------------------- */}
+				<Section title="Taqsimot">
 					<ListRow
-						title="Hamyonlar"
-						subtitle={`${wallets.length} ta hamyon · kirim ${wallets.reduce(
-							(n, w) => n + w.percent,
-							0,
-						)}% taqsimlanadi`}
+						title="Hamyonlar va ulushlar"
 						icon="wallet-outline"
-						divider
+						value={`${wallets.length} ta`}
 						onPress={() => router.push("/wallets")}
 					/>
 					<ListRow
-						title="Kontaktlar"
-						subtitle={
-							contacts.length
-								? `${contacts.length} ta kontakt · ${debts.length} ta qarz`
-								: "Qarzdorlarni qo'shing yoki telefondan import qiling"
+						title="Kirimni avtomatik taqsimlash"
+						subtitle="Ulushlar bo'yicha hamyonlarga. O'chirilsa, kirim qaysi hamyonga tushishini o'zingiz tanlaysiz"
+						icon="pie-chart-outline"
+						divider
+						trailing={
+							<Toggle
+								value={splitIncome}
+								onValueChange={setSplitIncome}
+								accessibilityLabel="Kirimni avtomatik taqsimlash"
+							/>
 						}
+					/>
+					<ListRow
+						title="Kategoriyalar"
+						subtitle={`${subcategoryCount} ta ichki kategoriya`}
+						icon="pricetags-outline"
+						value={`${categories.length} ta`}
+						divider
+						onPress={() => router.push("/categories")}
+					/>
+					<ListRow
+						title="Kontaktlar"
+						subtitle={contacts.length ? `${debts.length} ta qarz` : "Qarzdorlarni qo'shing yoki import qiling"}
 						icon="people-outline"
+						value={contacts.length ? `${contacts.length} ta` : undefined}
 						divider
 						onPress={() => router.push("/contacts")}
 					/>
-					<View className="px-4 py-3.5 border-t border-border">
-						<View className="flex-row items-center gap-3 mb-2">
-							<View className="w-9 h-9 rounded-full items-center justify-center bg-primary-highlight">
-								<Ionicons name="cash-outline" size={18} color={tc.primary} />
-							</View>
-							<View className="flex-1">
-								<Text
-									className="font-medium text-foreground"
-									style={{ fontSize: tf.base }}
-								>
-									Standart valyuta
-								</Text>
-								<Text
-									className="text-muted-foreground"
-									style={{ fontSize: tf.sm }}
-								>
-									{"Yangi yozuv shu valyuta bilan boshlanadi — har bir yozuv o'zinikini saqlaydi"}
-								</Text>
-							</View>
-						</View>
-						<Select
-							label="Standart valyuta"
-							value={defaultUnit}
-							toggleOff={false}
-							onChange={(unit) => unit && setDefaultUnit(unit)}
-							options={UNITS.map((u) => ({
-								key: u.code,
-								label: `${u.code} — ${u.name}`,
-							}))}
-							trigger={({ open }) => (
-								<Pressable
-									accessibilityRole="button"
-									onPress={open}
-									className="flex-row items-center justify-between rounded-xl px-4 py-3 bg-muted active:opacity-70"
-								>
-									<Text
-										className="font-semibold text-foreground"
-										style={{ fontSize: tf.base }}
-									>
-										{defaultUnit} — {unitByCode(defaultUnit).name}
-									</Text>
-									<Ionicons
-										name="chevron-down"
-										size={16}
-										color={tc.mutedForeground}
-									/>
-								</Pressable>
-							)}
-						/>
-					</View>
-				</Card>
-
-				{/* Wallets ------------------------------------------------------- */}
-				<Card flush title="Hamyonlar">
 					<ListRow
-						title="Kirimni hamyonlarga bo'lish"
-						subtitle="O'chirilsa, yangi kirimlar bo'linmaydi — kirim formasida pul tushadigan hamyonni o'zingiz tanlaysiz. Eski yozuvlar o'zgarmaydi"
-						icon="wallet-outline"
-						trailing={
-							<Switch
-								value={splitIncome}
-								onValueChange={setSplitIncome}
-								trackColor={{ false: tc.muted, true: tc.primary }}
-								thumbColor="#fff"
-							/>
-						}
-					/>
-				</Card>
-
-				{/* Stats --------------------------------------------------------- */}
-				<Card flush title="Statistika">
-					<ListRow
-						title="Qarzlarni statistikaga qo'shish"
-						subtitle="Qarz olish, qarz berish, qaytarish va undirish — yoqilsa, bular ham kirim/chiqim jamiga qo'shiladi"
+						title="Qarzlarni hisobotga qo'shish"
+						subtitle="Qarz olish, berish, qaytarish va undirish ham kirim/chiqim jamiga qo'shiladi"
 						icon="swap-horizontal-outline"
+						divider
 						trailing={
-							<Switch
+							<Toggle
 								value={includeDebtsInStats}
 								onValueChange={setIncludeDebtsInStats}
-								trackColor={{ false: tc.muted, true: tc.primary }}
-								thumbColor="#fff"
+								accessibilityLabel="Qarzlarni hisobotga qo'shish"
 							/>
 						}
 					/>
-				</Card>
+				</Section>
 
-				{/* Backup ------------------------------------------------------ */}
-				<Card flush title="Zaxira nusxa">
+				{/* Privacy ------------------------------------------------------- */}
+				<Section title="Maxfiylik">
+					<ListRow
+						title="Kirimni yashirish"
+						subtitle="Kirim, balans va hamyon qoldiqlari nuqtalar bilan ko'rsatiladi"
+						icon="eye-off-outline"
+						trailing={
+							<Toggle
+								value={hideIncome}
+								onValueChange={toggleHideIncome}
+								accessibilityLabel="Kirimni yashirish"
+							/>
+						}
+					/>
+				</Section>
+
+				{/* Data ---------------------------------------------------------- */}
+				<Section title="Ma'lumotlar">
 					<ListRow
 						title="Faylga saqlash"
-						subtitle={`${transactions.length} ta yozuv va ${categories.length} ta kategoriya JSON fayliga yoziladi`}
-						icon="save-outline"
+						subtitle={`${transactions.length} ta yozuv JSON fayliga yoziladi`}
+						icon="download-outline"
 						onPress={runSave}
-						trailing={
-							busy === "save" ? <ActivityIndicator color={tc.primary} /> : undefined
-						}
+						trailing={busy === "save" ? <ActivityIndicator color={tc.foreground} /> : undefined}
 					/>
 					<ListRow
 						title="Fayldan tiklash"
-						subtitle="JSON yoki .db zaxira faylini tanlang — hozirgi yozuvlar o'rniga qo'yiladi"
+						subtitle="JSON yoki .db zaxira — hozirgi yozuvlar o'rniga qo'yiladi"
 						icon="folder-open-outline"
 						divider
 						onPress={runLoad}
-						trailing={
-							busy === "load" ? <ActivityIndicator color={tc.primary} /> : undefined
-						}
+						trailing={busy === "load" ? <ActivityIndicator color={tc.foreground} /> : undefined}
 					/>
 					<ListRow
-						title="Telegram orqali"
+						title="Zaxira nusxa"
 						subtitle={
 							telegram.configured
 								? describeTelegramStatus(telegram.config, telegram.status) +
 									(telegram.config.auto ? " · har kuni" : "")
-								: "Har kuni .db zaxirani o'z Telegram botingizga yuborish"
+								: "Har kuni Telegram botingizga yuborish"
 						}
-						icon="paper-plane-outline"
+						icon="cloud-upload-outline"
 						divider
 						onPress={() => router.push("/telegram")}
 					/>
 					{telegram.configured && (
 						<ListRow
 							title="Telegramga hozir yuborish"
-							subtitle={`${transactions.length} ta yozuv .db fayl qilib chatga yuboriladi`}
-							icon="cloud-upload-outline"
+							subtitle={`${transactions.length} ta yozuv .db fayl qilib yuboriladi`}
+							icon="paper-plane-outline"
 							divider
 							onPress={runTelegramSend}
 							trailing={
-								telegram.sending ? <ActivityIndicator color={tc.primary} /> : undefined
+								telegram.sending ? <ActivityIndicator color={tc.foreground} /> : undefined
 							}
 						/>
 					)}
-				</Card>
-
-				{/* Theme ------------------------------------------------------- */}
-				<Card
-					title="Mavzu"
-					subtitle={
-						mode === "system"
-							? `Tizimga mos — hozir ${THEME_MODE_LABELS[isDark ? "dark" : "light"].toLowerCase()}`
-							: `Doim ${THEME_MODE_LABELS[mode].toLowerCase()}`
-					}
-				>
-					<SegmentedControl
-						items={THEME_ITEMS}
-						value={mode}
-						onChange={setMode}
-						className="bg-muted"
-					/>
-				</Card>
-
-				{/* Font size --------------------------------------------------- */}
-				<Card
-					title="Matn o'lchami"
-					subtitle={`Hozir: ${FONT_SCALE_LABELS[scale].toLowerCase()} — barcha ekranlarga qo'llanadi`}
-				>
-					<View className="flex-row gap-2">
-						{FONT_SCALES.map((s) => {
-							const active = scale === s;
-							return (
-								<Pressable
-									key={s}
-									accessibilityRole="button"
-									accessibilityState={{ selected: active }}
-									onPress={() => setScale(s)}
-									className={`flex-1 h-11 rounded-full items-center justify-center ${
-										active ? "bg-primary" : "bg-muted"
-									}`}
-								>
-									{/* Each option previews its own scale, so the choice is
-									    legible before it's applied. */}
-									<Text
-										style={{
-											fontSize: Math.round(13 * FONT_SCALE_VALUES[s]),
-											fontWeight: active ? "700" : "500",
-											color: active ? "#fff" : tc.mutedForeground,
-										}}
-									>
-										{FONT_SCALE_LABELS[s]}
-									</Text>
-								</Pressable>
-							);
-						})}
-					</View>
-				</Card>
-
-				{/* About ------------------------------------------------------- */}
-				<Card flush title="Ilova haqida">
-					<ListRow
-						title="Versiya"
-						icon="information-circle-outline"
-						trailing={<Badge label={appVersion} />}
-					/>
 					<ListRow
 						title="Kiritilgan yozuvlar"
 						icon="receipt-outline"
+						value={`${transactions.length} ta`}
 						divider
-						trailing={<Badge label={String(transactions.length)} tone="primary" />}
 					/>
 					<ListRow
+						title="Ilova versiyasi"
+						icon="information-circle-outline"
+						value={appVersion}
+						divider
+					/>
+				</Section>
+
+				<Card flush className="mt-5">
+					<ListRow
 						title="Barcha ma'lumotlarni o'chirish"
-						subtitle="Barcha yozuvlarni o'chirish va boshlang'ich kategoriyalarni tiklash"
+						subtitle="Barcha yozuvlar o'chadi, boshlang'ich kategoriyalar tiklanadi"
 						icon="trash-outline"
 						danger
-						divider
 						onPress={confirmReset}
 					/>
 				</Card>
 
 				<Text
-					className="text-muted-foreground text-center px-6 pt-1"
+					className="font-semibold text-muted-foreground text-center px-6 pt-4"
 					style={{ fontSize: tf.xs }}
 				>
 					{telegram.configured
@@ -428,5 +374,64 @@ export default function SettingsScreen() {
 				</Text>
 			</ScrollView>
 		</>
+	);
+}
+
+/** A group of settings under its small heading. */
+function Section({
+	title,
+	first = false,
+	children,
+}: {
+	title: string;
+	first?: boolean;
+	children: ReactNode;
+}) {
+	const { tf } = useFont();
+	return (
+		<View>
+			<Text
+				accessibilityRole="header"
+				className="font-bold text-muted-foreground ml-1 mb-2"
+				style={{ fontSize: tf.sm, marginTop: first ? 4 : 20 }}
+			>
+				{title}
+			</Text>
+			<Card flush>{children}</Card>
+		</View>
+	);
+}
+
+/** The label of a setting whose control sits under it rather than beside it. */
+function RowHeading({
+	icon,
+	title,
+	subtitle,
+}: {
+	icon: keyof typeof Ionicons.glyphMap;
+	title: string;
+	subtitle?: string;
+}) {
+	const { tc } = useTheme();
+	const { tf } = useFont();
+	return (
+		<View className="flex-row items-center gap-3">
+			<View
+				className="items-center justify-center bg-background"
+				style={{ width: 32, height: 32, borderRadius: 10 }}
+			>
+				<Ionicons name={icon} size={18} color={tc.foreground} />
+			</View>
+			<View className="flex-1 gap-px">
+				<Text className="font-semibold text-foreground" style={{ fontSize: tf.base }}>
+					{title}
+				</Text>
+				{!!subtitle && (
+					<Text className="font-semibold text-muted-foreground" style={{ fontSize: tf.sm - 1 }}>
+						{subtitle}
+					</Text>
+				)}
+			</View>
+		</View>
 	);
 }

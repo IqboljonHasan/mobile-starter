@@ -1,54 +1,49 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import {
-	ActivityIndicator,
-	Alert,
-	Pressable,
-	ScrollView,
-	Switch,
-	Text,
-	View,
-} from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AmountCard from "@/components/AmountCard";
+import BottomBar, { BOTTOM_BAR_SPACE } from "@/components/BottomBar";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import TransferSheet from "@/components/TransferSheet";
+import WalletIcon from "@/components/WalletIcon";
 import WalletPicker from "@/components/WalletPicker";
 import {
-	AmountField,
+	ActionSheet,
 	Button,
+	Chip,
 	DateField,
+	FieldLabel,
+	IconButton,
 	NumberPad,
-	SegmentedControl,
+	PickerField,
 	Select,
 	Textarea,
+	Toggle,
 } from "@/components/ui";
+import { Text } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
-import { categoryColorValue, withAlpha } from "@/lib/categoryColors";
-import { formatDayLabel, todayISO } from "@/lib/date";
-import {
-	DEFAULT_METHOD,
-	formatAmount,
-	maskAmount,
-	parseAmount,
-	PAY_METHODS,
-	UNITS,
-	unitByCode,
-} from "@/lib/money";
+import { categoryColorValue } from "@/lib/categoryColors";
+import { currentMonthKey, formatDayLabel, monthName, todayISO } from "@/lib/date";
 import { contactName, DIRECTION_META, remainingAmount } from "@/lib/debts";
+import { DEFAULT_METHOD, formatAmount, maskAmount, parseAmount, unitByCode } from "@/lib/money";
 import {
 	splitAmount,
 	splitsIncome,
+	UNALLOCATED_ID,
+	UNALLOCATED_NAME,
+	type WalletBalance,
 	walletBalances,
-	walletColor,
+	walletById,
 	walletName,
 } from "@/lib/wallets";
-import type { Debt, PayMethod, Transaction, TxType } from "@/lib/types";
+import type { Debt, PayMethod, Transaction, TxType, Wallet } from "@/lib/types";
 import "../global.css";
 
 /**
@@ -68,10 +63,10 @@ export default function TransactionScreen() {
 	const { ready, transactions, debts } = useLedger();
 
 	const existing = params.id ? transactions.find((t) => t.id === params.id) : undefined;
-	// An entry the Debts tab wrote is the ledger's side of a debt, not a record
-	// of its own. Editing it here would let the two disagree — the debt would
-	// still say 500 000 while the entry said 300 000 — so this one is read from
-	// here and changed there.
+	// An entry the Debts screen wrote is the ledger's side of a debt, not a
+	// record of its own. Editing it here would let the two disagree — the debt
+	// would still say 500 000 while the entry said 300 000 — so this one is read
+	// from here and changed there.
 	const owningDebt = existing?.debtId
 		? (debts.find((d) => d.id === existing.debtId) ?? null)
 		: null;
@@ -81,7 +76,7 @@ export default function TransactionScreen() {
 			<>
 				<Stack.Screen options={{ title: "Yozuv" }} />
 				<View className="flex-1 bg-background items-center justify-center">
-					<ActivityIndicator color={tc.primary} />
+					<ActivityIndicator color={tc.foreground} />
 				</View>
 			</>
 		);
@@ -93,7 +88,7 @@ export default function TransactionScreen() {
 				<Stack.Screen options={{ title: "Yozuv" }} />
 				<View className="flex-1 bg-background items-center justify-center px-8">
 					<Text
-						className="text-muted-foreground text-center"
+						className="font-semibold text-muted-foreground text-center"
 						style={{ fontSize: tf.base }}
 					>
 						{"Bu yozuv endi mavjud emas."}
@@ -138,71 +133,69 @@ function DebtOwnedEntry({
 	const meta = DIRECTION_META[debt.direction];
 	const isPrincipal = debt.transactionId === transaction.id;
 	const name = contactName(contacts, debt.contactId);
+	const income = transaction.type === "income";
 
 	return (
 		<>
 			<Stack.Screen options={{ title: "Qarz yozuvi" }} />
 			<ScrollView
 				className="flex-1 bg-background"
-				contentContainerStyle={{ padding: 16, gap: 16 }}
+				contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 32, gap: 12 }}
 			>
-				<View
-					className="rounded-2xl bg-card p-4 items-center"
-					style={{ borderWidth: 1, borderColor: tc.border }}
-				>
-					<View className="w-14 h-14 rounded-full items-center justify-center bg-primary-highlight">
-						<Ionicons name="people-outline" size={26} color={tc.primary} />
+				<View className="bg-card items-center" style={{ borderRadius: 20, padding: 20 }}>
+					<View
+						className="items-center justify-center bg-background"
+						style={{ width: 52, height: 52, borderRadius: 18 }}
+					>
+						<Ionicons name="people-outline" size={24} color={tc.foreground} />
 					</View>
 					<Text
-						className={`font-bold mt-3 ${
-							transaction.type === "income" ? "text-success" : "text-danger"
-						}`}
-						style={{ fontSize: tf.xxxl }}
+						className="font-extrabold mt-3"
+						style={{ fontSize: tf.xxxl + 4, letterSpacing: -0.6, color: income ? tc.success : tc.foreground }}
 						numberOfLines={1}
 						adjustsFontSizeToFit
 					>
-						{transaction.type === "income" ? "+" : "−"}
+						{income ? "+" : "−"}
 						{formatAmount(transaction.amount, transaction.unit)}
 					</Text>
 					<Text
-						className="text-muted-foreground mt-1 text-center"
-						style={{ fontSize: tf.base }}
+						className="font-semibold text-muted-foreground mt-1 text-center"
+						style={{ fontSize: tf.sm + 1 }}
 					>
 						{`${name} · ${formatDayLabel(transaction.date)}`}
 					</Text>
 				</View>
 
-				<View
-					className="rounded-2xl bg-card p-4 gap-1"
-					style={{ borderWidth: 1, borderColor: tc.border }}
-				>
-					<Text
-						className="font-semibold text-foreground"
-						style={{ fontSize: tf.base }}
-					>
+				<View className="bg-card gap-1" style={{ borderRadius: 20, padding: 16 }}>
+					<Text className="font-bold text-foreground" style={{ fontSize: tf.base }}>
 						{isPrincipal
 							? `Bu yozuv "${meta.label}" qarzining o'zi`
 							: `Bu yozuv qarz bo'yicha ${meta.payLabel.toLowerCase()}`}
 					</Text>
-					<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
+					<Text
+						className="font-semibold text-muted-foreground"
+						style={{ fontSize: tf.sm, lineHeight: Math.round(tf.sm * 1.45) }}
+					>
 						{`Summani yoki sanani o'zgartirish uchun qarzning o'zini tahrirlang — aks holda qarz qoldig'i bilan hisob bir-biriga to'g'ri kelmay qoladi. Hozirgi qoldiq: ${formatAmount(remainingAmount(debt), debt.unit)}.`}
 					</Text>
 				</View>
 
-				<Button
-					label="Qarzni ochish"
-					size="lg"
-					fullWidth
-					startIcon={<Ionicons name="open-outline" size={18} color="#fff" />}
-					onPress={() => router.replace(`/debt?id=${debt.id}`)}
-				/>
-				<Button
-					label="Orqaga"
-					variant="text"
-					color="secondary"
-					fullWidth
-					onPress={() => router.back()}
-				/>
+				<View className="gap-1 mt-2">
+					<Button
+						label="Qarzni ochish"
+						size="lg"
+						fullWidth
+						startIcon={<Ionicons name="open-outline" size={18} color={tc.primaryFg} />}
+						onPress={() => router.replace(`/debt?id=${debt.id}`)}
+					/>
+					<Button
+						label="Orqaga"
+						variant="text"
+						color="secondary"
+						fullWidth
+						onPress={() => router.back()}
+					/>
+				</View>
 			</ScrollView>
 		</>
 	);
@@ -234,16 +227,10 @@ function TransactionForm({
 	const { hideIncome, splitIncome } = usePreferences();
 
 	const [type, setType] = useState<TxType>(existing?.type ?? initialType);
-	const [amountText, setAmountText] = useState(
-		existing ? String(existing.amount) : "",
-	);
+	const [amountText, setAmountText] = useState(existing ? String(existing.amount) : "");
 	const [unit, setUnit] = useState(existing?.unit ?? defaultUnit);
-	const [method, setMethod] = useState<PayMethod>(
-		existing?.method ?? DEFAULT_METHOD,
-	);
-	const [categoryId, setCategoryId] = useState<string | null>(
-		existing?.categoryId ?? null,
-	);
+	const [method, setMethod] = useState<PayMethod>(existing?.method ?? DEFAULT_METHOD);
+	const [categoryId, setCategoryId] = useState<string | null>(existing?.categoryId ?? null);
 	const [subcategoryId, setSubcategoryId] = useState<string | null>(
 		existing?.subcategoryId ?? null,
 	);
@@ -261,23 +248,25 @@ function TransactionForm({
 	);
 	const [coverOpen, setCoverOpen] = useState(false);
 	const [padOpen, setPadOpen] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
 	// Errors only appear once the user has tried to save — a form that turns red
 	// while it's still being filled in is nagging, not helping.
 	const [submitted, setSubmitted] = useState(false);
 
+	const income = type === "income";
 	const typeCategories = useMemo(
 		() => categories.filter((c) => c.type === type),
 		[categories, type],
 	);
 	const category = typeCategories.find((c) => c.id === categoryId) ?? null;
+	const subcategory = category?.subcategories.find((s) => s.id === subcategoryId) ?? null;
 
 	const amount = parseAmount(amountText);
-	const amountError =
-		!amountText.trim()
-			? "Summani kiriting"
-			: !Number.isFinite(amount) || amount <= 0
-				? "Summa noldan katta bo'lishi kerak"
-				: undefined;
+	const amountError = !amountText.trim()
+		? "Summani kiriting"
+		: !Number.isFinite(amount) || amount <= 0
+			? "Summa noldan katta bo'lishi kerak"
+			: undefined;
 	const categoryError = categoryId ? undefined : "Kategoriyani tanlang";
 
 	// The entry being edited is left out, so an expense is measured against the
@@ -304,14 +293,14 @@ function TransactionForm({
 		existing.unit === unit &&
 		existing.categoryId === categoryId;
 
+	// Whether the category (and the user-wide switch) would divide this income
+	// on its own; only then is there a split for the entry to opt out of.
+	const splitsByDefault = income && splitsIncome(category, splitIncome);
+	const dividing = splitsByDefault && splitThis;
+
 	// The stored split for an entry as it stands, and the split it is about to
 	// get once an edit is saved — history shows what actually happened, the form
 	// shows what saving would make happen.
-	// Whether the category (and the user-wide switch) would divide this income
-	// on its own; only then is there a split for the entry to opt out of.
-	const splitsByDefault = type === "income" && splitsIncome(category, splitIncome);
-	const dividing = splitsByDefault && splitThis;
-
 	const preview = useMemo(() => {
 		if (!dividing) return [];
 		if (splitUnchanged && existing.allocations.length > 0 && !existing.walletId) {
@@ -376,8 +365,7 @@ function TransactionForm({
 			// all of them, which the store works out from the category — unless
 			// it isn't being divided, in which case it names the wallet that
 			// receives it whole (or none, and touches no wallet).
-			walletId:
-				type === "expense" ? walletId : dividing ? null : incomeWalletId,
+			walletId: type === "expense" ? walletId : dividing ? null : incomeWalletId,
 		};
 
 		if (existing) updateTransaction(existing.id, input);
@@ -429,240 +417,148 @@ function TransactionForm({
 		);
 	};
 
+	const title = existing
+		? income
+			? "Kirimni tahrirlash"
+			: "Chiqimni tahrirlash"
+		: income
+			? "Yangi kirim"
+			: "Yangi chiqim";
+	const keyboardLift = Math.max(keyboardInset - insets.bottom, 0);
+	const money = (value: number) => (hideIncome ? maskAmount(unit) : formatAmount(value, unit));
+
 	return (
-		<>
+		<View className="flex-1 bg-background">
 			<Stack.Screen
 				options={{
-					title: existing
-						? type === "income"
-							? "Kirimni tahrirlash"
-							: "Chiqimni tahrirlash"
-						: type === "income"
-							? "Yangi kirim"
-							: "Yangi chiqim",
+					title,
+					headerRight: () => (
+						<IconButton
+							variant="filled"
+							icon="ellipsis-vertical"
+							accessibilityLabel="Boshqa amallar"
+							onPress={() => setMenuOpen(true)}
+						/>
+					),
 				}}
 			/>
 			<ScrollView
-				className="flex-1 bg-background"
+				className="flex-1"
 				// Shrinking the scroll viewport, rather than only padding its
 				// content, is what lets a field tapped low in the form scroll itself
 				// into view: the native scroll container pulls a newly focused child
 				// inside its own bounds. The root layout already pads past the
 				// navigation bar, so only the rest of the keyboard is taken off here.
-				style={{ marginBottom: Math.max(keyboardInset - insets.bottom, 0) }}
-				contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}
+				style={{ marginBottom: keyboardLift }}
+				contentContainerStyle={{
+					paddingHorizontal: 18,
+					paddingTop: 4,
+					paddingBottom: padOpen ? 24 : BOTTOM_BAR_SPACE,
+					gap: 16,
+				}}
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}
 			>
-				{/* Which side of the ledger ------------------------------------ */}
-				<View className="flex-row gap-3">
-					{(["expense", "income"] as TxType[]).map((option) => {
-						const active = type === option;
-						const income = option === "income";
-						return (
-							<Pressable
-								key={option}
-								accessibilityRole="button"
-								accessibilityState={{ selected: active }}
-								onPress={() => changeType(option)}
-								className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3.5 active:opacity-70 ${
-									active ? "" : "bg-card"
-								}`}
-								style={
-									active
-										? { backgroundColor: income ? tc.success : tc.danger }
-										: { borderWidth: 1, borderColor: tc.border }
+				{/* Amount, how it was paid, and in what -------------------------- */}
+				<AmountCard
+					value={amountText}
+					onFocus={() => setPadOpen(true)}
+					onBlur={() => setPadOpen(false)}
+					method={method}
+					onMethodChange={setMethod}
+					unit={unit}
+					onUnitChange={setUnit}
+					error={submitted ? amountError : undefined}
+				/>
+
+				{/* Category and subcategory, side by side ------------------------- */}
+				<View>
+					<View className="flex-row" style={{ gap: 8 }}>
+						<View className="flex-1">
+							<FieldLabel required>Kategoriya</FieldLabel>
+							<Select
+								label="Kategoriya"
+								value={categoryId}
+								toggleOff={false}
+								onChange={changeCategory}
+								options={typeCategories.map((c) => ({ key: c.id, label: c.name }))}
+								emptyMessage={`Hali ${income ? "kirim" : "chiqim"} kategoriyasi yo'q — avval qo'shing.`}
+								headerRight={
+									<Pressable
+										accessibilityRole="button"
+										onPress={() => router.push("/categories")}
+										className="px-3.5 py-2 rounded-full bg-muted active:opacity-70"
+									>
+										<Text className="font-bold text-foreground" style={{ fontSize: tf.sm }}>
+											Boshqarish
+										</Text>
+									</Pressable>
 								}
-							>
-								<Ionicons
-									name={income ? "arrow-down-circle" : "arrow-up-circle"}
-									size={18}
-									color={active ? "#fff" : income ? tc.success : tc.danger}
-								/>
-								<Text
-									className="font-semibold"
-									style={{
-										fontSize: tf.base,
-										color: active ? "#fff" : tc.foreground,
-									}}
-								>
-									{income ? "Kirim" : "Chiqim"}
-								</Text>
-							</Pressable>
-						);
-					})}
-				</View>
-
-				{/* Amount and unit --------------------------------------------- */}
-				<View className="flex-row items-start gap-3">
-					<View className="flex-1">
-						<AmountField
-							label="Summa"
-							required
-							value={amountText}
-							onFocus={() => setPadOpen(true)}
-							onBlur={() => setPadOpen(false)}
-							placeholder="0"
-							error={submitted ? amountError : undefined}
-						/>
-					</View>
-					<View style={{ width: 116 }}>
-						<Text
-							className="font-medium text-foreground mb-1.5"
-							style={{ fontSize: tf.base }}
-						>
-							Valyuta
-						</Text>
-						<Select
-							label="Valyuta"
-							value={unit}
-							onChange={(next) => next && setUnit(next)}
-							toggleOff={false}
-							options={UNITS.map((u) => ({
-								key: u.code,
-								label: `${u.code} — ${u.name}`,
-							}))}
-							trigger={({ open }) => (
-								<Pressable
-									accessibilityRole="button"
-									accessibilityLabel={`Valyuta: ${unit}`}
-									onPress={open}
-									className="flex-row items-center justify-between rounded-xl px-4 active:opacity-70"
-									style={{
-										backgroundColor: tc.card,
-										borderWidth: 1,
-										borderColor: tc.border,
-										minHeight: 56,
-									}}
-								>
-									<Text
-										className="font-semibold text-foreground"
-										style={{ fontSize: tf.lg }}
-									>
-										{unit}
-									</Text>
-									<Ionicons
-										name="chevron-down"
-										size={16}
-										color={tc.mutedForeground}
-									/>
-								</Pressable>
-							)}
-						/>
-					</View>
-				</View>
-				{!amountError && (
-					<Text className="text-muted-foreground -mt-3" style={{ fontSize: tf.sm }}>
-						{type === "income" ? "+" : "−"}
-						{formatAmount(amount, unit)} · {unitByCode(unit).name}
-					</Text>
-				)}
-
-				{/* How it was paid ---------------------------------------------- */}
-				<View>
-					<Text
-						className="font-medium text-foreground mb-1.5"
-						style={{ fontSize: tf.base }}
-					>
-						{"To'lov turi"}
-					</Text>
-					<SegmentedControl
-						items={PAY_METHODS}
-						value={method}
-						onChange={setMethod}
-						className="bg-muted"
-					/>
-				</View>
-
-				{/* Category ----------------------------------------------------- */}
-				<View>
-					<Text
-						className="font-medium text-foreground mb-1.5"
-						style={{ fontSize: tf.base }}
-					>
-						Kategoriya
-						<Text className="text-danger"> *</Text>
-					</Text>
-					<Select
-						label="Kategoriya"
-						value={categoryId}
-						toggleOff={false}
-						onChange={changeCategory}
-						options={typeCategories.map((c) => ({ key: c.id, label: c.name }))}
-						emptyMessage={`Hali ${type === "income" ? "kirim" : "chiqim"} kategoriyasi yo'q — avval qo'shing.`}
-						headerRight={
-							<Pressable
-								accessibilityRole="button"
-								onPress={() => router.push("/categories")}
-								className="px-3 py-1.5 rounded-full bg-muted active:opacity-70"
-							>
-								<Text
-									className="font-medium text-muted-foreground"
-									style={{ fontSize: tf.sm }}
-								>
-									Boshqarish
-								</Text>
-							</Pressable>
-						}
-						renderOption={(option, selected) => {
-							const optionCategory = typeCategories.find((c) => c.id === option.key);
-							return (
-								<View className="flex-row items-center gap-3 py-2.5">
-									<CategoryAvatar
-										icon={optionCategory?.icon ?? "pricetag-outline"}
-										color={optionCategory?.color ?? "blue"}
-										size={34}
-									/>
-									<Text
-										className={`flex-1 ${selected ? "font-bold text-primary" : "text-foreground"}`}
-										style={{ fontSize: tf.base }}
-									>
-										{option.label}
-									</Text>
-									{selected && (
-										<Ionicons name="checkmark" size={20} color={tc.primary} />
-									)}
-								</View>
-							);
-						}}
-						trigger={({ open }) => (
-							<Pressable
-								accessibilityRole="button"
-								onPress={open}
-								className="flex-row items-center gap-3 rounded-xl px-4 active:opacity-70"
-								style={{
-									backgroundColor: tc.card,
-									borderWidth: submitted && categoryError ? 1.5 : 1,
-									borderColor:
-										submitted && categoryError ? tc.danger : tc.border,
-									minHeight: 56,
+								renderOption={(option, selected) => {
+									const optionCategory = typeCategories.find((c) => c.id === option.key);
+									return (
+										<View className="flex-row items-center gap-3 py-2.5">
+											<CategoryAvatar
+												icon={optionCategory?.icon ?? "pricetag-outline"}
+												color={optionCategory?.color ?? "blue"}
+												size={34}
+											/>
+											<Text
+												className={`flex-1 text-foreground ${selected ? "font-extrabold" : "font-semibold"}`}
+												style={{ fontSize: tf.base }}
+											>
+												{option.label}
+											</Text>
+											{selected && (
+												<Ionicons name="checkmark-circle" size={22} color={tc.foreground} />
+											)}
+										</View>
+									);
 								}}
-							>
-								{category ? (
-									<CategoryAvatar icon={category.icon} color={category.color} size={34} />
-								) : (
-									<Ionicons
-										name="pricetag-outline"
-										size={20}
-										color={tc.mutedForeground}
+								trigger={({ open }) => (
+									<PickerField
+										accessibilityLabel={`Kategoriya: ${category?.name ?? "tanlanmagan"}`}
+										text={category?.name ?? null}
+										placeholder="Tanlang"
+										onPress={open}
+										error={submitted && !!categoryError}
 									/>
 								)}
-								<Text
-									className="flex-1"
-									style={{
-										fontSize: tf.lg,
-										color: category ? tc.foreground : tc.placeholder,
-									}}
-									numberOfLines={1}
-								>
-									{category?.name ?? "Kategoriyani tanlang"}
-								</Text>
-								<Ionicons name="chevron-down" size={16} color={tc.mutedForeground} />
-							</Pressable>
-						)}
-					/>
+							/>
+						</View>
+						<View className="flex-1">
+							<FieldLabel>Subkategoriya</FieldLabel>
+							<Select
+								label="Subkategoriya"
+								value={subcategoryId}
+								onChange={setSubcategoryId}
+								clearable
+								disabled={!category || category.subcategories.length === 0}
+								options={(category?.subcategories ?? []).map((s) => ({
+									key: s.id,
+									label: s.name,
+								}))}
+								emptyMessage="Bu kategoriyada hali subkategoriya yo'q."
+								trigger={({ open }) => (
+									<PickerField
+										accessibilityLabel={`Subkategoriya: ${subcategory?.name ?? "tanlanmagan"}`}
+										text={subcategory?.name ?? null}
+										placeholder={
+											category
+												? category.subcategories.length
+													? "Ixtiyoriy"
+													: "Yo'q"
+												: "Tanlang"
+										}
+										onPress={open}
+										disabled={!category || category.subcategories.length === 0}
+									/>
+								)}
+							/>
+						</View>
+					</View>
 					{submitted && !!categoryError && (
-						<Text className="text-danger mt-1.5" style={{ fontSize: tf.sm }}>
+						<Text className="font-semibold text-danger mt-1.5 ml-1" style={{ fontSize: tf.sm }}>
 							{categoryError}
 						</Text>
 					)}
@@ -670,169 +566,56 @@ function TransactionForm({
 
 				{/* Pinned subcategories: one tap sets category and subcategory ---- */}
 				{pinnedShortcuts.length > 0 && (
-					<View>
-						<Text
-							className="font-medium text-foreground mb-1.5"
-							style={{ fontSize: tf.base }}
-						>
-							Tezkor tanlash
-						</Text>
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							keyboardShouldPersistTaps="handled"
-							contentContainerStyle={{ gap: 8 }}
-						>
-							{pinnedShortcuts.map(({ category: c, sub }) => {
-								const selected = categoryId === c.id && subcategoryId === sub.id;
-								const subHex = categoryColorValue(sub.color, isDark);
-								return (
-									<Pressable
-										key={sub.id}
-										accessibilityRole="button"
-										accessibilityState={{ selected }}
-										onPress={() => {
-											if (categoryId !== c.id) changeCategory(c.id);
-											setSubcategoryId(sub.id);
-										}}
-										className="flex-row items-center gap-2 rounded-full px-3 py-2 active:opacity-70"
-										style={{
-											backgroundColor: selected
-												? subHex
-												: withAlpha(subHex, isDark ? 0.22 : 0.14),
-											borderWidth: 1.5,
-											borderColor: selected ? subHex : "transparent",
-										}}
-									>
-										<Text
-											className="font-medium"
-											style={{
-												fontSize: tf.xs,
-												color: selected ? "#fff" : tc.foreground,
-											}}
-										>
-											{sub.name}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</ScrollView>
-					</View>
-				)}
-
-				{/* Subcategory -------------------------------------------------- */}
-				<View>
-					<Text
-						className="font-medium text-foreground mb-1.5"
-						style={{ fontSize: tf.base }}
+					<ScrollView
+						horizontal
+						accessibilityRole="radiogroup"
+						accessibilityLabel="Tezkor tanlash"
+						showsHorizontalScrollIndicator={false}
+						keyboardShouldPersistTaps="handled"
+						style={{ marginTop: -8, marginHorizontal: -18 }}
+						contentContainerStyle={{ gap: 6, paddingHorizontal: 18 }}
 					>
-						Ichki kategoriya
-					</Text>
-					<Select
-						label="Ichki kategoriya"
-						value={subcategoryId}
-						onChange={setSubcategoryId}
-						clearable
-						disabled={!category || category.subcategories.length === 0}
-						options={(category?.subcategories ?? []).map((s) => ({
-							key: s.id,
-							label: s.name,
-						}))}
-						emptyMessage="Bu kategoriyada hali ichki kategoriya yo'q."
-						trigger={({ open }) => {
-							const subcategory =
-								category?.subcategories.find((s) => s.id === subcategoryId) ?? null;
-							const disabled = !category || category.subcategories.length === 0;
+						{pinnedShortcuts.map(({ category: c, sub }) => {
+							const selected = categoryId === c.id && subcategoryId === sub.id;
 							return (
-								<Pressable
-									accessibilityRole="button"
-									disabled={disabled}
-									onPress={open}
-									className={`flex-row items-center gap-3 rounded-xl px-4 active:opacity-70 ${
-										disabled ? "opacity-50" : ""
-									}`}
-									style={{
-										backgroundColor: tc.card,
-										borderWidth: 1,
-										borderColor: tc.border,
-										minHeight: 56,
+								<Chip
+									key={sub.id}
+									size="sm"
+									role="radio"
+									label={sub.name}
+									active={selected}
+									onPress={() => {
+										if (selected) {
+											setSubcategoryId(null);
+											return;
+										}
+										if (categoryId !== c.id) changeCategory(c.id);
+										setSubcategoryId(sub.id);
 									}}
-								>
-									{subcategory && (
-										<View
-											style={{
-												width: 10,
-												height: 10,
-												borderRadius: 5,
-												backgroundColor: tc.primary,
-											}}
-										/>
-									)}
-									<Text
-										className="flex-1"
-										style={{
-											fontSize: tf.lg,
-											color: subcategory ? tc.foreground : tc.placeholder,
-										}}
-										numberOfLines={1}
-									>
-										{subcategory?.name ??
-											(category
-												? category.subcategories.length
-													? "Ixtiyoriy"
-													: "Ichki kategoriya yo'q"
-												: "Avval kategoriyani tanlang")}
-									</Text>
-									<Ionicons
-										name="chevron-down"
-										size={16}
-										color={tc.mutedForeground}
-									/>
-								</Pressable>
+								/>
 							);
-						}}
-					/>
-				</View>
+						})}
+					</ScrollView>
+				)}
 
 				{/* Which wallet pays, or how the income divides ------------------ */}
 				{type === "expense" ? (
 					<View>
 						{mappedWallets.length > 1 && (
-							<View className="flex-row flex-wrap gap-2 mb-2">
-								{mappedWallets.map((w) => {
-									const active = walletId === w.id;
-									return (
-										<Pressable
-											key={w.id}
-											accessibilityRole="button"
-											accessibilityState={{ selected: active }}
-											onPress={() => {
-												setWalletId(w.id);
-												setWalletTouched(true);
-											}}
-											className={`flex-row items-center gap-1.5 rounded-full px-3 py-1.5 active:opacity-70 ${
-												active ? "bg-primary-highlight" : "bg-muted"
-											}`}
-										>
-											<View
-												style={{
-													width: 7,
-													height: 7,
-													borderRadius: 3.5,
-													backgroundColor: categoryColorValue(w.color, isDark),
-												}}
-											/>
-											<Text
-												className={`font-medium ${
-													active ? "text-primary" : "text-muted-foreground"
-												}`}
-												style={{ fontSize: tf.sm }}
-											>
-												{w.name}
-											</Text>
-										</Pressable>
-									);
-								})}
+							<View className="flex-row flex-wrap mb-2" style={{ gap: 6 }}>
+								{mappedWallets.map((w) => (
+									<Chip
+										key={w.id}
+										size="sm"
+										label={w.name}
+										dot={categoryColorValue(w.color, isDark)}
+										active={walletId === w.id}
+										onPress={() => {
+											setWalletId(w.id);
+											setWalletTouched(true);
+										}}
+									/>
+								))}
 							</View>
 						)}
 						<WalletPicker
@@ -850,177 +633,187 @@ function TransactionForm({
 							hideAmounts={hideIncome}
 						/>
 						{shortfall > 0 ? (
-							<Text className="text-danger mt-1.5" style={{ fontSize: tf.sm }}>
+							<Text className="font-semibold text-danger mt-1.5 ml-1" style={{ fontSize: tf.sm }}>
 								{`Yetishmaydi: ${formatAmount(shortfall, unit)} — saqlashda boshqa hamyondan qoplashni taklif qilamiz.`}
 							</Text>
 						) : walletId ? (
 							<Text
-								className="text-muted-foreground mt-1.5"
+								className="font-semibold text-muted-foreground mt-1.5 ml-1"
 								style={{ fontSize: tf.sm }}
 							>
-								{`Yozuvdan keyin qoladi: ${
-									hideIncome
-										? maskAmount(unit)
-										: formatAmount(
-												available - (Number.isFinite(amount) ? amount : 0),
-												unit,
-											)
-								}`}
+								{`Yozuvdan keyin qoladi: ${money(available - (Number.isFinite(amount) ? amount : 0))}`}
 							</Text>
 						) : null}
 					</View>
 				) : category ? (
-					<View className="gap-3">
+					<View className="bg-card overflow-hidden" style={{ borderRadius: 20 }}>
 						{splitsByDefault && (
-							<View className="flex-row items-center gap-3">
-								<View className="flex-1">
-									<Text
-										className="font-medium text-foreground"
-										style={{ fontSize: tf.base }}
-									>
-										{"Hamyonlarga bo'lish"}
+							<View
+								className="flex-row items-center gap-3"
+								style={{ minHeight: 60, paddingLeft: 14, paddingRight: 8 }}
+							>
+								<View
+									className="items-center justify-center bg-background"
+									style={{ width: 32, height: 32, borderRadius: 10 }}
+								>
+									<Ionicons name="pie-chart-outline" size={18} color={tc.foreground} />
+								</View>
+								<View className="flex-1 gap-px">
+									<Text className="font-bold text-foreground" style={{ fontSize: tf.base }}>
+										Hamyonlarga taqsimlash
 									</Text>
 									<Text
-										className="text-muted-foreground"
-										style={{ fontSize: tf.xs }}
+										className="font-semibold text-muted-foreground"
+										style={{ fontSize: tf.sm - 1 }}
 									>
-										{splitThis
-											? "Kirim hamyonlar orasida foizlar bo'yicha bo'linadi"
-											: "Kirim bo'linmaydi — bitta hamyonga tushadi"}
+										{splitThis ? "Ulushlar bo'yicha avtomatik" : "Bitta hamyonga tushadi"}
 									</Text>
 								</View>
-								<Switch
+								<Toggle
 									value={splitThis}
 									onValueChange={setSplitThis}
-									trackColor={{ false: tc.muted, true: tc.primary }}
-									thumbColor="#fff"
+									accessibilityLabel="Hamyonlarga taqsimlash"
 								/>
 							</View>
 						)}
-						{!dividing && (
-							<WalletPicker
-								label="Qaysi hamyonga tushadi"
-								value={incomeWalletId}
-								onChange={setIncomeWalletId}
-								wallets={wallets}
-								balances={balances}
-								unit={unit}
-								allowNone
-								noneLabel="Hamyonsiz"
-								includeUnallocated
-								hideAmounts={hideIncome}
-							/>
-						)}
-						{preview.length > 0 && (
-							<View>
-								<Text
-									className="font-medium text-foreground mb-1.5"
-									style={{ fontSize: tf.base }}
-								>
-									{splitUnchanged ? "Hamyonlarga taqsimlangan" : "Hamyonlarga taqsimlanadi"}
-								</Text>
-								<View
-									className="rounded-xl px-4 py-3 gap-2"
-									style={{
-										backgroundColor: tc.card,
-										borderWidth: 1,
-										borderColor: tc.border,
-									}}
-								>
+
+						{dividing ? (
+							preview.length > 0 && (
+								<View style={{ paddingHorizontal: 14, paddingBottom: 6 }}>
 									{preview.map((allocation) => {
-										const share = amount > 0 ? allocation.amount / amount : 0;
+										const wallet = walletById(wallets, allocation.walletId);
+										const pool = allocation.walletId === UNALLOCATED_ID;
+										const share = amount > 0 ? (allocation.amount / amount) * 100 : 0;
 										return (
 											<View
 												key={allocation.walletId}
-												className="flex-row items-center gap-2"
+												className="flex-row items-center border-t border-border"
+												style={{ height: 40, gap: 10 }}
 											>
-												<View
-													style={{
-														width: 8,
-														height: 8,
-														borderRadius: 4,
-														backgroundColor: categoryColorValue(
-															walletColor(wallets, allocation.walletId),
-															isDark,
-														),
-													}}
+												<WalletIcon
+													icon={pool ? null : (wallet?.icon ?? "wallet-outline")}
+													color={wallet?.color ?? "blue"}
+													size={24}
 												/>
 												<Text
-													className="flex-1 text-foreground"
-													style={{ fontSize: tf.sm }}
+													className="flex-1 font-semibold text-foreground"
+													style={{ fontSize: tf.sm + 1 }}
 													numberOfLines={1}
 												>
-													{walletName(wallets, allocation.walletId)}
+													{pool ? UNALLOCATED_NAME : walletName(wallets, allocation.walletId)}
 												</Text>
 												<Text
-													className="text-muted-foreground"
-													style={{ fontSize: tf.sm }}
+													className="font-bold text-muted-foreground"
+													style={{ fontSize: tf.xs + 1 }}
 												>
-													{Math.round(share * 100)}%
+													{`${String(Math.round(share * 10) / 10).replace(".", ",")}%`}
 												</Text>
 												<Text
-													className="font-semibold text-foreground text-right"
-													style={{ fontSize: tf.sm, minWidth: 96 }}
+													className="font-extrabold text-foreground text-right"
+													style={{ fontSize: tf.sm + 1, minWidth: 88 }}
 													numberOfLines={1}
 												>
-													{hideIncome
-														? maskAmount(unit)
-														: formatAmount(allocation.amount, unit)}
+													{money(allocation.amount)}
 												</Text>
 											</View>
 										);
 									})}
 								</View>
+							)
+						) : (
+							<View
+								className={splitsByDefault ? "border-t border-border" : ""}
+								style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 }}
+							>
+								<Text
+									nativeID="income-wallet-label"
+									className="font-bold text-muted-foreground mb-2"
+									style={{ fontSize: tf.sm }}
+								>
+									Qaysi hamyonga
+								</Text>
+								<IncomeWalletChips
+									wallets={wallets}
+									balances={balances}
+									value={incomeWalletId}
+									onChange={setIncomeWalletId}
+								/>
 							</View>
 						)}
 					</View>
 				) : null}
 
-				{/* Description and date ----------------------------------------- */}
+				{/* Note and date ------------------------------------------------- */}
 				<Textarea
 					label="Izoh"
-					rows={3}
+					rows={4}
 					value={description}
 					onChangeText={setDescription}
-					placeholder="Nima uchun?"
+					placeholder={
+						income
+							? `Masalan: ${monthName(currentMonthKey()).toLowerCase()} oyi uchun`
+							: "Masalan: haftalik bozorlik"
+					}
 				/>
 
 				<DateField label="Sana" required value={date} onChange={setDate} maxDate={todayISO()} />
-
-				<View className="gap-3 mt-2">
-					<Button
-						label={existing ? "O'zgarishlarni saqlash" : "Qo'shish"}
-						fullWidth
-						size="lg"
-						onPress={save}
-						startIcon={
-							<Ionicons
-								name={existing ? "checkmark" : "add"}
-								size={18}
-								color="#fff"
-							/>
-						}
-					/>
-					{existing ? (
-						<Button
-							label="O'chirish"
-							variant="soft"
-							color="danger"
-							fullWidth
-							onPress={confirmDelete}
-							startIcon={
-								<Ionicons name="trash-outline" size={16} color={tc.danger} />
-							}
-						/>
-					) : null}
-				</View>
 			</ScrollView>
 
-			<NumberPad
-				visible={padOpen}
-				value={amountText}
-				onChange={setAmountText}
-				decimals={unitByCode(unit).decimals}
+			{padOpen ? (
+				<NumberPad
+					visible
+					value={amountText}
+					onChange={setAmountText}
+					decimals={unitByCode(unit).decimals}
+				/>
+			) : (
+				<BottomBar lift={keyboardLift}>
+					<View className="flex-1">
+						<Button
+							label={
+								existing
+									? "O'zgarishlarni saqlash"
+									: income
+										? "Yangi kirim qo'shish"
+										: "Yangi chiqim qo'shish"
+							}
+							size="lg"
+							fullWidth
+							onPress={save}
+						/>
+					</View>
+				</BottomBar>
+			)}
+
+			<ActionSheet
+				visible={menuOpen}
+				onClose={() => setMenuOpen(false)}
+				items={[
+					{
+						key: "type",
+						label: income ? "Chiqimga aylantirish" : "Kirimga aylantirish",
+						hint: "Kategoriya qaytadan tanlanadi",
+						icon: "swap-vertical-outline",
+						onPress: () => changeType(income ? "expense" : "income"),
+					},
+					{
+						key: "categories",
+						label: "Kategoriyalarni boshqarish",
+						icon: "pricetags-outline",
+						onPress: () => router.push("/categories"),
+					},
+					...(existing
+						? [
+								{
+									key: "delete",
+									label: "Yozuvni o'chirish",
+									icon: "trash-outline" as const,
+									danger: true,
+									onPress: confirmDelete,
+								},
+							]
+						: []),
+				]}
 			/>
 
 			{/* Covering a shortfall: the transfer lands first, then the expense it
@@ -1044,6 +837,76 @@ function TransactionForm({
 				initialAmount={shortfall}
 				submitLabel="Qoplash va saqlash"
 			/>
-		</>
+		</View>
+	);
+}
+
+/**
+ * Where an income that isn't split lands — every wallet as a chip with its
+ * tile, plus "no wallet". The unallocated pool is offered once it holds
+ * something, since it's a real balance the user may be topping up.
+ */
+function IncomeWalletChips({
+	wallets,
+	balances,
+	value,
+	onChange,
+}: {
+	wallets: Wallet[];
+	balances: WalletBalance[];
+	value: string | null;
+	onChange: (walletId: string | null) => void;
+}) {
+	const { tc } = useTheme();
+	const { tf } = useFont();
+	const pool = balances.find((b) => b.walletId === UNALLOCATED_ID && b.balance !== 0);
+	const options = [
+		{ key: null, name: "Hamyonsiz", icon: null, color: "blue", none: true },
+		...wallets.map((w) => ({ key: w.id, name: w.name, icon: w.icon, color: w.color, none: false })),
+		...(pool
+			? [{ key: UNALLOCATED_ID, name: UNALLOCATED_NAME, icon: null, color: "blue", none: false }]
+			: []),
+	];
+
+	return (
+		<View
+			accessibilityRole="radiogroup"
+			accessibilityLabelledBy="income-wallet-label"
+			className="flex-row flex-wrap"
+			style={{ gap: 6 }}
+		>
+			{options.map((option) => {
+				const active = option.key === value;
+				return (
+					<Pressable
+						key={option.key ?? "none"}
+						accessibilityRole="radio"
+						accessibilityState={{ checked: active }}
+						onPress={() => onChange(option.key)}
+						className={`flex-row items-center rounded-full active:opacity-70 ${
+							active ? "bg-primary" : "bg-background"
+						}`}
+						style={{ height: 44, paddingLeft: 8, paddingRight: 14, gap: 8 }}
+					>
+						{option.none ? (
+							<View
+								className="items-center justify-center bg-muted"
+								style={{ width: 28, height: 28, borderRadius: 14 }}
+							>
+								<Ionicons name="remove" size={16} color={tc.mutedForeground} />
+							</View>
+						) : (
+							<WalletIcon icon={option.icon} color={option.color} size={28} round />
+						)}
+						<Text
+							className={`font-bold ${active ? "text-primary-fg" : "text-foreground"}`}
+							style={{ fontSize: tf.sm + 1 }}
+						>
+							{option.name}
+						</Text>
+					</Pressable>
+				);
+			})}
+		</View>
 	);
 }

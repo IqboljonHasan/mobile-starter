@@ -1,5 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import AmountText from "@/components/AmountText";
 import PieChart from "@/components/PieChart";
 import StackedBarChart from "@/components/StackedBarChart";

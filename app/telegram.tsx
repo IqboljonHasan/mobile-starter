@@ -1,8 +1,9 @@
 import { Stack } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button, Card, InputField, ListRow, PasswordField } from "@/components/ui";
+import { Button, Card, InputField, ListRow, PasswordField, Toggle } from "@/components/ui";
 import { useTelegramBackup } from "@/contexts/TelegramBackupContext";
 import { useFont } from "@/hooks/useFont";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
@@ -27,7 +28,7 @@ export default function TelegramScreen() {
 				<TelegramForm />
 			) : (
 				<View className="flex-1 bg-background items-center justify-center">
-					<ActivityIndicator color={tc.primary} />
+					<ActivityIndicator color={tc.foreground} />
 				</View>
 			)}
 		</>
@@ -114,7 +115,8 @@ function TelegramForm() {
 		<ScrollView
 			className="flex-1 bg-background"
 			contentContainerStyle={{
-				padding: 16,
+				paddingHorizontal: 18,
+				paddingTop: 4,
 				gap: 12,
 				paddingBottom: 40 + Math.max(0, keyboardInset - insets.bottom),
 			}}
@@ -177,11 +179,10 @@ function TelegramForm() {
 					subtitle="Kuniga bir marta .db fayl chatga o'zi yuboriladi"
 					icon="time-outline"
 					trailing={
-						<Switch
+						<Toggle
 							value={config.auto}
 							onValueChange={(auto) => saveConfig({ ...config, auto })}
-							trackColor={{ false: tc.muted, true: tc.primary }}
-							thumbColor="#fff"
+							accessibilityLabel="Har kuni avtomatik"
 						/>
 					}
 				/>
@@ -196,7 +197,7 @@ function TelegramForm() {
 					divider
 					onPress={configured && !dirty && !sending ? runSend : undefined}
 					trailing={
-						sending && !testing ? <ActivityIndicator color={tc.primary} /> : undefined
+						sending && !testing ? <ActivityIndicator color={tc.foreground} /> : undefined
 					}
 				/>
 			</Card>

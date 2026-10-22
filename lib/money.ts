@@ -97,6 +97,34 @@ export function formatAmount(
 }
 
 /**
+ * A figure cut down to fit a small tile — "9,3 mln", "932 ming", "$1,2 ming".
+ * Rounded to one decimal at most, with the comma Uzbek writes decimals with.
+ * Small amounts are shown in full, since there is nothing to shorten.
+ */
+export function formatCompact(amount: number, unitCode: string): string {
+	const unit = unitByCode(unitCode);
+	const abs = Math.abs(amount);
+	const sign = amount < 0 ? "−" : "";
+	const steps: [number, string][] = [
+		[1e12, "trln"],
+		[1e9, "mlrd"],
+		[1e6, "mln"],
+		[1e3, "ming"],
+	];
+	const step = steps.find(([size]) => abs >= size);
+	if (!step) return formatAmount(amount, unitCode, { showUnit: unit.position === "before" });
+
+	const [size, word] = step;
+	const scaled = abs / size;
+	// One decimal while it still says something ("9,3 mln"), none once the
+	// whole part is long enough on its own ("932 ming").
+	const body =
+		scaled >= 100 ? String(Math.round(scaled)) : String(Math.round(scaled * 10) / 10).replace(".", ",");
+	const symbol = unit.position === "before" ? unit.symbol : "";
+	return `${sign}${symbol}${body} ${word}`;
+}
+
+/**
  * Placeholder standing in for a masked amount — same unit-symbol placement as
  * formatAmount, so hiding income doesn't reflow the surrounding layout.
  */

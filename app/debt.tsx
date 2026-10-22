@@ -1,36 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import {
-	ActivityIndicator,
-	Alert,
-	Pressable,
-	ScrollView,
-	Text,
-	View,
-} from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AmountCard from "@/components/AmountCard";
+import BottomBar, { BOTTOM_BAR_SPACE } from "@/components/BottomBar";
 import ContactPicker from "@/components/ContactPicker";
 import DebtPaymentSheet from "@/components/DebtPaymentSheet";
 import WalletPicker from "@/components/WalletPicker";
 import {
-	AmountField,
+	ActionSheet,
 	Badge,
 	Button,
 	Card,
+	Chip,
 	DateField,
+	FieldLabel,
+	IconButton,
 	NumberPad,
-	SegmentedControl,
-	Select,
 	Textarea,
 } from "@/components/ui";
+import { Text } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
-import { formatDate, formatDayLabel, todayISO } from "@/lib/date";
+import { addDaysISO, addMonthsISO, formatDate, formatDayLabel, todayISO } from "@/lib/date";
 import {
 	DIRECTION_META,
 	daysUntilDue,
@@ -40,17 +37,18 @@ import {
 	paymentType,
 	remainingAmount,
 } from "@/lib/debts";
-import {
-	formatAmount,
-	methodByKey,
-	PAY_METHODS,
-	parseAmount,
-	UNITS,
-	unitByCode,
-} from "@/lib/money";
+import { formatAmount, methodByKey, parseAmount, unitByCode } from "@/lib/money";
 import type { Debt, DebtDirection, DebtPayment, PayMethod } from "@/lib/types";
 import { walletBalances } from "@/lib/wallets";
 import "../global.css";
+
+/** The usual terms, one tap each — counted from the day the money moved. */
+const TERMS: { key: string; label: string; due: (from: string) => string | null }[] = [
+	{ key: "week", label: "1 hafta", due: (from) => addDaysISO(from, 7) },
+	{ key: "month", label: "1 oy", due: (from) => addMonthsISO(from, 1) },
+	{ key: "quarter", label: "3 oy", due: (from) => addMonthsISO(from, 3) },
+	{ key: "none", label: "Muddatsiz", due: () => null },
+];
 
 /**
  * Create or edit one debt, and settle it.
@@ -73,7 +71,7 @@ export default function DebtScreen() {
 			<>
 				<Stack.Screen options={{ title: "Qarz" }} />
 				<View className="flex-1 bg-background items-center justify-center">
-					<ActivityIndicator color={tc.primary} />
+					<ActivityIndicator color={tc.foreground} />
 				</View>
 			</>
 		);
@@ -85,7 +83,7 @@ export default function DebtScreen() {
 				<Stack.Screen options={{ title: "Qarz" }} />
 				<View className="flex-1 bg-background items-center justify-center px-8">
 					<Text
-						className="text-muted-foreground text-center"
+						className="font-semibold text-muted-foreground text-center"
 						style={{ fontSize: tf.base }}
 					>
 						{"Bu qarz endi mavjud emas."}
@@ -132,17 +130,11 @@ function DebtForm({
 	const [direction, setDirection] = useState<DebtDirection>(
 		existing?.direction ?? initialDirection,
 	);
-	const [contactId, setContactId] = useState<string | null>(
-		existing?.contactId ?? null,
-	);
-	const [amountText, setAmountText] = useState(
-		existing ? String(existing.amount) : "",
-	);
+	const [contactId, setContactId] = useState<string | null>(existing?.contactId ?? null);
+	const [amountText, setAmountText] = useState(existing ? String(existing.amount) : "");
 	const [unit, setUnit] = useState(existing?.unit ?? defaultUnit);
 	const [method, setMethod] = useState<PayMethod>(existing?.method ?? "cash");
-	const [walletId, setWalletId] = useState<string | null>(
-		existing?.walletId ?? null,
-	);
+	const [walletId, setWalletId] = useState<string | null>(existing?.walletId ?? null);
 	const [description, setDescription] = useState(existing?.description ?? "");
 	const [date, setDate] = useState(existing?.date ?? todayISO());
 	const [dueDate, setDueDate] = useState<string | null>(existing?.dueDate ?? null);
@@ -151,6 +143,7 @@ function DebtForm({
 	// the sheet reads this to seed its fields and to know which mutator to call.
 	const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null);
 	const [padOpen, setPadOpen] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
 
 	const today = todayISO();
@@ -169,13 +162,7 @@ function DebtForm({
 	// wallet against the balance without its older self still counted.
 	const balances = useMemo(
 		() =>
-			walletBalances(
-				transactions,
-				transfers,
-				wallets,
-				unit,
-				existing?.transactionId ?? undefined,
-			),
+			walletBalances(transactions, transfers, wallets, unit, existing?.transactionId ?? undefined),
 		[transactions, transfers, wallets, unit, existing?.transactionId],
 	);
 
@@ -184,6 +171,10 @@ function DebtForm({
 	const share = existing ? paidShare(existing) : 0;
 	const status = existing ? debtStatus(existing, today) : "open";
 	const days = existing ? daysUntilDue(existing, today) : null;
+	// A debt is settled in the currency it was taken in, so once something has
+	// been paid against it the unit is fixed — changing it would silently
+	// reinterpret every payment.
+	const unitLocked = !!existing && existing.payments.length > 0;
 
 	// The principal can't be cut below what has already been paid against it:
 	// that would leave a debt settled by payments it never had room for.
@@ -191,6 +182,10 @@ function DebtForm({
 		!!existing && !amountError && amount < paid
 			? `Bu qarzga allaqachon ${formatAmount(paid, existing.unit)} to'langan.`
 			: undefined;
+
+	// A due date before the day the money moved can only be a slip.
+	const dueError =
+		dueDate && dueDate < date ? "Muddat qarz sanasidan oldin bo'lishi mumkin emas" : undefined;
 
 	const changeDirection = (next: DebtDirection) => {
 		if (next === direction) return;
@@ -203,7 +198,7 @@ function DebtForm({
 
 	const save = () => {
 		setSubmitted(true);
-		if (amountError || !contactId || belowPaid) return;
+		if (amountError || !contactId || belowPaid || dueError) return;
 
 		const input = {
 			direction,
@@ -258,88 +253,88 @@ function DebtForm({
 		);
 	};
 
+	const title = existing ? "Qarzni tahrirlash" : incoming ? "Qarz olish" : "Qarz berish";
+	const keyboardLift = Math.max(keyboardInset - insets.bottom, 0);
+	const collecting = paymentType(direction) === "income";
+
+	const menuItems = [
+		...(!existing
+			? [
+					{
+						key: "direction",
+						label: incoming ? "Qarz berishga o'tish" : "Qarz olishga o'tish",
+						hint: incoming ? "Pulni siz berdingiz" : "Pulni siz oldingiz",
+						icon: "swap-vertical-outline" as const,
+						onPress: () => changeDirection(incoming ? "lent" : "borrowed"),
+					},
+				]
+			: []),
+		{
+			key: "contacts",
+			label: "Kontaktlar",
+			icon: "people-outline" as const,
+			onPress: () => router.push("/contacts"),
+		},
+		...(existing
+			? [
+					{
+						key: "delete",
+						label: "Qarzni o'chirish",
+						icon: "trash-outline" as const,
+						danger: true,
+						onPress: confirmDelete,
+					},
+				]
+			: []),
+	];
+
 	return (
-		<>
+		<View className="flex-1 bg-background">
 			<Stack.Screen
 				options={{
-					title: existing
-						? "Qarzni tahrirlash"
-						: incoming
-							? "Qarz olish"
-							: "Qarz berish",
+					title,
+					headerRight: () => (
+						<IconButton
+							variant="filled"
+							icon="ellipsis-vertical"
+							accessibilityLabel="Boshqa amallar"
+							onPress={() => setMenuOpen(true)}
+						/>
+					),
 				}}
 			/>
 			<ScrollView
-				className="flex-1 bg-background"
-				style={{ marginBottom: Math.max(keyboardInset - insets.bottom, 0) }}
-				contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}
+				className="flex-1"
+				style={{ marginBottom: keyboardLift }}
+				contentContainerStyle={{
+					paddingHorizontal: 18,
+					paddingTop: 4,
+					paddingBottom: padOpen ? 24 : BOTTOM_BAR_SPACE,
+					gap: 16,
+				}}
 				keyboardShouldPersistTaps="handled"
 				showsVerticalScrollIndicator={false}
 			>
-				{/* Which way the debt runs -------------------------------------- */}
-				<View className="flex-row gap-3">
-					{(["borrowed", "lent"] as DebtDirection[]).map((option) => {
-						const active = direction === option;
-						const optionMeta = DIRECTION_META[option];
-						const borrowed = option === "borrowed";
-						// Locked once there are entries behind it: flipping it would
-						// move every one of them to a different category.
-						const locked = !!existing;
-						return (
-							<Pressable
-								key={option}
-								accessibilityRole="button"
-								accessibilityState={{ selected: active, disabled: locked }}
-								disabled={locked}
-								onPress={() => changeDirection(option)}
-								className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3.5 active:opacity-70 ${
-									active ? "" : "bg-card"
-								} ${locked && !active ? "opacity-40" : ""}`}
-								style={
-									active
-										? { backgroundColor: borrowed ? tc.success : tc.danger }
-										: { borderWidth: 1, borderColor: tc.border }
-								}
-							>
-								<Ionicons
-									name={borrowed ? "arrow-down-circle" : "arrow-up-circle"}
-									size={18}
-									color={active ? "#fff" : borrowed ? tc.success : tc.danger}
-								/>
-								<Text
-									className="font-semibold"
-									style={{
-										fontSize: tf.base,
-										color: active ? "#fff" : tc.foreground,
-									}}
-								>
-									{optionMeta.label}
-								</Text>
-							</Pressable>
-						);
-					})}
-				</View>
-
 				{/* Where it stands ---------------------------------------------- */}
 				{existing && (
 					<Card>
 						<View className="flex-row items-center justify-between gap-3">
 							<View className="flex-1">
-								<Text
-									className="text-muted-foreground"
-									style={{ fontSize: tf.sm }}
-								>
+								<Text className="font-bold text-muted-foreground" style={{ fontSize: tf.sm }}>
 									Qoldiq
 								</Text>
 								<Text
-									className={`font-bold mt-0.5 ${
-										status === "settled"
-											? "text-muted-foreground"
-											: direction === "lent"
-												? "text-success"
-												: "text-danger"
-									}`}
-									style={{ fontSize: tf.xxl }}
+									className="font-extrabold mt-0.5"
+									style={{
+										fontSize: tf.xxl + 2,
+										letterSpacing: -0.4,
+										color:
+											status === "settled"
+												? tc.mutedForeground
+												: direction === "lent"
+													? tc.success
+													: tc.danger,
+									}}
 									numberOfLines={1}
 									adjustsFontSizeToFit
 								>
@@ -353,49 +348,43 @@ function DebtForm({
 										: status === "overdue"
 											? `${Math.abs(days ?? 0)} kun kechikdi`
 											: days === null
-												? "Ochiq"
+												? "Muddatsiz"
 												: days === 0
 													? "Bugun muddati"
 													: `${days} kun qoldi`
 								}
-								tone={
-									status === "settled"
-										? "success"
-										: status === "overdue"
-											? "danger"
-											: "neutral"
-								}
+								tone={status === "settled" ? "success" : status === "overdue" ? "danger" : "neutral"}
 							/>
 						</View>
 
-						<View
-							className="rounded-full bg-muted mt-3 overflow-hidden"
-							style={{ height: 6 }}
-						>
+						<View className="rounded-full bg-background mt-3 overflow-hidden" style={{ height: 6 }}>
 							<View
 								style={{
 									width: `${Math.round(share * 100)}%`,
 									height: "100%",
 									borderRadius: 3,
-									backgroundColor: status === "settled" ? tc.success : tc.primary,
+									backgroundColor:
+										status === "settled" ? tc.success : direction === "lent" ? tc.success : tc.danger,
 								}}
 							/>
 						</View>
-						<Text
-							className="text-muted-foreground mt-2"
-							style={{ fontSize: tf.sm }}
-						>
-							{`${formatAmount(paid, existing.unit)} / ${formatAmount(existing.amount, existing.unit)} · ${Math.round(share * 100)}%`}
+						<Text className="font-semibold text-muted-foreground mt-2" style={{ fontSize: tf.sm }}>
+							{`${formatAmount(paid, existing.unit)} / ${formatAmount(existing.amount, existing.unit)} · ${Math.round(share * 100)}% qaytarildi`}
 						</Text>
 
 						{status !== "settled" && (
 							<View className="mt-3">
 								<Button
 									label={meta.payLabel}
-									color={paymentType(direction) === "income" ? "success" : "danger"}
+									variant="soft"
+									color={collecting ? "success" : "danger"}
 									fullWidth
 									startIcon={
-										<Ionicons name="cash-outline" size={18} color="#fff" />
+										<Ionicons
+											name="cash-outline"
+											size={18}
+											color={collecting ? tc.success : tc.danger}
+										/>
 									}
 									onPress={() => {
 										setEditingPayment(null);
@@ -407,6 +396,19 @@ function DebtForm({
 					</Card>
 				)}
 
+				{/* Amount, how it moved, and in what ----------------------------- */}
+				<AmountCard
+					value={amountText}
+					onFocus={() => setPadOpen(true)}
+					onBlur={() => setPadOpen(false)}
+					method={method}
+					onMethodChange={setMethod}
+					unit={unit}
+					onUnitChange={setUnit}
+					unitLocked={unitLocked}
+					error={submitted ? (amountError ?? belowPaid) : undefined}
+				/>
+
 				{/* Who it's with ------------------------------------------------- */}
 				<ContactPicker
 					label={meta.counterparty}
@@ -415,101 +417,10 @@ function DebtForm({
 					error={submitted ? contactError : undefined}
 				/>
 
-				{/* Amount and unit ----------------------------------------------- */}
-				<View className="flex-row items-start gap-3">
-					<View className="flex-1">
-						<AmountField
-							label="Summa"
-							required
-							value={amountText}
-							onFocus={() => setPadOpen(true)}
-							onBlur={() => setPadOpen(false)}
-							placeholder="0"
-							error={submitted ? (amountError ?? belowPaid) : undefined}
-						/>
-					</View>
-					<View style={{ width: 116 }}>
-						<Text
-							className="font-medium text-foreground mb-1.5"
-							style={{ fontSize: tf.base }}
-						>
-							Valyuta
-						</Text>
-						<Select
-							label="Valyuta"
-							value={unit}
-							onChange={(next) => next && setUnit(next)}
-							toggleOff={false}
-							// A debt is settled in the currency it was taken in, so once
-							// something has been paid against it the unit is fixed —
-							// changing it would silently reinterpret every payment.
-							disabled={!!existing && existing.payments.length > 0}
-							options={UNITS.map((u) => ({
-								key: u.code,
-								label: `${u.code} — ${u.name}`,
-							}))}
-							trigger={({ open }) => {
-								const locked = !!existing && existing.payments.length > 0;
-								return (
-									<Pressable
-										accessibilityRole="button"
-										accessibilityLabel={`Valyuta: ${unit}`}
-										disabled={locked}
-										onPress={open}
-										className={`flex-row items-center justify-between rounded-xl px-4 active:opacity-70 ${
-											locked ? "opacity-50" : ""
-										}`}
-										style={{
-											backgroundColor: tc.card,
-											borderWidth: 1,
-											borderColor: tc.border,
-											minHeight: 56,
-										}}
-									>
-										<Text
-											className="font-semibold text-foreground"
-											style={{ fontSize: tf.lg }}
-										>
-											{unit}
-										</Text>
-										<Ionicons
-											name="chevron-down"
-											size={16}
-											color={tc.mutedForeground}
-										/>
-									</Pressable>
-								);
-							}}
-						/>
-					</View>
-				</View>
-				{!amountError && (
-					<Text className="text-muted-foreground -mt-3" style={{ fontSize: tf.sm }}>
-						{incoming ? "+" : "−"}
-						{formatAmount(amount, unit)} · {unitByCode(unit).name}
-					</Text>
-				)}
-
-				{/* How it moved --------------------------------------------------- */}
-				<View>
-					<Text
-						className="font-medium text-foreground mb-1.5"
-						style={{ fontSize: tf.base }}
-					>
-						{"To'lov turi"}
-					</Text>
-					<SegmentedControl
-						items={PAY_METHODS}
-						value={method}
-						onChange={setMethod}
-						className="bg-muted"
-					/>
-				</View>
-
 				{/* Which jar it touched ------------------------------------------- */}
 				<View>
 					<WalletPicker
-						label={incoming ? "Qaysi hamyonga tushdi" : "Qaysi hamyondan"}
+						label={incoming ? "Qaysi hamyonga" : "Qaysi hamyondan"}
 						value={walletId}
 						onChange={setWalletId}
 						wallets={wallets}
@@ -519,7 +430,7 @@ function DebtForm({
 						includeUnallocated
 					/>
 					<Text
-						className="text-muted-foreground mt-1.5"
+						className="font-semibold text-muted-foreground mt-1.5 ml-1"
 						style={{ fontSize: tf.sm }}
 					>
 						{incoming
@@ -530,7 +441,7 @@ function DebtForm({
 
 				{/* When ------------------------------------------------------------ */}
 				<DateField
-					label={incoming ? "Qachon oldingiz" : "Qachon berdingiz"}
+					label={incoming ? "Olingan sana" : "Berilgan sana"}
 					required
 					value={date}
 					onChange={setDate}
@@ -538,66 +449,55 @@ function DebtForm({
 				/>
 
 				<View>
-					<View className="flex-row items-center justify-between mb-1.5">
-						<Text
-							className="font-medium text-foreground"
-							style={{ fontSize: tf.base }}
-						>
-							Muddat
+					<FieldLabel>Qaytarish muddati</FieldLabel>
+					{/* No `maxDate`: a due date is meant to be in the future, which is
+					    the one date in this app that legitimately hasn't happened yet. */}
+					<DateField
+						value={dueDate ?? addMonthsISO(date, 1)}
+						onChange={setDueDate}
+						minDate={date}
+						placeholder={dueDate ? undefined : "Muddatsiz"}
+						quickPicks={TERMS.flatMap((term) => {
+							const due = term.due(date);
+							return due ? [{ label: term.label, iso: due }] : [];
+						})}
+					/>
+					<ScrollView
+						horizontal
+						accessibilityRole="radiogroup"
+						accessibilityLabel="Muddatni tez tanlash"
+						showsHorizontalScrollIndicator={false}
+						keyboardShouldPersistTaps="handled"
+						style={{ marginTop: 8, marginHorizontal: -18 }}
+						contentContainerStyle={{ gap: 6, paddingHorizontal: 18 }}
+					>
+						{TERMS.map((term) => {
+							const due = term.due(date);
+							return (
+								<Chip
+									key={term.key}
+									size="sm"
+									role="radio"
+									label={term.label}
+									active={dueDate === due}
+									onPress={() => setDueDate(due)}
+								/>
+							);
+						})}
+					</ScrollView>
+					{submitted && !!dueError && (
+						<Text className="font-semibold text-danger mt-1.5 ml-1" style={{ fontSize: tf.sm }}>
+							{dueError}
 						</Text>
-						{!!dueDate && (
-							<Pressable
-								accessibilityRole="button"
-								onPress={() => setDueDate(null)}
-								className="px-3 py-1 rounded-full bg-muted active:opacity-70"
-							>
-								<Text
-									className="font-medium text-muted-foreground"
-									style={{ fontSize: tf.sm }}
-								>
-									Tozalash
-								</Text>
-							</Pressable>
-						)}
-					</View>
-					{dueDate ? (
-						// No `maxDate`: a due date is meant to be in the future, which is
-						// the one date in this app that legitimately hasn't happened yet.
-						<DateField value={dueDate} onChange={setDueDate} />
-					) : (
-						<Pressable
-							accessibilityRole="button"
-							onPress={() => setDueDate(today)}
-							className="flex-row items-center gap-3 rounded-xl px-5 active:opacity-70"
-							style={{
-								backgroundColor: tc.card,
-								borderWidth: 1,
-								borderColor: tc.border,
-								minHeight: 56,
-							}}
-						>
-							<Ionicons
-								name="alarm-outline"
-								size={20}
-								color={tc.mutedForeground}
-							/>
-							<Text
-								className="flex-1"
-								style={{ fontSize: tf.lg, color: tc.placeholder }}
-							>
-								Muddat belgilanmagan
-							</Text>
-							<Ionicons name="add" size={18} color={tc.mutedForeground} />
-						</Pressable>
 					)}
 				</View>
 
 				<Textarea
 					label="Izoh"
-					rows={2}
+					rows={4}
 					value={description}
 					onChangeText={setDescription}
-					placeholder="Nima uchun?"
+					placeholder={incoming ? "Masalan: uy ta'miri uchun" : "Masalan: mashina ta'miri uchun"}
 				/>
 
 				{/* What has been paid so far --------------------------------------- */}
@@ -626,39 +526,42 @@ function DebtForm({
 								/>
 							))}
 						<Text
-							className="text-muted-foreground px-4 py-2.5"
+							className="font-semibold text-muted-foreground px-4 py-2.5"
 							style={{ fontSize: tf.xs }}
 						>
 							{"Tahrirlash uchun bosing, o'chirish uchun uzoq bosing."}
 						</Text>
 					</Card>
 				)}
-
-				{/* Save ------------------------------------------------------------ */}
-				<Button
-					label={existing ? "Saqlash" : incoming ? "Qarzni qo'shish" : "Qarzni berish"}
-					size="lg"
-					fullWidth
-					onPress={save}
-				/>
-
-				{!!existing && (
-					<Button
-						label="Qarzni o'chirish"
-						variant="text"
-						color="danger"
-						fullWidth
-						onPress={confirmDelete}
-					/>
-				)}
 			</ScrollView>
 
-			<NumberPad
-				visible={padOpen}
-				value={amountText}
-				onChange={setAmountText}
-				decimals={unitByCode(unit).decimals}
-			/>
+			{padOpen ? (
+				<NumberPad
+					visible
+					value={amountText}
+					onChange={setAmountText}
+					decimals={unitByCode(unit).decimals}
+				/>
+			) : (
+				<BottomBar lift={keyboardLift}>
+					<View className="flex-1">
+						<Button
+							label={
+								existing
+									? "Saqlash"
+									: incoming
+										? "Olingan qarzni qo'shish"
+										: "Berilgan qarzni qo'shish"
+							}
+							size="lg"
+							fullWidth
+							onPress={save}
+						/>
+					</View>
+				</BottomBar>
+			)}
+
+			<ActionSheet visible={menuOpen} onClose={() => setMenuOpen(false)} items={menuItems} />
 
 			{!!existing && (
 				<DebtPaymentSheet
@@ -674,7 +577,7 @@ function DebtForm({
 					}
 				/>
 			)}
-		</>
+		</View>
 	);
 }
 
@@ -702,30 +605,29 @@ function PaymentRow({
 			accessibilityLabel={`${formatAmount(payment.amount, unit)}, ${formatDate(payment.date)} — tahrirlash`}
 			onPress={handlePress}
 			onLongPress={onDelete}
-			className={`flex-row items-center gap-3 px-4 py-3 active:opacity-70 ${
+			className={`flex-row items-center gap-3 px-3.5 py-3 active:opacity-70 ${
 				divider ? "border-t border-border" : ""
 			}`}
 		>
-			<View className="w-9 h-9 rounded-full items-center justify-center bg-primary-highlight">
-				<Ionicons
-					name={methodByKey(payment.method).icon}
-					size={16}
-					color={tc.primary}
-				/>
+			<View
+				className="items-center justify-center bg-background"
+				style={{ width: 32, height: 32, borderRadius: 10 }}
+			>
+				<Ionicons name={methodByKey(payment.method).icon} size={17} color={tc.foreground} />
 			</View>
-			<View className="flex-1">
-				<Text className="font-medium text-foreground" style={{ fontSize: tf.base }}>
+			<View className="flex-1 gap-px">
+				<Text className="font-bold text-foreground" style={{ fontSize: tf.base }}>
 					{formatAmount(payment.amount, unit)}
 				</Text>
 				<Text
-					className="text-muted-foreground"
-					style={{ fontSize: tf.sm }}
+					className="font-semibold text-muted-foreground"
+					style={{ fontSize: tf.sm - 1 }}
 					numberOfLines={1}
 				>
 					{payment.note || formatDayLabel(payment.date)}
 				</Text>
 			</View>
-			<Text className="text-muted-foreground" style={{ fontSize: tf.sm }}>
+			<Text className="font-semibold text-muted-foreground" style={{ fontSize: tf.sm }}>
 				{formatDate(payment.date)}
 			</Text>
 		</Pressable>

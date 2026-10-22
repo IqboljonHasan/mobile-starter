@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
-import { Pressable, Text, View, type ViewProps } from "react-native";
+import { Pressable, View, type ViewProps } from "react-native";
+import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import "../../global.css";
 
@@ -18,8 +19,10 @@ export interface CardProps extends Omit<ViewProps, "style"> {
 }
 
 /**
- * The standard surface for grouping content on a screen: a rounded `bg-card`
- * panel that reads correctly in both themes without any per-screen styling.
+ * The standard group on a screen: a quiet grey panel with 20px corners and no
+ * border or shadow — on the white sheet the tone change alone sets it apart.
+ * Anything nested inside it that needs its own surface (an icon tile, a
+ * segmented track) uses `bg-background`, which reads as white on the grey.
  */
 export function Card({
 	title,
@@ -42,15 +45,15 @@ export function Card({
 			<View className="flex-1">
 				{!!title && (
 					<Text
-						className="font-semibold text-foreground"
-						style={{ fontSize: tf.lg }}
+						className="font-extrabold text-foreground"
+						style={{ fontSize: tf.base }}
 					>
 						{title}
 					</Text>
 				)}
 				{!!subtitle && (
 					<Text
-						className="text-muted-foreground mt-0.5"
+						className="font-semibold text-muted-foreground mt-0.5"
 						style={{ fontSize: tf.sm }}
 					>
 						{subtitle}
@@ -68,7 +71,7 @@ export function Card({
 		</>
 	);
 
-	const containerClass = `rounded-2xl bg-card overflow-hidden ${
+	const containerClass = `rounded-[20px] bg-card overflow-hidden ${
 		flush ? "" : "p-4"
 	} ${className ?? ""}`;
 

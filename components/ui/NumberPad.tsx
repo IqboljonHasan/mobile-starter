@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { type ReactNode, useEffect } from "react";
-import { BackHandler, Keyboard, Pressable, Text, View } from "react-native";
+import { BackHandler, Keyboard, Pressable, View } from "react-native";
+import { Text } from "@/components/ui/Text";
 import Animated, { SlideInDown } from "react-native-reanimated";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
@@ -68,6 +69,7 @@ export function NumberPad({ visible, value, onChange, decimals }: NumberPadProps
 		<Animated.View
 			entering={SlideInDown.duration(200)}
 			style={{
+				backgroundColor: tc.background,
 				borderTopWidth: 1,
 				borderTopColor: tc.border,
 				padding: 12,
@@ -84,7 +86,7 @@ export function NumberPad({ visible, value, onChange, decimals }: NumberPadProps
 							onPressIn={() => press(key)}
 						>
 							<Text
-								className="font-semibold text-foreground"
+								className="font-bold text-foreground"
 								style={{ fontSize: tf.xxl }}
 							>
 								{key}
@@ -103,7 +105,7 @@ export function NumberPad({ visible, value, onChange, decimals }: NumberPadProps
 					<Ionicons name="backspace-outline" size={26} color={tc.foreground} />
 				</Key>
 				<Key accessibilityLabel="Tayyor" primary onPress={Keyboard.dismiss}>
-					<Ionicons name="checkmark" size={28} color="#fff" />
+					<Ionicons name="checkmark" size={28} color={tc.primaryFg} />
 				</Key>
 			</View>
 		</Animated.View>
@@ -150,10 +152,8 @@ function Key({
 				height: KEY_HEIGHT,
 				alignItems: "center",
 				justifyContent: "center",
-				borderRadius: 12,
+				borderRadius: 16,
 				backgroundColor: primary ? tc.primary : pressed ? tc.muted : tc.card,
-				borderWidth: primary ? 0 : 1,
-				borderColor: tc.border,
 				opacity: disabled ? 0.35 : primary && pressed ? 0.8 : 1,
 			})}
 		>
