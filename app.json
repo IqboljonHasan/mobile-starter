@@ -99,6 +99,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ac9facac-e004-4a49-90ae-4b7995407a5c"
+      }
+    },
+    "owner": "iqboljonhasan"
   }
 }
