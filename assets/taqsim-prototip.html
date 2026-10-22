@@ -1,0 +1,1986 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Taqsim — prototip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --page-bg: #E8ECF2;
+  --panel-text: #0B1B2E;
+  --panel-muted: #5B6B80;
+  --panel-item-bg: #FFFFFF;
+  --panel-item-active-bg: #0B1B2E;
+  --panel-item-active-text: #FFFFFF;
+  --device-shadow: 0 30px 80px rgba(11, 27, 46, 0.22), 0 0 0 10px #0B1B2E;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page-bg: #0E141D;
+    --panel-text: #E8EEF6;
+    --panel-muted: #8E9DB0;
+    --panel-item-bg: #18212D;
+    --panel-item-active-bg: #E8EEF6;
+    --panel-item-active-text: #0B1B2E;
+    --device-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 0 10px #000000;
+  }
+}
+:root[data-theme="dark"] {
+  --page-bg: #0E141D;
+  --panel-text: #E8EEF6;
+  --panel-muted: #8E9DB0;
+  --panel-item-bg: #18212D;
+  --panel-item-active-bg: #E8EEF6;
+  --panel-item-active-text: #0B1B2E;
+  --device-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 0 10px #000000;
+}
+
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--page-bg);
+  font-family: 'Manrope', system-ui, sans-serif;
+  color: var(--panel-text);
+  overflow: hidden;
+}
+
+/* styles shared by every screen (from the design files) */
+.device a { color: #0B1B2E; transition: transform .12s ease; }
+.device a:hover { color: #0B1B2E; }
+.device a[href]:active { transform: scale(0.98); }
+.device input::placeholder, .device textarea::placeholder { color: #8A97A8; }
+.device button:focus-visible, .device a:focus-visible, .device input:focus-visible, .device textarea:focus-visible {
+  outline: 2px solid #1556C9; outline-offset: 2px;
+}
+
+.layout {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: 56px;
+}
+.panel { width: 220px; flex: none; }
+.panel h1 { margin: 0 0 4px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.panel p { margin: 0 0 20px; font-size: 13px; line-height: 19px; color: var(--panel-muted); }
+.panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.panel button {
+  width: 100%; min-height: 44px; padding: 0 16px; border: none; border-radius: 14px;
+  background: var(--panel-item-bg); color: var(--panel-text);
+  font: 700 14px/1.2 'Manrope', system-ui, sans-serif; text-align: left; cursor: pointer;
+}
+.panel button[aria-current="true"] { background: var(--panel-item-active-bg); color: var(--panel-item-active-text); }
+
+.stage { position: relative; flex: none; width: 390px; height: 844px; transform-origin: center center; }
+.device {
+  position: absolute; inset: 0; overflow: hidden; border-radius: 44px;
+  box-shadow: var(--device-shadow); background: #1556C9;
+}
+.screen { position: absolute; inset: 0; }
+.screen.is-under { visibility: hidden; }
+.screen.enter { animation: enter .3s cubic-bezier(.2, .8, .2, 1) both; }
+.screen.leave { animation: leave .22s ease-in both; pointer-events: none; }
+@keyframes enter { from { opacity: 0; transform: translateY(48px); } to { opacity: 1; transform: none; } }
+@keyframes leave { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(48px); } }
+@media (prefers-reduced-motion: reduce) {
+  .screen.enter, .screen.leave { animation-duration: .01s; }
+}
+
+.toast {
+  position: absolute; z-index: 60; left: 50%; bottom: 128px;
+  transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+  max-width: calc(100% - 48px); box-sizing: border-box;
+  padding: 12px 18px; border-radius: 22px;
+  background: #0B1B2E; color: #FFFFFF;
+  font: 700 14px/20px 'Manrope', system-ui, sans-serif; white-space: nowrap;
+  box-shadow: 0 10px 30px rgba(11, 27, 46, 0.3);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* phone-sized viewports: no frame, no side panel, fill the screen */
+@media (max-width: 760px) {
+  .panel { display: none; }
+  .device { border-radius: 0; box-shadow: none; }
+  body { background: #1556C9; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="panel" aria-label="Ekranlar">
+    <h1>Taqsim</h1>
+    <p>Bosiladigan prototip. Tugmalar va kartalar ekranlarni bir-biriga ulaydi; quyidan istalgan ekranga o'tish mumkin.</p>
+    <ul>
+<li><button type="button" data-jump="asosiy">Asosiy ekran</button></li>
+<li><button type="button" data-jump="kirim-chiqimlar">Kirim va chiqimlar</button></li>
+<li><button type="button" data-jump="qarzlar">Qarzlar</button></li>
+<li><button type="button" data-jump="sozlamalar">Sozlamalar</button></li>
+<li><button type="button" data-jump="yangi-kirim">Yangi kirim</button></li>
+<li><button type="button" data-jump="yangi-chiqim">Yangi chiqim</button></li>
+<li><button type="button" data-jump="qarz-berish">Qarz berish</button></li>
+<li><button type="button" data-jump="qarz-olish">Qarz olish</button></li>
+    </ul>
+  </nav>
+  <div class="stage" id="stage">
+    <div class="device" id="device">
+      <div id="screens"></div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
+<template id="tpl-asosiy">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: linear-gradient(180deg, #1556C9 0%, #2468D8 28%, #5BA2EE 46%, #8CC2F2 62%, #CFE1EE 80%, #EBDDCB 100%)">
+  <div aria-hidden="true" style="position: absolute; left: -90px; top: 330px; width: 280px; height: 280px; border-radius: 50%; background: #62B6FF; filter: blur(60px); opacity: 0.7"></div>
+  <div aria-hidden="true" style="position: absolute; right: -100px; top: 440px; width: 300px; height: 300px; border-radius: 50%; background: #F2C49B; filter: blur(70px); opacity: 0.85"></div>
+
+  <div style="position: relative; z-index: 1; box-sizing: border-box; padding: 44px 18px 0; display: flex; flex-direction: column">
+    <header style="position: absolute; top: 44px; right: 18px; display: flex; align-items: center">
+      <div style="display: flex; align-items: center; gap: 4px">
+        <button type="button" aria-label="Sozlamalar" data-go="sozlamalar" style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: none; background: rgba(255,255,255,0.16); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
+      </div>
+    </header>
+
+    <section aria-label="Jami balans" style="margin-top: 0">
+      <div style="display: grid; grid-template-columns: max-content max-content; justify-content: start; column-gap: 8px; row-gap: 0; align-items: baseline">
+        <p style="margin: 0; align-self: center; height: 20px; display: flex; align-items: flex-start; font-size: 15px; line-height: 16px; font-weight: 600; color: #FFFFFF">Jami balans</p>
+        <button type="button" aria-label="Summalarni yashirish" aria-pressed="false" style="align-self: start; justify-self: center; position: relative; top: 12px; width: 44px; height: 44px; margin: -12px -11px; padding: 0; border-radius: 22px; border: none; background: transparent; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button>
+        <span style="font-size: 44px; line-height: 48px; font-weight: 800; letter-spacing: -0.035em; color: #FFFFFF; white-space: nowrap">18 640 000</span>
+        <span style="font-size: 18px; font-weight: 700; color: #FFFFFF">so'm</span>
+      </div>
+      <span style="display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; height: 34px; box-sizing: border-box; padding: 0 14px; border-radius: 17px; background: rgba(6,20,45,0.35); border: none; font-size: 13.5px; font-weight: 700; color: #FFFFFF">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"></path><path d="M7 7h10v10"></path></svg>+4 550 000 so'm bu oy
+      </span>
+    </section>
+
+    <ul aria-label="Hamyonlar" style="list-style: none; margin: 80px -18px 0; padding: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory">
+      <li style="flex: 0 0 116px; scroll-snap-align: start">
+        <a href="#kirim-chiqimlar" data-params='{"cat":"oilaga"}' aria-label="Oilaga, 9 320 000 so'm" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 104px; border-radius: 22px; text-decoration: none; color: #0B1B2E; background: rgba(255,255,255,0.5); border: none; box-shadow: 0 8px 20px rgba(10,48,110,0.12); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%)">
+          <span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 16px; background: #FFE3CF; color: #C2410C; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></span>
+          <span aria-hidden="true" style="font-size: 14px; font-weight: 800; white-space: nowrap">9,3 mln</span>
+        </a>
+      </li>
+      <li style="flex: 0 0 116px; scroll-snap-align: start">
+        <a href="#kirim-chiqimlar" data-params='{"cat":"biznes"}' aria-label="Biznes, 4 660 000 so'm" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 104px; border-radius: 22px; text-decoration: none; color: #0B1B2E; background: rgba(255,255,255,0.5); border: none; box-shadow: 0 8px 20px rgba(10,48,110,0.12); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%)">
+          <span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 16px; background: #DCE8FF; color: #1D4ED8; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg></span>
+          <span aria-hidden="true" style="font-size: 14px; font-weight: 800; white-space: nowrap">4,7 mln</span>
+        </a>
+      </li>
+      <li style="flex: 0 0 116px; scroll-snap-align: start">
+        <a href="#kirim-chiqimlar" data-params='{"cat":"ota"}' aria-label="Ota-onamga, 2 330 000 so'm" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 104px; border-radius: 22px; text-decoration: none; color: #0B1B2E; background: rgba(255,255,255,0.5); border: none; box-shadow: 0 8px 20px rgba(10,48,110,0.12); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%)">
+          <span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 16px; background: #FCE1EE; color: #BE185D; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+          <span aria-hidden="true" style="font-size: 14px; font-weight: 800; white-space: nowrap">2,3 mln</span>
+        </a>
+      </li>
+      <li style="flex: 0 0 116px; scroll-snap-align: start">
+        <a href="#kirim-chiqimlar" data-params='{"cat":"xayriya"}' aria-label="Xayriya, 932 000 so'm" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 104px; border-radius: 22px; text-decoration: none; color: #0B1B2E; background: rgba(255,255,255,0.5); border: none; box-shadow: 0 8px 20px rgba(10,48,110,0.12); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%)">
+          <span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 16px; background: #D8F5E1; color: #15803D; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></span>
+          <span aria-hidden="true" style="font-size: 14px; font-weight: 800; white-space: nowrap">932 ming</span>
+        </a>
+      </li>
+      <li style="flex: 0 0 116px; scroll-snap-align: start">
+        <a href="#kirim-chiqimlar" data-params='{"cat":"shaxsiy"}' aria-label="Shaxsiy rivojlanish, 1 398 000 so'm" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 104px; border-radius: 22px; text-decoration: none; color: #0B1B2E; background: rgba(255,255,255,0.5); border: none; box-shadow: 0 8px 20px rgba(10,48,110,0.12); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%)">
+          <span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 16px; background: #E9E0FF; color: #6D28D9; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path><path d="M22 10v6"></path><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg></span>
+          <span aria-hidden="true" style="font-size: 14px; font-weight: 800; white-space: nowrap">1,4 mln</span>
+        </a>
+      </li>
+    </ul>
+
+    <a href="#qarzlar" aria-label="Qarzlar: berilgan 1 500 000 so'm, olingan 800 000 so'm" style="display: block; margin: 20px -18px 0; box-sizing: border-box; padding: 16px 18px 18px; border-radius: 26px; text-decoration: none; color: #0B1B2E; background: rgba(255,255,255,0.5); border: none; box-shadow: 0 8px 20px rgba(10,48,110,0.12); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%)">
+      <span style="display: flex; align-items: center; justify-content: space-between">
+        <span style="font-size: 15px; line-height: 20px; font-weight: 800">Qarzlar</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3A4B61" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+      </span>
+      <span style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px">
+        <span style="display: flex; align-items: center; gap: 12px; padding-right: 12px">
+          <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 14px; background: #D8F5E1; color: #15803D; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"></path><path d="M7 7h10v10"></path></svg></span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-size: 12px; line-height: 16px; font-weight: 700; color: #3A4B61">Berilgan</span>
+            <span style="font-size: 17px; line-height: 22px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap">1 500 000</span>
+          </span>
+        </span>
+        <span style="display: flex; align-items: center; gap: 12px; padding-left: 16px; border-left: 1px solid rgba(11,27,46,0.12)">
+          <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 14px; background: #FEE2E2; color: #B91C1C; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17"></path><path d="M17 17H7V7"></path></svg></span>
+          <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+            <span style="font-size: 12px; line-height: 16px; font-weight: 700; color: #3A4B61">Olingan</span>
+            <span style="font-size: 17px; line-height: 22px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap">800 000</span>
+          </span>
+        </span>
+      </span>
+    </a>
+    <a href="#hisobot" data-toast="Hisobot ekrani hali chizilmagan" style="display: flex; align-items: center; gap: 12px; margin: 12px -18px 0; height: 60px; box-sizing: border-box; padding: 0 18px; border-radius: 22px; text-decoration: none; color: #0B1B2E; background: rgba(255,255,255,0.5); border: none; box-shadow: 0 8px 20px rgba(10,48,110,0.12); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%)">
+      <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 14px; background: #DCE8FF; color: #1D4ED8; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg></span>
+      <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+        <span style="font-size: 15px; line-height: 20px; font-weight: 800">Hisobot</span>
+        <span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #3A4B61">Kirim va chiqimlar tahlili</span>
+      </span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3A4B61" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+    </a>
+  </div>
+
+  <section aria-label="Oktabr 2026 hisoboti" data-swipe="kirim-chiqimlar" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; height: 272px; box-sizing: border-box; padding: 14px 18px 64px; display: flex; flex-direction: column; gap: 14px; color: #0B1B2E; background: rgba(255,255,255,0.5); border-radius: 32px 32px 0 0; box-shadow: 0 -8px 20px rgba(10,48,110,0.12); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%)">
+    <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center"></div>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: -4px">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex: 1 1 auto">
+      <button type="button" aria-label="Oldingi oy" style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: none; background: rgba(11,27,46,0.06); color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+      </button>
+      <h2 style="margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em">Oktabr 2026</h2>
+      <button type="button" aria-label="Keyingi oy" disabled="" style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: none; background: rgba(11,27,46,0.06); color: #0B1B2E; display: flex; align-items: center; justify-content: center; opacity: 0.35">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+      </button>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr))">
+      <a href="#kirim-chiqimlar" data-params='{"type":"in"}' style="display: flex; flex-direction: column; gap: 3px; padding-right: 10px; text-decoration: none; color: #0B1B2E">
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #3A4B61"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>Kirim</span>
+        <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap">12 400 000</span>
+      </a>
+      <a href="#kirim-chiqimlar" data-params='{"type":"out"}' style="display: flex; flex-direction: column; gap: 3px; padding: 0 10px; border-left: 1px solid rgba(11,27,46,0.12); text-decoration: none; color: #0B1B2E">
+        <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #3A4B61"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg>Chiqim</span>
+        <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap">7 850 000</span>
+      </a>
+    </div>
+    <div style="display: flex; gap: 4px">
+      <button type="button" data-go="yangi-kirim" style="flex: 1 1 0px; height: 58px; border-radius: 29px; border: none; background: rgba(21,128,61,0.12); color: #15803D; font-family: inherit; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer">
+        <span aria-hidden="true" style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Kirim
+      </button>
+      <button type="button" data-go="yangi-chiqim" style="flex: 1 1 0px; height: 58px; border-radius: 29px; border: none; background: rgba(220,38,38,0.10); color: #B91C1C; font-family: inherit; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer">
+        <span aria-hidden="true" style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Chiqim
+      </button>
+      
+    </div>
+  </section>
+  <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
+    <span>17:25</span>
+    <span style="display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.859a10 10 0 0 1 14 0"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="11" width="2.6" height="4" rx="0.6"></rect><rect x="5" y="8" width="2.6" height="7" rx="0.6"></rect><rect x="9" y="5" width="2.6" height="10" rx="0.6"></rect><rect x="13" y="2" width="2.6" height="13" rx="0.6"></rect></svg>
+      <svg width="24" height="14" viewBox="0 0 24 14"><rect x="0.75" y="0.75" width="20" height="12.5" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"></rect><rect x="2.75" y="2.75" width="12.5" height="8.5" rx="1.8" fill="currentColor"></rect><rect x="22" y="4.5" width="1.6" height="5" rx="0.8" fill="currentColor" opacity="0.6"></rect></svg>
+    </span>
+  </div>
+  <nav aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: space-around; padding: 0 40px; color: rgba(11,27,46,0.72); pointer-events: none">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12"></path><path d="M12 6v12"></path><path d="M17 6v12"></path></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="13" height="13" rx="5"></rect></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"></path></svg>
+  </nav>
+</div>
+</template>
+<template id="tpl-kirim-chiqimlar">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+
+  <section aria-label="Oktabr 2026 yozuvlari" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
+    <div style="flex: none; padding: 10px 18px 0; display: flex; flex-direction: column; gap: 14px">
+      <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center; margin-bottom: -4px"></div>
+      <header style="display: flex; align-items: center; gap: 10px; height: 44px">
+        <a href="#asosiy" aria-label="Orqaga" data-back style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; text-decoration: none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+        </a>
+        <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; color: #0B1B2E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Kirim va chiqimlar</h1>
+        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+        </button>
+      </header>
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <button type="button" aria-label="Oldingi oy" style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: none; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+        <h2 style="margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em">Oktabr 2026</h2>
+        <button type="button" aria-label="Keyingi oy" disabled="" style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: none; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; opacity: 0.35">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px">
+        <button type="button" aria-label="Faqat kirimlarni ko'rsatish" aria-pressed="{{inPressed}}" onClick="{{toggleIn}}" style="position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; height: 68px; box-sizing: border-box; padding: 12px 14px; border-radius: 20px; border: none; background: {{inBg}}; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #5B6B80"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>Kirim</span>
+          <span style="font-size: 20px; line-height: 24px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap">12 400 000</span>
+          <sc-if value="{{inActive}}" hint-placeholder-val="{{ false }}">
+            <span aria-hidden="true" style="position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 11px; background: #15803D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+          </sc-if>
+        </button>
+        <button type="button" aria-label="Faqat chiqimlarni ko'rsatish" aria-pressed="{{outPressed}}" onClick="{{toggleOut}}" style="position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; height: 68px; box-sizing: border-box; padding: 12px 14px; border-radius: 20px; border: none; background: {{outBg}}; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #5B6B80"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg>Chiqim</span>
+          <span style="font-size: 20px; line-height: 24px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap">7 850 000</span>
+          <sc-if value="{{outActive}}" hint-placeholder-val="{{ false }}">
+            <span aria-hidden="true" style="position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 11px; background: #DC2626; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+          </sc-if>
+        </button>
+      </div>
+
+      <div role="group" aria-label="Kategoriya bo'yicha filtr" style="display: flex; gap: 6px; margin: 0 -18px; padding: 0 18px 8px; overflow-x: auto; scrollbar-width: none">
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="4">
+          <button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="flex: none; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 20px; border: none; background: {{c.bg}}; color: {{c.color}}; font-family: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer">
+            <sc-if value="{{c.hasDot}}" hint-placeholder-val="{{ false }}">
+              <span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; background: {{c.dot}}"></span>
+            </sc-if>
+            {{c.name}}
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="position: relative; z-index: 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 18px 190px">
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <section aria-label="{{g.label}}">
+          <div style="position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; height: 40px; margin-top: {{g.mt}}px; background: #FFFFFF; font-size: 12.5px; font-weight: 700; color: #5B6B80">
+            <h3 style="margin: 0; font-size: inherit; font-weight: inherit">{{g.label}}</h3>
+            <span style="white-space: nowrap">{{g.total}}</span>
+          </div>
+          <sc-for list="{{g.items}}" as="it" hint-placeholder-count="2">
+            <a href="#yozuv" data-toast="Yozuv tafsilotlari hali chizilmagan" style="display: flex; align-items: center; gap: 12px; min-height: 64px; box-sizing: border-box; padding: 10px 0; text-decoration: none; color: #0B1B2E; border-top: 1px solid {{it.border}}">
+              <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 14px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center">
+                <sc-if value="{{it.isBiz}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"></path><path d="m22 7-8.5 8.5-5-5L2 17"></path></svg></sc-if>
+                <sc-if value="{{it.isFood}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg></sc-if>
+                <sc-if value="{{it.isFamily}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"></path><circle cx="10" cy="8" r="5"></circle><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"></path></svg></sc-if>
+                <sc-if value="{{it.isCharity}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"></path><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"></path><path d="m2 15 6 6"></path><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z"></path></svg></sc-if>
+                <sc-if value="{{it.isEdu}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg></sc-if>
+                <sc-if value="{{it.isSalary}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg></sc-if>
+                <sc-if value="{{it.isHome}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg></sc-if>
+              </span>
+              <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+                <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap">{{it.walletText}}</span>
+                <span style="font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.sub}}<span style="font-weight: 600; color: #5B6B80"> / {{it.catName}}</span></span>
+                <sc-if value="{{it.hasNote}}" hint-placeholder-val="{{ true }}">
+                  <span style="font-size: 12.5px; line-height: 17px; font-weight: 600; color: #5B6B80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.note}}</span>
+                </sc-if>
+              </span>
+              <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 5px">
+                <span style="font-size: 15px; line-height: 20px; font-weight: 800; white-space: nowrap; color: {{it.color}}">{{it.amount}}</span>
+                <sc-if value="{{it.isIn}}" hint-placeholder-val="{{ true }}">
+                  <span aria-hidden="true" style="align-self: stretch; display: flex; gap: 2px; height: 4px">
+                    <sc-for list="{{it.split}}" as="sp" hint-placeholder-count="3">
+                      <span style="flex: {{sp.share}} 1 0px; min-width: 3px; border-radius: 2px; background: {{sp.color}}"></span>
+                    </sc-for>
+                  </span>
+                </sc-if>
+                <sc-if value="{{it.isOut}}" hint-placeholder-val="{{ false }}">
+                  <span aria-hidden="true" style="width: 20px; height: 20px; border-radius: 6px; background: {{it.wBg}}; color: {{it.wFg}}; display: flex; align-items: center; justify-content: center">
+                    <sc-if value="{{it.isOilaga}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></sc-if>
+                    <sc-if value="{{it.isBiznes}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg></sc-if>
+                    <sc-if value="{{it.isOta}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></sc-if>
+                    <sc-if value="{{it.isXayriya}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+                    <sc-if value="{{it.isShaxsiy}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path><path d="M22 10v6"></path><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg></sc-if>
+                  </span>
+                </sc-if>
+              </span>
+            </a>
+          </sc-for>
+        </section>
+      </sc-for>
+      <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 12px; text-align: center">
+          <span style="font-size: 15px; font-weight: 700">Yozuv topilmadi</span>
+          <span style="font-size: 13px; line-height: 18px; color: #5B6B80">Bu filtr bo'yicha oktabrda yozuv yo'q</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 180px; background: linear-gradient(to top, #FFFFFF 60%, rgba(255,255,255,0)); pointer-events: none"></div>
+    <div style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; display: flex; gap: 4px">
+      <button type="button" data-go="yangi-kirim" style="flex: 1 1 0px; height: 58px; border-radius: 29px; border: none; background: #E3F6E9; color: #15803D; font-family: inherit; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer">
+        <span aria-hidden="true" style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Kirim
+      </button>
+      <button type="button" data-go="yangi-chiqim" style="flex: 1 1 0px; height: 58px; border-radius: 29px; border: none; background: #FDE8E8; color: #B91C1C; font-family: inherit; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer">
+        <span aria-hidden="true" style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Chiqim
+      </button>
+    </div>
+  </section>
+  <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
+    <span>17:25</span>
+    <span style="display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.859a10 10 0 0 1 14 0"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="11" width="2.6" height="4" rx="0.6"></rect><rect x="5" y="8" width="2.6" height="7" rx="0.6"></rect><rect x="9" y="5" width="2.6" height="10" rx="0.6"></rect><rect x="13" y="2" width="2.6" height="13" rx="0.6"></rect></svg>
+      <svg width="24" height="14" viewBox="0 0 24 14"><rect x="0.75" y="0.75" width="20" height="12.5" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"></rect><rect x="2.75" y="2.75" width="12.5" height="8.5" rx="1.8" fill="currentColor"></rect><rect x="22" y="4.5" width="1.6" height="5" rx="0.8" fill="currentColor" opacity="0.6"></rect></svg>
+    </span>
+  </div>
+  <nav aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: space-around; padding: 0 40px; color: rgba(11,27,46,0.72); pointer-events: none">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12"></path><path d="M12 6v12"></path><path d="M17 6v12"></path></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="13" height="13" rx="5"></rect></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"></path></svg>
+  </nav>
+</div>
+</template>
+<template id="tpl-qarzlar">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+
+  <section aria-label="Qarzlar" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
+    <div style="flex: none; padding: 10px 18px 0; display: flex; flex-direction: column; gap: 14px">
+      <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center; margin-bottom: -4px"></div>
+      <header style="display: flex; align-items: center; gap: 10px; height: 44px">
+        <a href="#asosiy" aria-label="Orqaga" data-back style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; text-decoration: none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+        </a>
+        <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; color: #0B1B2E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Qarzlar</h1>
+        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+        </button>
+      </header>
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <button type="button" aria-label="Oldingi oy" style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: none; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+        </button>
+        <h2 style="margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em">Oktabr 2026</h2>
+        <button type="button" aria-label="Keyingi oy" disabled style="width: 44px; height: 44px; padding: 0; border-radius: 22px; border: none; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; opacity: 0.35">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        </button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px">
+        <button type="button" aria-label="Faqat berilgan qarzlar" aria-pressed="{{givenPressed}}" onClick="{{toggleGiven}}" style="position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; height: 68px; box-sizing: border-box; padding: 12px 14px; border-radius: 20px; border: none; background: {{givenBg}}; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #5B6B80"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"></path><path d="M7 7h10v10"></path></svg>Berilgan</span>
+          <span style="font-size: 20px; line-height: 24px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap">1 500 000</span>
+          <sc-if value="{{givenOn}}" hint-placeholder-val="{{ false }}">
+            <span aria-hidden="true" style="position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 11px; background: #15803D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+          </sc-if>
+        </button>
+        <button type="button" aria-label="Faqat olingan qarzlar" aria-pressed="{{takenPressed}}" onClick="{{toggleTaken}}" style="position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; height: 68px; box-sizing: border-box; padding: 12px 14px; border-radius: 20px; border: none; background: {{takenBg}}; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: #5B6B80"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 7 7 17"></path><path d="M17 17H7V7"></path></svg>Olingan</span>
+          <span style="font-size: 20px; line-height: 24px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap">800 000</span>
+          <sc-if value="{{takenOn}}" hint-placeholder-val="{{ false }}">
+            <span aria-hidden="true" style="position: absolute; top: 10px; right: 10px; width: 22px; height: 22px; border-radius: 11px; background: #DC2626; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+          </sc-if>
+        </button>
+      </div>
+
+      <div role="group" aria-label="Holat bo'yicha filtr" style="display: flex; gap: 6px; margin: 0 -18px; padding: 0 18px 8px; overflow-x: auto; scrollbar-width: none">
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="4">
+          <button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="flex: none; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 20px; border: none; background: {{c.bg}}; color: {{c.color}}; font-family: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer">
+            <sc-if value="{{c.hasDot}}" hint-placeholder-val="{{ false }}">
+              <span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 4px; background: {{c.dot}}"></span>
+            </sc-if>
+            {{c.name}}
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="position: relative; z-index: 0; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 18px 190px">
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+        <section aria-label="{{g.label}}">
+          <div style="position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; height: 40px; margin-top: {{g.mt}}px; background: #FFFFFF; font-size: 12.5px; font-weight: 700; color: {{g.color}}">
+            <h3 style="margin: 0; font-size: inherit; font-weight: inherit">{{g.label}}</h3>
+            <span style="white-space: nowrap">{{g.total}}</span>
+          </div>
+          <sc-for list="{{g.items}}" as="d" hint-placeholder-count="2">
+            <a href="#qarz" data-toast="Qarz tafsilotlari hali chizilmagan" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; text-decoration: none; color: #0B1B2E; border-top: 1px solid {{d.border}}">
+              <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 20px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800">{{d.ini}}</span>
+              <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+                <span style="font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{d.name}}</span>
+                <span style="font-size: 12px; line-height: 16px; font-weight: 600; color: {{d.subColor}}">{{d.sub}}</span>
+                <sc-if value="{{d.hasProgress}}" hint-placeholder-val="{{ false }}">
+                  <span style="display: flex; align-items: center; gap: 8px; margin-top: 5px">
+                    <span style="flex: 1 1 auto; height: 4px; border-radius: 2px; background: #EEF1F5; overflow: hidden"><span style="display: block; width: {{d.pct}}%; height: 4px; border-radius: 2px; background: {{d.color}}"></span></span>
+                    <span style="font-size: 11.5px; font-weight: 600; color: #5B6B80; white-space: nowrap">{{d.paidText}}</span>
+                  </span>
+                </sc-if>
+              </span>
+              <span style="flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px">
+                <span style="font-size: 15px; font-weight: 800; white-space: nowrap; color: {{d.color}}">{{d.amount}}</span>
+                <span style="font-size: 11.5px; font-weight: 600; color: #5B6B80">{{d.typeLabel}}</span>
+              </span>
+            </a>
+          </sc-for>
+        </section>
+      </sc-for>
+      <sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 12px; text-align: center">
+          <span style="font-size: 15px; font-weight: 700">Qarz topilmadi</span>
+          <span style="font-size: 13px; line-height: 18px; color: #5B6B80">Bu filtr bo'yicha qarz yo'q</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 180px; background: linear-gradient(to top, #FFFFFF 60%, rgba(255,255,255,0)); pointer-events: none"></div>
+    <div style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; display: flex; gap: 4px">
+      <button type="button" data-go="qarz-berish" style="flex: 1 1 0px; height: 58px; border-radius: 29px; border: none; background: #E3F6E9; color: #15803D; font-family: inherit; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer">
+        <span aria-hidden="true" style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Qarz berdim
+      </button>
+      <button type="button" data-go="qarz-olish" style="flex: 1 1 0px; height: 58px; border-radius: 29px; border: none; background: #FDE8E8; color: #B91C1C; font-family: inherit; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer">
+        <span aria-hidden="true" style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Qarz oldim
+      </button>
+    </div>
+  </section>
+  <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
+    <span>17:25</span>
+    <span style="display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.859a10 10 0 0 1 14 0"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="11" width="2.6" height="4" rx="0.6"></rect><rect x="5" y="8" width="2.6" height="7" rx="0.6"></rect><rect x="9" y="5" width="2.6" height="10" rx="0.6"></rect><rect x="13" y="2" width="2.6" height="13" rx="0.6"></rect></svg>
+      <svg width="24" height="14" viewBox="0 0 24 14"><rect x="0.75" y="0.75" width="20" height="12.5" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"></rect><rect x="2.75" y="2.75" width="12.5" height="8.5" rx="1.8" fill="currentColor"></rect><rect x="22" y="4.5" width="1.6" height="5" rx="0.8" fill="currentColor" opacity="0.6"></rect></svg>
+    </span>
+  </div>
+  <nav aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: space-around; padding: 0 40px; color: rgba(11,27,46,0.72); pointer-events: none">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12"></path><path d="M12 6v12"></path><path d="M17 6v12"></path></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="13" height="13" rx="5"></rect></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"></path></svg>
+  </nav>
+</div>
+</template>
+<template id="tpl-sozlamalar">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+
+  <section aria-label="Sozlamalar" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
+    <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
+      <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center; margin-bottom: -4px"></div>
+      <header style="display: flex; align-items: center; gap: 10px; height: 44px">
+        <a href="#asosiy" aria-label="Orqaga" data-back style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; text-decoration: none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+        </a>
+        <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Sozlamalar</h1>
+        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+        </button>
+      </header>
+    </div>
+
+    <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 18px 72px">
+
+      <h2 style="margin: 4px 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Ko'rinish</h2>
+      <div style="border-radius: 18px; background: #F4F6F9; overflow: hidden">
+        <div style="padding: 12px 12px 12px 14px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></span>
+            <span style="font-size: 15px; font-weight: 600">Mavzu</span>
+          </div>
+          <div role="radiogroup" aria-label="Mavzu" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; height: 44px; box-sizing: border-box; padding: 4px; border-radius: 22px; background: #FFFFFF">
+            <sc-for list="{{themes}}" as="t" hint-placeholder-count="3">
+              <button type="button" role="radio" aria-checked="{{t.checked}}" onClick="{{t.pick}}" style="border: none; border-radius: 18px; background: {{t.bg}}; color: {{t.color}}; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">{{t.name}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <a href="#til" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px 0 14px; border-top: 1px solid rgba(11,27,46,0.06); text-decoration: none; color: #0B1B2E">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg></span>
+          <span style="flex: 1 1 auto; font-size: 15px; font-weight: 600">Til</span>
+          <span style="font-size: 14px; font-weight: 600; color: #5B6B80">O'zbekcha</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        </a>
+        <a href="#valyuta" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px 0 14px; border-top: 1px solid rgba(11,27,46,0.06); text-decoration: none; color: #0B1B2E">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg></span>
+          <span style="flex: 1 1 auto; font-size: 15px; font-weight: 600">Valyuta</span>
+          <span style="font-size: 14px; font-weight: 600; color: #5B6B80">so'm (UZS)</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        </a>
+      </div>
+
+      <h2 style="margin: 20px 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Taqsimot</h2>
+      <div style="border-radius: 18px; background: #F4F6F9; overflow: hidden">
+        <a href="#hamyonlar" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px 0 14px; text-decoration: none; color: #0B1B2E">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path></svg></span>
+          <span style="flex: 1 1 auto; font-size: 15px; font-weight: 600">Hamyonlar va ulushlar</span>
+          <span style="font-size: 14px; font-weight: 600; color: #5B6B80">5 ta</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        </a>
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px 0 14px; border-top: 1px solid rgba(11,27,46,0.06)">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"></path><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path></svg></span>
+          <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 600">Kirimni avtomatik taqsimlash</span><span style="font-size: 12px; font-weight: 600; color: #5B6B80">Ulushlar bo'yicha hamyonlarga</span></span>
+          <button type="button" role="switch" aria-label="Kirimni avtomatik taqsimlash" aria-checked="{{auto.checked}}" onClick="{{auto.toggle}}" style="width: 56px; height: 44px; flex: none; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><span aria-hidden="true" style="position: relative; width: 48px; height: 28px; border-radius: 14px; background: {{auto.bg}}"><span style="position: absolute; top: 2px; left: {{auto.x}}px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span></span></button>
+        </div>
+      </div>
+
+      <h2 style="margin: 20px 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Xavfsizlik</h2>
+      <div style="border-radius: 18px; background: #F4F6F9; overflow: hidden">
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px 0 14px">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span>
+          <span style="flex: 1 1 auto; font-size: 15px; font-weight: 600">PIN-kod</span>
+          <button type="button" role="switch" aria-label="PIN-kod" aria-checked="{{pin.checked}}" onClick="{{pin.toggle}}" style="width: 56px; height: 44px; flex: none; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><span aria-hidden="true" style="position: relative; width: 48px; height: 28px; border-radius: 14px; background: {{pin.bg}}"><span style="position: absolute; top: 2px; left: {{pin.x}}px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span></span></button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px 0 14px; border-top: 1px solid rgba(11,27,46,0.06)">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"></path><path d="M14 13.12c0 2.38 0 6.38-1 8.88"></path><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"></path><path d="M2 12a10 10 0 0 1 18-6"></path><path d="M2 16h.01"></path><path d="M21.8 16c.2-2 .131-5.354 0-6"></path><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"></path><path d="M8.65 22c.21-.66.45-1.32.57-2"></path><path d="M9 6.8a6 6 0 0 1 9 5.2v2"></path></svg></span>
+          <span style="flex: 1 1 auto; font-size: 15px; font-weight: 600">Barmoq izi bilan kirish</span>
+          <button type="button" role="switch" aria-label="Barmoq izi bilan kirish" aria-checked="{{bio.checked}}" onClick="{{bio.toggle}}" style="width: 56px; height: 44px; flex: none; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><span aria-hidden="true" style="position: relative; width: 48px; height: 28px; border-radius: 14px; background: {{bio.bg}}"><span style="position: absolute; top: 2px; left: {{bio.x}}px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span></span></button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 8px 0 14px; border-top: 1px solid rgba(11,27,46,0.06)">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"></path><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"></path><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"></path><path d="m2 2 20 20"></path></svg></span>
+          <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 600">Summalarni yashirish</span><span style="font-size: 12px; font-weight: 600; color: #5B6B80">Ilova ochilganda</span></span>
+          <button type="button" role="switch" aria-label="Summalarni yashirish" aria-checked="{{hide.checked}}" onClick="{{hide.toggle}}" style="width: 56px; height: 44px; flex: none; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><span aria-hidden="true" style="position: relative; width: 48px; height: 28px; border-radius: 14px; background: {{hide.bg}}"><span style="position: absolute; top: 2px; left: {{hide.x}}px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span></span></button>
+        </div>
+      </div>
+
+      <h2 style="margin: 20px 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Ma'lumotlar</h2>
+      <div style="border-radius: 18px; background: #F4F6F9; overflow: hidden">
+        <a href="#eksport" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px 0 14px; text-decoration: none; color: #0B1B2E">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg></span>
+          <span style="flex: 1 1 auto; font-size: 15px; font-weight: 600">Excel'ga eksport</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        </a>
+        <a href="#zaxira" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px 0 14px; border-top: 1px solid rgba(11,27,46,0.06); text-decoration: none; color: #0B1B2E">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"></path><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 17 4-4 4 4"></path></svg></span>
+          <span style="flex: 1 1 auto; font-size: 15px; font-weight: 600">Zaxira nusxa</span>
+          <span style="font-size: 14px; font-weight: 600; color: #5B6B80">Bugun, 09:12</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        </a>
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-top: 1px solid rgba(11,27,46,0.06)">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></span>
+          <span style="flex: 1 1 auto; font-size: 15px; font-weight: 600">Ilova versiyasi</span>
+          <span style="font-size: 14px; font-weight: 600; color: #5B6B80">[VERSIYA]</span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
+    <span>17:25</span>
+    <span style="display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.859a10 10 0 0 1 14 0"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="11" width="2.6" height="4" rx="0.6"></rect><rect x="5" y="8" width="2.6" height="7" rx="0.6"></rect><rect x="9" y="5" width="2.6" height="10" rx="0.6"></rect><rect x="13" y="2" width="2.6" height="13" rx="0.6"></rect></svg>
+      <svg width="24" height="14" viewBox="0 0 24 14"><rect x="0.75" y="0.75" width="20" height="12.5" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"></rect><rect x="2.75" y="2.75" width="12.5" height="8.5" rx="1.8" fill="currentColor"></rect><rect x="22" y="4.5" width="1.6" height="5" rx="0.8" fill="currentColor" opacity="0.6"></rect></svg>
+    </span>
+  </div>
+  <nav aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: space-around; padding: 0 40px; color: rgba(11,27,46,0.72); background: rgba(255,255,255,0.92); pointer-events: none">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12"></path><path d="M12 6v12"></path><path d="M17 6v12"></path></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="13" height="13" rx="5"></rect></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"></path></svg>
+  </nav>
+</div>
+</template>
+<template id="tpl-yangi-kirim">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+
+  <section aria-label="Yangi kirim" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
+    <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
+      <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center; margin-bottom: -4px"></div>
+      <header style="display: flex; align-items: center; gap: 10px; height: 44px">
+        <a href="#kirim-chiqimlar" aria-label="Orqaga" data-back style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; text-decoration: none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+        </a>
+        <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Yangi kirim</h1>
+        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+        </button>
+      </header>
+    </div>
+
+    <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 18px 160px; display: flex; flex-direction: column; gap: 16px">
+
+      <div style="padding: 12px 12px 16px 16px; border-radius: 20px; background: #F4F6F9">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+          <label for="summa" style="font-size: 13px; font-weight: 700; color: #5B6B80">Summa</label>
+          <div role="radiogroup" aria-label="To'lov turi" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 22px; background: #FFFFFF">
+            <button type="button" role="radio" aria-checked="{{cardChecked}}" onClick="{{pickCard}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border: none; border-radius: 19px; background: {{cardBg}}; color: {{cardColor}}; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"></rect><path d="M2 10h20"></path></svg>Karta
+            </button>
+            <button type="button" role="radio" aria-checked="{{cashChecked}}" onClick="{{pickCash}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border: none; border-radius: 19px; background: {{cashBg}}; color: {{cashColor}}; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>Naqd
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px">
+          <input id="summa" type="text" autocomplete="off" placeholder="0" value="{{amountText}}" onChange="{{onAmount}}" style="flex: 1 1 auto; min-width: 0; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 36px; line-height: 44px; font-weight: 800; letter-spacing: -0.03em; color: #0B1B2E; outline-offset: 4px">
+          <span style="font-size: 18px; font-weight: 700; color: #5B6B80">so'm</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <div>
+          <span id="kat-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Kategoriya</span>
+          <button type="button" aria-labelledby="kat-lbl kat-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+            <span id="kat-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{catColor}}">{{catText}}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+        </div>
+        <div>
+          <span id="sub-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Subkategoriya</span>
+          <button type="button" aria-labelledby="sub-lbl sub-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+            <span id="sub-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{subColor}}">{{subText}}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-top: -8px">
+        <div role="radiogroup" aria-label="Tezkor tanlash" style="display: flex; gap: 6px; margin: 0 -18px; padding: 0 18px; overflow-x: auto; scrollbar-width: none">
+          <sc-for list="{{quick}}" as="q" hint-placeholder-count="4">
+            <button type="button" role="radio" aria-checked="{{q.checked}}" onClick="{{q.pick}}" style="flex: none; height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: {{q.bg}}; color: {{q.color}}; font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer">{{q.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex: none; border-radius: 20px; background: #F4F6F9; overflow: hidden">
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 8px 0 14px">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"></path><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path></svg></span>
+          <span style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 15px; font-weight: 700">Hamyonlarga taqsimlash</span><span style="font-size: 12px; font-weight: 600; color: #5B6B80">Ulushlar bo'yicha avtomatik</span></span>
+          <button type="button" role="switch" aria-label="Hamyonlarga taqsimlash" aria-checked="{{splitChecked}}" onClick="{{toggleSplit}}" style="width: 56px; height: 44px; flex: none; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><span aria-hidden="true" style="position: relative; width: 48px; height: 28px; border-radius: 14px; background: {{splitBg}}"><span style="position: absolute; top: 2px; left: {{splitX}}px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span></span></button>
+        </div>
+
+        <sc-if value="{{split}}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 0 14px 6px">
+            <sc-for list="{{dist}}" as="w" hint-placeholder-count="5">
+              <div style="display: flex; align-items: center; gap: 10px; height: 40px; border-top: 1px solid rgba(11,27,46,0.06)">
+                <span aria-hidden="true" style="width: 24px; height: 24px; flex: none; border-radius: 8px; background: {{w.bg}}; color: {{w.fg}}; display: flex; align-items: center; justify-content: center">
+                  <sc-if value="{{w.isOilaga}}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></sc-if>
+                  <sc-if value="{{w.isBiznes}}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg></sc-if>
+                  <sc-if value="{{w.isOta}}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></sc-if>
+                  <sc-if value="{{w.isXayriya}}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+                  <sc-if value="{{w.isShaxsiy}}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path><path d="M22 10v6"></path><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg></sc-if>
+                </span>
+                <span style="flex: 1 1 auto; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{w.name}}</span>
+                <span style="font-size: 12px; font-weight: 700; color: #5B6B80">{{w.pct}}</span>
+                <span style="min-width: 88px; text-align: right; font-size: 14px; font-weight: 800; white-space: nowrap">{{w.amount}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{single}}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 4px 14px 14px; border-top: 1px solid rgba(11,27,46,0.06)">
+            <span id="hamyon-lbl" style="display: block; margin: 8px 0 8px; font-size: 13px; font-weight: 700; color: #5B6B80">Qaysi hamyonga</span>
+            <div role="radiogroup" aria-labelledby="hamyon-lbl" style="display: flex; flex-wrap: wrap; gap: 6px">
+              <sc-for list="{{wallets}}" as="w" hint-placeholder-count="5">
+                <button type="button" role="radio" aria-checked="{{w.checked}}" onClick="{{w.pick}}" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px 0 8px; border: none; border-radius: 22px; background: {{w.chipBg}}; color: {{w.chipColor}}; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer">
+                  <span aria-hidden="true" style="width: 28px; height: 28px; flex: none; border-radius: 14px; background: {{w.bg}}; color: {{w.fg}}; display: flex; align-items: center; justify-content: center">
+                    <sc-if value="{{w.isOilaga}}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></sc-if>
+                    <sc-if value="{{w.isBiznes}}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg></sc-if>
+                    <sc-if value="{{w.isOta}}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></sc-if>
+                    <sc-if value="{{w.isXayriya}}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+                    <sc-if value="{{w.isShaxsiy}}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path><path d="M22 10v6"></path><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg></sc-if>
+                  </span>
+                  {{w.name}}
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+
+      <div>
+        <label for="izoh" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Izoh</label>
+        <textarea id="izoh" rows="4" placeholder="Masalan: oktabr oyi uchun" style="display: block; width: 100%; min-height: 112px; box-sizing: border-box; padding: 14px 16px; border: none; border-radius: 18px; background: #F4F6F9; font-family: inherit; font-size: 15px; line-height: 22px; font-weight: 600; color: #0B1B2E; resize: none"></textarea>
+      </div>
+
+      <div>
+        <span id="sana-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Sana</span>
+        <button type="button" aria-labelledby="sana-lbl sana-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span id="sana-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700">Bugun, 21-oktabr</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to top, #FFFFFF 62%, rgba(255,255,255,0)); pointer-events: none"></div>
+    <button type="button" data-save="Kirim qo'shildi" style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; height: 58px; border: none; border-radius: 29px; background: #0B1B2E; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Yangi kirim qo'shish</button>
+  </section>
+  <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
+    <span>17:25</span>
+    <span style="display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.859a10 10 0 0 1 14 0"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="11" width="2.6" height="4" rx="0.6"></rect><rect x="5" y="8" width="2.6" height="7" rx="0.6"></rect><rect x="9" y="5" width="2.6" height="10" rx="0.6"></rect><rect x="13" y="2" width="2.6" height="13" rx="0.6"></rect></svg>
+      <svg width="24" height="14" viewBox="0 0 24 14"><rect x="0.75" y="0.75" width="20" height="12.5" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"></rect><rect x="2.75" y="2.75" width="12.5" height="8.5" rx="1.8" fill="currentColor"></rect><rect x="22" y="4.5" width="1.6" height="5" rx="0.8" fill="currentColor" opacity="0.6"></rect></svg>
+    </span>
+  </div>
+  <nav aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: space-around; padding: 0 40px; color: rgba(11,27,46,0.72); pointer-events: none">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12"></path><path d="M12 6v12"></path><path d="M17 6v12"></path></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="13" height="13" rx="5"></rect></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"></path></svg>
+  </nav>
+</div>
+</template>
+<template id="tpl-yangi-chiqim">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+
+  <section aria-label="Yangi chiqim" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
+    <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
+      <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center; margin-bottom: -4px"></div>
+      <header style="display: flex; align-items: center; gap: 10px; height: 44px">
+        <a href="#kirim-chiqimlar" aria-label="Orqaga" data-back style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; text-decoration: none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+        </a>
+        <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Yangi chiqim</h1>
+        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+        </button>
+      </header>
+    </div>
+
+    <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 18px 160px; display: flex; flex-direction: column; gap: 16px">
+
+      <div style="flex: none; padding: 12px 12px 16px 16px; border-radius: 20px; background: #F4F6F9">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+          <label for="summa" style="font-size: 13px; font-weight: 700; color: #5B6B80">Summa</label>
+          <div role="radiogroup" aria-label="To'lov turi" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 22px; background: #FFFFFF">
+            <button type="button" role="radio" aria-checked="{{cardChecked}}" onClick="{{pickCard}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border: none; border-radius: 19px; background: {{cardBg}}; color: {{cardColor}}; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"></rect><path d="M2 10h20"></path></svg>Karta
+            </button>
+            <button type="button" role="radio" aria-checked="{{cashChecked}}" onClick="{{pickCash}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border: none; border-radius: 19px; background: {{cashBg}}; color: {{cashColor}}; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>Naqd
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px">
+          <input id="summa" type="text" autocomplete="off" placeholder="0" value="{{amountText}}" onChange="{{onAmount}}" style="flex: 1 1 auto; min-width: 0; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 36px; line-height: 44px; font-weight: 800; letter-spacing: -0.03em; color: #0B1B2E; outline-offset: 4px">
+          <span style="font-size: 18px; font-weight: 700; color: #5B6B80">so'm</span>
+        </div>
+      </div>
+
+      <div style="flex: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <div>
+          <span id="kat-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Kategoriya</span>
+          <button type="button" aria-labelledby="kat-lbl kat-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+            <span id="kat-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{catColor}}">{{catText}}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+        </div>
+        <div>
+          <span id="sub-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Subkategoriya</span>
+          <button type="button" aria-labelledby="sub-lbl sub-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+            <span id="sub-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: {{subColor}}">{{subText}}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <div style="flex: none; margin-top: -8px">
+        <div role="radiogroup" aria-label="Tezkor tanlash" style="display: flex; gap: 6px; margin: 0 -18px; padding: 0 18px; overflow-x: auto; scrollbar-width: none">
+          <sc-for list="{{quick}}" as="q" hint-placeholder-count="4">
+            <button type="button" role="radio" aria-checked="{{q.checked}}" onClick="{{q.pick}}" style="flex: none; height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: {{q.bg}}; color: {{q.color}}; font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer">{{q.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex: none">
+        <span id="hamyon-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Qaysi hamyondan</span>
+        <button type="button" aria-labelledby="hamyon-lbl hamyon-val" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 52px; padding: 0 12px 0 10px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: {{w.bg}}; color: {{w.fg}}; display: flex; align-items: center; justify-content: center">
+            <sc-if value="{{w.isOilaga}}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></sc-if>
+            <sc-if value="{{w.isBiznes}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg></sc-if>
+            <sc-if value="{{w.isOta}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></sc-if>
+            <sc-if value="{{w.isXayriya}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+            <sc-if value="{{w.isShaxsiy}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path><path d="M22 10v6"></path><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg></sc-if>
+          </span>
+          <span id="hamyon-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{w.name}}</span>
+          <span style="font-size: 13px; font-weight: 600; color: #5B6B80; white-space: nowrap">{{w.balance}}</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </div>
+
+      <div style="flex: none">
+        <label for="izoh" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Izoh</label>
+        <textarea id="izoh" rows="4" placeholder="Masalan: haftalik bozorlik" style="display: block; width: 100%; min-height: 112px; box-sizing: border-box; padding: 14px 16px; border: none; border-radius: 18px; background: #F4F6F9; font-family: inherit; font-size: 15px; line-height: 22px; font-weight: 600; color: #0B1B2E; resize: none"></textarea>
+      </div>
+
+      <div style="flex: none">
+        <span id="sana-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Sana</span>
+        <button type="button" aria-labelledby="sana-lbl sana-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span id="sana-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700">Bugun, 21-oktabr</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to top, #FFFFFF 62%, rgba(255,255,255,0)); pointer-events: none"></div>
+    <button type="button" data-save="Chiqim qo'shildi" style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; height: 58px; border: none; border-radius: 29px; background: #0B1B2E; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Yangi chiqim qo'shish</button>
+  </section>
+  <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
+    <span>17:25</span>
+    <span style="display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.859a10 10 0 0 1 14 0"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="11" width="2.6" height="4" rx="0.6"></rect><rect x="5" y="8" width="2.6" height="7" rx="0.6"></rect><rect x="9" y="5" width="2.6" height="10" rx="0.6"></rect><rect x="13" y="2" width="2.6" height="13" rx="0.6"></rect></svg>
+      <svg width="24" height="14" viewBox="0 0 24 14"><rect x="0.75" y="0.75" width="20" height="12.5" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"></rect><rect x="2.75" y="2.75" width="12.5" height="8.5" rx="1.8" fill="currentColor"></rect><rect x="22" y="4.5" width="1.6" height="5" rx="0.8" fill="currentColor" opacity="0.6"></rect></svg>
+    </span>
+  </div>
+  <nav aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: space-around; padding: 0 40px; color: rgba(11,27,46,0.72); pointer-events: none">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12"></path><path d="M12 6v12"></path><path d="M17 6v12"></path></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="13" height="13" rx="5"></rect></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"></path></svg>
+  </nav>
+</div>
+</template>
+<template id="tpl-qarz-berish">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+
+  <section aria-label="Qarz berish" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
+    <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
+      <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center; margin-bottom: -4px"></div>
+      <header style="display: flex; align-items: center; gap: 10px; height: 44px">
+        <a href="#qarzlar" aria-label="Orqaga" data-back style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; text-decoration: none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+        </a>
+        <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Qarz berish</h1>
+        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+        </button>
+      </header>
+    </div>
+
+    <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 18px 160px; display: flex; flex-direction: column; gap: 16px">
+
+      <div style="flex: none; padding: 12px 12px 16px 16px; border-radius: 20px; background: #F4F6F9">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+          <label for="qarz-summa" style="font-size: 13px; font-weight: 700; color: #5B6B80">Summa</label>
+          <div role="radiogroup" aria-label="To'lov turi" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 22px; background: #FFFFFF">
+            <button type="button" role="radio" aria-checked="{{cardChecked}}" onClick="{{pickCard}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border: none; border-radius: 19px; background: {{cardBg}}; color: {{cardColor}}; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"></rect><path d="M2 10h20"></path></svg>Karta
+            </button>
+            <button type="button" role="radio" aria-checked="{{cashChecked}}" onClick="{{pickCash}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border: none; border-radius: 19px; background: {{cashBg}}; color: {{cashColor}}; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>Naqd
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px">
+          <input id="qarz-summa" type="text" autocomplete="off" placeholder="0" value="{{amountText}}" onChange="{{onAmount}}" style="flex: 1 1 auto; min-width: 0; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 36px; line-height: 44px; font-weight: 800; letter-spacing: -0.03em; color: #0B1B2E; outline-offset: 4px">
+          <span style="font-size: 18px; font-weight: 700; color: #5B6B80">so'm</span>
+        </div>
+      </div>
+
+      <div style="flex: none">
+        <label for="kim" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Kimga</label>
+        <div style="display: flex; align-items: center; gap: 4px; height: 52px; box-sizing: border-box; padding: 0 4px 0 14px; border-radius: 16px; background: #F4F6F9">
+          <input id="kim" type="text" autocomplete="off" placeholder="Ism yoki telefon raqam" style="flex: 1 1 auto; min-width: 0; height: 44px; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 15px; font-weight: 700; color: #0B1B2E">
+          <button type="button" aria-label="Kontaktlardan tanlash" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 12px; background: #FFFFFF; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 2v2"></path><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path><path d="M8 2v2"></path><circle cx="12" cy="11" r="3"></circle><rect x="3" y="4" width="18" height="18" rx="2"></rect></svg>
+          </button>
+        </div>
+      </div>
+
+      <div style="flex: none">
+        <span id="berilgan-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Berilgan sana</span>
+        <button type="button" aria-labelledby="berilgan-lbl berilgan-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span id="berilgan-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700">Bugun, 21-oktabr</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+        </button>
+      </div>
+
+      <div style="flex: none">
+        <span id="muddat-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Qaytarish muddati</span>
+        <button type="button" aria-labelledby="muddat-lbl muddat-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span id="muddat-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; color: {{dueColor}}">{{dueText}}</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+        </button>
+      </div>
+
+      <div style="flex: none; margin-top: -8px">
+        <div role="radiogroup" aria-label="Muddatni tez tanlash" style="display: flex; gap: 6px; margin: 0 -18px; padding: 0 18px; overflow-x: auto; scrollbar-width: none">
+          <sc-for list="{{terms}}" as="t" hint-placeholder-count="4">
+            <button type="button" role="radio" aria-checked="{{t.checked}}" onClick="{{t.pick}}" style="flex: none; height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: {{t.bg}}; color: {{t.color}}; font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer">{{t.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{hasDue}}" hint-placeholder-val="{{ true }}">
+        <div style="flex: none; display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 14px; border-radius: 20px; background: #F4F6F9">
+          <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 12px; background: #FFFFFF; color: #0B1B2E; display: flex; align-items: center; justify-content: center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+          </span>
+          <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Eslatma</span><span style="font-size: 12.5px; font-weight: 600; color: #5B6B80">Muddatdan 1 kun oldin</span></span>
+          <button type="button" role="switch" aria-label="Muddatdan 1 kun oldin eslatish" aria-checked="{{remind.checked}}" onClick="{{remind.toggle}}" style="width: 56px; height: 44px; flex: none; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><span aria-hidden="true" style="position: relative; width: 48px; height: 28px; border-radius: 14px; background: {{remind.bg}}"><span style="position: absolute; top: 2px; left: {{remind.x}}px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span></span></button>
+        </div>
+      </sc-if>
+
+      <div style="flex: none">
+        <label for="qarz-izoh" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Izoh</label>
+        <textarea id="qarz-izoh" rows="4" placeholder="Masalan: mashina ta'miri uchun" style="display: block; width: 100%; min-height: 112px; box-sizing: border-box; padding: 14px 16px; border: none; border-radius: 18px; background: #F4F6F9; font-family: inherit; font-size: 15px; line-height: 22px; font-weight: 600; color: #0B1B2E; resize: none"></textarea>
+      </div>
+    </div>
+
+    <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to top, #FFFFFF 62%, rgba(255,255,255,0)); pointer-events: none"></div>
+    <button type="button" data-save="Berilgan qarz qo'shildi" style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; height: 58px; border: none; border-radius: 29px; background: #0B1B2E; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Berilgan qarzni qo'shish</button>
+  </section>
+  <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
+    <span>17:25</span>
+    <span style="display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.859a10 10 0 0 1 14 0"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="11" width="2.6" height="4" rx="0.6"></rect><rect x="5" y="8" width="2.6" height="7" rx="0.6"></rect><rect x="9" y="5" width="2.6" height="10" rx="0.6"></rect><rect x="13" y="2" width="2.6" height="13" rx="0.6"></rect></svg>
+      <svg width="24" height="14" viewBox="0 0 24 14"><rect x="0.75" y="0.75" width="20" height="12.5" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"></rect><rect x="2.75" y="2.75" width="12.5" height="8.5" rx="1.8" fill="currentColor"></rect><rect x="22" y="4.5" width="1.6" height="5" rx="0.8" fill="currentColor" opacity="0.6"></rect></svg>
+    </span>
+  </div>
+  <nav aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: space-around; padding: 0 40px; color: rgba(11,27,46,0.72); pointer-events: none">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12"></path><path d="M12 6v12"></path><path d="M17 6v12"></path></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="13" height="13" rx="5"></rect></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"></path></svg>
+  </nav>
+</div>
+</template>
+<template id="tpl-qarz-olish">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+
+  <section aria-label="Qarz olish" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
+    <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
+      <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center; margin-bottom: -4px"></div>
+      <header style="display: flex; align-items: center; gap: 10px; height: 44px">
+        <a href="#qarzlar" aria-label="Orqaga" data-back style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; text-decoration: none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
+        </a>
+        <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Qarz olish</h1>
+        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+        </button>
+      </header>
+    </div>
+
+    <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 18px 160px; display: flex; flex-direction: column; gap: 16px">
+
+      <div style="flex: none; padding: 12px 12px 16px 16px; border-radius: 20px; background: #F4F6F9">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+          <label for="qarz-summa" style="font-size: 13px; font-weight: 700; color: #5B6B80">Summa</label>
+          <div role="radiogroup" aria-label="To'lov turi" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 22px; background: #FFFFFF">
+            <button type="button" role="radio" aria-checked="{{cardChecked}}" onClick="{{pickCard}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border: none; border-radius: 19px; background: {{cardBg}}; color: {{cardColor}}; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"></rect><path d="M2 10h20"></path></svg>Karta
+            </button>
+            <button type="button" role="radio" aria-checked="{{cashChecked}}" onClick="{{pickCash}}" style="display: flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border: none; border-radius: 19px; background: {{cashBg}}; color: {{cashColor}}; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="12" x="2" y="6" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>Naqd
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 8px">
+          <input id="qarz-summa" type="text" autocomplete="off" placeholder="0" value="{{amountText}}" onChange="{{onAmount}}" style="flex: 1 1 auto; min-width: 0; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 36px; line-height: 44px; font-weight: 800; letter-spacing: -0.03em; color: #0B1B2E; outline-offset: 4px">
+          <span style="font-size: 18px; font-weight: 700; color: #5B6B80">so'm</span>
+        </div>
+      </div>
+
+      <div style="flex: none">
+        <label for="kim" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Kimdan</label>
+        <div style="display: flex; align-items: center; gap: 4px; height: 52px; box-sizing: border-box; padding: 0 4px 0 14px; border-radius: 16px; background: #F4F6F9">
+          <input id="kim" type="text" autocomplete="off" placeholder="Ism yoki telefon raqam" style="flex: 1 1 auto; min-width: 0; height: 44px; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 15px; font-weight: 700; color: #0B1B2E">
+          <button type="button" aria-label="Kontaktlardan tanlash" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 12px; background: #FFFFFF; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 2v2"></path><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path><path d="M8 2v2"></path><circle cx="12" cy="11" r="3"></circle><rect x="3" y="4" width="18" height="18" rx="2"></rect></svg>
+          </button>
+        </div>
+      </div>
+
+      <div style="flex: none">
+        <span id="hamyon-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Qaysi hamyonga</span>
+        <button type="button" aria-labelledby="hamyon-lbl hamyon-val" style="display: flex; align-items: center; gap: 10px; width: 100%; height: 52px; padding: 0 12px 0 10px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span aria-hidden="true" style="width: 32px; height: 32px; flex: none; border-radius: 10px; background: {{w.bg}}; color: {{w.fg}}; display: flex; align-items: center; justify-content: center">
+            <sc-if value="{{w.isOilaga}}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></sc-if>
+            <sc-if value="{{w.isBiznes}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg></sc-if>
+            <sc-if value="{{w.isOta}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></sc-if>
+            <sc-if value="{{w.isXayriya}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+            <sc-if value="{{w.isShaxsiy}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path><path d="M22 10v6"></path><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg></sc-if>
+          </span>
+          <span id="hamyon-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{w.name}}</span>
+          <span style="font-size: 13px; font-weight: 600; color: #5B6B80; white-space: nowrap">{{w.balance}}</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </div>
+
+      <div style="flex: none">
+        <span id="olingan-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Olingan sana</span>
+        <button type="button" aria-labelledby="olingan-lbl olingan-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span id="olingan-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700">Bugun, 21-oktabr</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+        </button>
+      </div>
+
+      <div style="flex: none">
+        <span id="muddat-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Qaytarish muddati</span>
+        <button type="button" aria-labelledby="muddat-lbl muddat-val" style="display: flex; align-items: center; gap: 8px; width: 100%; height: 52px; padding: 0 12px 0 14px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <span id="muddat-val" style="flex: 1 1 auto; min-width: 0; font-size: 15px; font-weight: 700; color: {{dueColor}}">{{dueText}}</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+        </button>
+      </div>
+
+      <div style="flex: none; margin-top: -8px">
+        <div role="radiogroup" aria-label="Muddatni tez tanlash" style="display: flex; gap: 6px; margin: 0 -18px; padding: 0 18px; overflow-x: auto; scrollbar-width: none">
+          <sc-for list="{{terms}}" as="t" hint-placeholder-count="4">
+            <button type="button" role="radio" aria-checked="{{t.checked}}" onClick="{{t.pick}}" style="flex: none; height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: {{t.bg}}; color: {{t.color}}; font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer">{{t.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{hasDue}}" hint-placeholder-val="{{ true }}">
+        <div style="flex: none; display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 14px; border-radius: 20px; background: #F4F6F9">
+          <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 12px; background: #FFFFFF; color: #0B1B2E; display: flex; align-items: center; justify-content: center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+          </span>
+          <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Eslatma</span><span style="font-size: 12.5px; font-weight: 600; color: #5B6B80">Muddatdan 1 kun oldin</span></span>
+          <button type="button" role="switch" aria-label="Muddatdan 1 kun oldin eslatish" aria-checked="{{remind.checked}}" onClick="{{remind.toggle}}" style="width: 56px; height: 44px; flex: none; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer"><span aria-hidden="true" style="position: relative; width: 48px; height: 28px; border-radius: 14px; background: {{remind.bg}}"><span style="position: absolute; top: 2px; left: {{remind.x}}px; width: 24px; height: 24px; border-radius: 12px; background: #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.25)"></span></span></button>
+        </div>
+      </sc-if>
+
+      <div style="flex: none">
+        <label for="qarz-izoh" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Izoh</label>
+        <textarea id="qarz-izoh" rows="4" placeholder="Masalan: uy ta'miri uchun" style="display: block; width: 100%; min-height: 112px; box-sizing: border-box; padding: 14px 16px; border: none; border-radius: 18px; background: #F4F6F9; font-family: inherit; font-size: 15px; line-height: 22px; font-weight: 600; color: #0B1B2E; resize: none"></textarea>
+      </div>
+    </div>
+
+    <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to top, #FFFFFF 62%, rgba(255,255,255,0)); pointer-events: none"></div>
+    <button type="button" data-save="Olingan qarz qo'shildi" style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; height: 58px; border: none; border-radius: 29px; background: #0B1B2E; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Olingan qarzni qo'shish</button>
+  </section>
+  <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
+    <span>17:25</span>
+    <span style="display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M5 12.859a10 10 0 0 1 14 0"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path></svg>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="11" width="2.6" height="4" rx="0.6"></rect><rect x="5" y="8" width="2.6" height="7" rx="0.6"></rect><rect x="9" y="5" width="2.6" height="10" rx="0.6"></rect><rect x="13" y="2" width="2.6" height="13" rx="0.6"></rect></svg>
+      <svg width="24" height="14" viewBox="0 0 24 14"><rect x="0.75" y="0.75" width="20" height="12.5" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"></rect><rect x="2.75" y="2.75" width="12.5" height="8.5" rx="1.8" fill="currentColor"></rect><rect x="22" y="4.5" width="1.6" height="5" rx="0.8" fill="currentColor" opacity="0.6"></rect></svg>
+    </span>
+  </div>
+  <nav aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; justify-content: space-around; padding: 0 40px; color: rgba(11,27,46,0.72); pointer-events: none">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12"></path><path d="M12 6v12"></path><path d="M17 6v12"></path></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5.5" y="5.5" width="13" height="13" rx="5"></rect></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"></path></svg>
+  </nav>
+</div>
+</template>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- minimal runtime for the design files' template syntax ---------- */
+  class DCLogic {
+    constructor() { this.state = null; }
+    setState(patch) {
+      this.state = Object.assign({}, this.state || {}, patch);
+      if (this.__paint) this.__paint();
+    }
+    renderVals() { return {}; }
+  }
+
+  var HOLE = /\{\{([^}]+)\}\}/g;
+  function lookup(scope, expr) {
+    expr = (expr || '').trim();
+    if (expr === 'true') return true;
+    if (expr === 'false') return false;
+    if (/^-?\d+(\.\d+)?$/.test(expr)) return Number(expr);
+    var parts = expr.split('.');
+    var v = scope[parts[0]];
+    for (var i = 1; i < parts.length; i++) {
+      if (v == null) return undefined;
+      v = v[parts[i]];
+    }
+    return v;
+  }
+  function interp(str, scope) {
+    return str.replace(HOLE, function (m, e) {
+      var v = lookup(scope, e);
+      return v == null ? '' : String(v);
+    });
+  }
+  function single(str) {
+    var m = /^\s*\{\{([^}]+)\}\}\s*$/.exec(str || '');
+    return m ? m[1] : null;
+  }
+
+  function renderInto(tplParent, scope, out, ctx) {
+    var kids = tplParent.childNodes;
+    for (var k = 0; k < kids.length; k++) {
+      var n = kids[k];
+      if (n.nodeType === 3) {
+        var txt = n.nodeValue;
+        out.appendChild(document.createTextNode(txt.indexOf('{{') >= 0 ? interp(txt, scope) : txt));
+        continue;
+      }
+      if (n.nodeType !== 1) continue;
+      var tag = n.localName;
+      if (tag === 'sc-for') {
+        var list = lookup(scope, single(n.getAttribute('list'))) || [];
+        var as = n.getAttribute('as');
+        for (var i = 0; i < list.length; i++) {
+          var s = Object.create(scope);
+          s[as] = list[i];
+          renderInto(n, s, out, ctx);
+        }
+        continue;
+      }
+      if (tag === 'sc-if') {
+        if (lookup(scope, single(n.getAttribute('value')))) renderInto(n, scope, out, ctx);
+        continue;
+      }
+      var el = n.cloneNode(false);
+      var attrs = n.attributes;
+      for (var a = 0; a < attrs.length; a++) {
+        var name = attrs[a].name, val = attrs[a].value;
+        if (val.indexOf('{{') < 0) continue;
+        if (name.indexOf('on') === 0) {
+          el.removeAttribute(name);
+          var fn = lookup(scope, single(val));
+          if (typeof fn === 'function') {
+            var evt = name.slice(2);
+            if (evt === 'change' && (tag === 'input' || tag === 'textarea')) evt = 'input';
+            el.addEventListener(evt, fn);
+          }
+          continue;
+        }
+        var v = interp(val, scope);
+        el.setAttribute(name, v);
+        if (name === 'value') { el.value = v; el.setAttribute('data-controlled', ''); }
+      }
+      renderInto(n, scope, el, ctx);
+      var st = el.getAttribute && el.getAttribute('style');
+      if (st && /overflow(-x|-y)?:\s*auto/.test(st)) el.setAttribute('data-scroll', String(ctx.scroll++));
+      out.appendChild(el);
+    }
+  }
+
+  /* ---------- screens ---------- */
+  var SCREENS = {};
+  SCREENS["asosiy"] = { name: "Asosiy ekran", make: function (DCLogic) {
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+return Component;
+} };
+
+SCREENS["kirim-chiqimlar"] = { name: "Kirim va chiqimlar", make: function (DCLogic) {
+class Component extends DCLogic {
+  fmt(n) {
+    return String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  renderVals() {
+    var st = this.state || {};
+    var type = st.type || 'all';
+    var cat = st.cat || 'all';
+    var self = this;
+
+    var CATS = {
+      oilaga: { name: 'Oilaga', bg: '#FFE3CF', fg: '#C2410C', dot: '#FB923C' },
+      biznes: { name: 'Biznes', bg: '#DCE8FF', fg: '#1D4ED8', dot: '#60A5FA' },
+      ota: { name: 'Ota-onamga', bg: '#FCE1EE', fg: '#BE185D', dot: '#F472B6' },
+      xayriya: { name: 'Xayriya', bg: '#D8F5E1', fg: '#15803D', dot: '#4ADE80' },
+      shaxsiy: { name: 'Shaxsiy rivojlanish', bg: '#E9E0FF', fg: '#6D28D9', dot: '#A78BFA' }
+    };
+    var CAT_ORDER = ['oilaga', 'biznes', 'ota', 'xayriya', 'shaxsiy'];
+
+    var DAYS = [
+      { key: '21', label: 'Bugun · 21-oktabr, chorshanba' },
+      { key: '20', label: 'Kecha · 20-oktabr, seshanba' },
+      { key: '18', label: '18-oktabr, yakshanba' },
+      { key: '15', label: '15-oktabr, payshanba' },
+      { key: '12', label: '12-oktabr, dushanba' }
+    ];
+
+    var SHARES = { oilaga: 50, biznes: 25, ota: 12.5, xayriya: 5, shaxsiy: 7.5 };
+    var ALL = 'split';
+
+    var CATICON = { 'Biznes': 'biz', 'Oziq-ovqat': 'food', 'Oila': 'family', 'Xayriya': 'charity', "Ta'lim": 'edu', 'Ish haqi': 'salary', 'Uy-joy': 'home' };
+
+    var ITEMS = [
+      { day: '21', sub: "Mijozdan to'lov", category: 'Biznes', wallet: ALL, note: 'Logotip dizayni uchun avans', amount: 2400000 },
+      { day: '21', sub: 'Bozorlik', category: 'Oziq-ovqat', wallet: 'oilaga', note: 'Haftalik bozorlik', amount: -185000 },
+      { day: '20', sub: 'Oylik yordam', category: 'Oila', wallet: 'ota', note: 'Oktabr oyi uchun', amount: -500000 },
+      { day: '20', sub: 'Sadaqa', category: 'Xayriya', wallet: 'xayriya', note: '', amount: -100000 },
+      { day: '18', sub: 'Savdo tushumi', category: 'Biznes', wallet: 'biznes', note: "Do'kon, 3 kunlik tushum", amount: 3100000 },
+      { day: '18', sub: 'Til kurslari', category: "Ta'lim", wallet: 'shaxsiy', note: 'Ingliz tili, 2-oy', amount: -450000 },
+      { day: '15', sub: 'Oylik maosh', category: 'Ish haqi', wallet: ALL, note: 'Oktabr oyi maoshi', amount: 6000000 },
+      { day: '15', sub: "Kommunal to'lovlar", category: 'Uy-joy', wallet: 'oilaga', note: 'Gaz, svet, suv', amount: -420000 },
+      { day: '15', sub: 'Reklama', category: 'Biznes', wallet: 'biznes', note: 'Instagram reklama, 1 hafta', amount: -750000 },
+      { day: '12', sub: "Sovg'a", category: 'Oila', wallet: 'ota', note: "Onamning tug'ilgan kuniga", amount: -350000 },
+      { day: '12', sub: 'Mehribonlik uyi', category: 'Xayriya', wallet: 'xayriya', note: '', amount: -200000 },
+      { day: '12', sub: 'Kitoblar', category: "Ta'lim", wallet: 'shaxsiy', note: 'Ikkita kitob', amount: -160000 }
+    ];
+
+    function walletsOf(it) { return it.wallet === ALL ? CAT_ORDER : [it.wallet]; }
+
+    var filtered = ITEMS.filter(function (it) {
+      if (type === 'in' && it.amount < 0) return false;
+      if (type === 'out' && it.amount > 0) return false;
+      if (cat !== 'all' && walletsOf(it).indexOf(cat) < 0) return false;
+      return true;
+    });
+
+    var groups = [];
+    DAYS.forEach(function (d) {
+      var rows = filtered.filter(function (it) { return it.day === d.key; });
+      if (!rows.length) return;
+      var sum = 0;
+      var items = rows.map(function (it, i) {
+        sum += it.amount;
+        var isIn = it.amount > 0;
+        var ws = walletsOf(it);
+        var w = CATS[ws[0]];
+        var ic = CATICON[it.category];
+        return {
+          sub: it.sub,
+          catName: it.category,
+          note: it.note,
+          hasNote: it.note !== '',
+          isBiz: ic === 'biz', isFood: ic === 'food', isFamily: ic === 'family', isCharity: ic === 'charity',
+          isEdu: ic === 'edu', isSalary: ic === 'salary', isHome: ic === 'home',
+          isIn: isIn,
+          isOut: !isIn,
+          split: ws.map(function (k) { return { share: ws.length > 1 ? SHARES[k] : 1, color: CATS[k].dot }; }),
+          wBg: w.bg,
+          wFg: w.fg,
+          isOilaga: ws[0] === 'oilaga', isBiznes: ws[0] === 'biznes', isOta: ws[0] === 'ota', isXayriya: ws[0] === 'xayriya', isShaxsiy: ws[0] === 'shaxsiy',
+          walletText: isIn ? (ws.length > 1 ? 'Hamyonlarga taqsimlangan:' : w.name + ' hamyoniga:') : w.name + ' hamyonidan:',
+          amount: (it.amount > 0 ? '+' : '−') + self.fmt(it.amount),
+          color: it.amount > 0 ? '#15803D' : '#0B1B2E',
+          border: i === 0 ? 'transparent' : 'rgba(11,27,46,0.08)'
+        };
+      });
+      groups.push({
+        label: d.label,
+        mt: groups.length === 0 ? 0 : 8,
+        total: (sum >= 0 ? '+' : '−') + self.fmt(sum),
+        items: items
+      });
+    });
+
+    var chipDefs = [{ id: 'all', name: 'Hammasi', dot: '' }].concat(CAT_ORDER.map(function (k) {
+      return { id: k, name: CATS[k].name, dot: CATS[k].dot };
+    }));
+    var chips = chipDefs.map(function (c) {
+      var on = c.id === cat;
+      return {
+        name: c.name,
+        dot: c.dot,
+        hasDot: c.dot !== '',
+        pressed: on ? 'true' : 'false',
+        bg: on ? '#0B1B2E' : '#F1F4F8',
+        color: on ? '#FFFFFF' : '#0B1B2E',
+        border: on ? '#0B1B2E' : 'rgba(11,27,46,0.08)',
+        pick: function () { self.setState({ cat: c.id }); }
+      };
+    });
+
+    var inOn = type === 'in';
+    var outOn = type === 'out';
+
+    return {
+      groups: groups,
+      isEmpty: groups.length === 0,
+      chips: chips,
+      inActive: inOn,
+      outActive: outOn,
+      inPressed: inOn ? 'true' : 'false',
+      outPressed: outOn ? 'true' : 'false',
+      inBg: inOn ? '#E7F7EC' : '#F4F6F9',
+      inBorder: inOn ? 'rgba(21,128,61,0.55)' : 'rgba(11,27,46,0.06)',
+      outBg: outOn ? '#FDECEC' : '#F4F6F9',
+      outBorder: outOn ? 'rgba(220,38,38,0.5)' : 'rgba(11,27,46,0.06)',
+      toggleIn: function () { self.setState({ type: inOn ? 'all' : 'in' }); },
+      toggleOut: function () { self.setState({ type: outOn ? 'all' : 'out' }); }
+    };
+  }
+}
+return Component;
+} };
+
+SCREENS["qarzlar"] = { name: "Qarzlar", make: function (DCLogic) {
+class Component extends DCLogic {
+  fmt(n) {
+    return String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  renderVals() {
+    var st = this.state || {};
+    var type = st.type || 'all';
+    var filter = st.filter || 'all';
+    var self = this;
+
+    var DEBTS = [
+      { name: 'Dilnoza Rahimova', ini: 'DR', type: 'given', left: 500000, total: 500000, due: '15-oktabr', overdue: true },
+      { name: 'Aziz Karimov', ini: 'AK', type: 'given', left: 600000, total: 1000000, due: '25-oktabr' },
+      { name: 'Sardor aka', ini: 'SA', type: 'taken', left: 800000, total: 1000000, due: '1-noyabr' },
+      { name: 'Jasur Toshmatov', ini: 'JT', type: 'given', left: 400000, total: 400000, due: '' },
+      { name: 'Nodira Aliyeva', ini: 'NA', type: 'given', left: 0, total: 300000, closed: true, closedOn: '10-oktabr' },
+      { name: 'Bobur Qodirov', ini: 'BQ', type: 'taken', left: 0, total: 200000, closed: true, closedOn: '5-oktabr' }
+    ];
+
+    function status(d) { return d.closed ? 'closed' : (d.overdue ? 'overdue' : 'active'); }
+
+    var GROUPS = [
+      { key: 'overdue', label: "Muddati o'tgan", color: '#B91C1C' },
+      { key: 'active', label: 'Faol', color: '#5B6B80' },
+      { key: 'closed', label: 'Yopilgan', color: '#5B6B80' }
+    ];
+
+    var byType = DEBTS.filter(function (d) { return type === 'all' || d.type === type; });
+    var visible = byType.filter(function (d) {
+      var s = status(d);
+      if (filter === 'all') return true;
+      if (filter === 'open') return s !== 'closed';
+      return s === filter;
+    });
+
+    var groups = [];
+    GROUPS.forEach(function (g) {
+      var rows = visible.filter(function (d) { return status(d) === g.key; });
+      if (!rows.length) return;
+      var sum = 0;
+      var items = rows.map(function (d, i) {
+        var isGiven = d.type === 'given';
+        var s = status(d);
+        sum += s === 'closed' ? 0 : (isGiven ? d.left : -d.left);
+        var paid = d.total - d.left;
+        var pct = Math.round(paid / d.total * 100);
+        var sub;
+        if (s === 'closed') sub = 'Yopilgan · ' + d.closedOn;
+        else if (s === 'overdue') sub = "Muddati o'tgan · " + d.due;
+        else if (d.due) sub = 'Muddat: ' + d.due;
+        else sub = 'Muddat belgilanmagan';
+        return {
+          name: d.name,
+          ini: d.ini,
+          sub: sub,
+          subColor: s === 'overdue' ? '#B91C1C' : '#5B6B80',
+          amount: s === 'closed' ? self.fmt(d.total) : (isGiven ? '+' : '−') + self.fmt(d.left),
+          color: s === 'closed' ? '#5B6B80' : (isGiven ? '#15803D' : '#B91C1C'),
+          typeLabel: isGiven ? 'Berilgan' : 'Olingan',
+          hasProgress: s !== 'closed' && paid > 0,
+          pct: pct,
+          paidText: pct + '% qaytarildi',
+          border: i === 0 ? 'transparent' : 'rgba(11,27,46,0.08)'
+        };
+      });
+      groups.push({
+        label: g.label,
+        color: g.color,
+        mt: groups.length === 0 ? 0 : 8,
+        total: g.key === 'closed' ? rows.length + ' ta' : (sum >= 0 ? '+' : '−') + self.fmt(sum),
+        items: items
+      });
+    });
+
+    var CHIPS = [
+      { id: 'all', name: 'Hammasi', dot: '' },
+      { id: 'open', name: 'Faol', dot: '' },
+      { id: 'overdue', name: "Muddati o'tgan", dot: '#DC2626' },
+      { id: 'closed', name: 'Yopilgan', dot: '' }
+    ];
+    var chips = CHIPS.map(function (c) {
+      var on = c.id === filter;
+      return {
+        name: c.name,
+        dot: c.dot,
+        hasDot: c.dot !== '',
+        pressed: on ? 'true' : 'false',
+        bg: on ? '#0B1B2E' : '#F1F4F8',
+        color: on ? '#FFFFFF' : '#0B1B2E',
+        pick: function () { self.setState({ filter: c.id }); }
+      };
+    });
+
+    var givenOn = type === 'given';
+    var takenOn = type === 'taken';
+
+    return {
+      groups: groups,
+      isEmpty: groups.length === 0,
+      chips: chips,
+      givenOn: givenOn,
+      takenOn: takenOn,
+      givenPressed: givenOn ? 'true' : 'false',
+      takenPressed: takenOn ? 'true' : 'false',
+      givenBg: givenOn ? '#E7F7EC' : '#F4F6F9',
+      takenBg: takenOn ? '#FDECEC' : '#F4F6F9',
+      toggleGiven: function () { self.setState({ type: givenOn ? 'all' : 'given' }); },
+      toggleTaken: function () { self.setState({ type: takenOn ? 'all' : 'taken' }); }
+    };
+  }
+}
+return Component;
+} };
+
+SCREENS["sozlamalar"] = { name: "Sozlamalar", make: function (DCLogic) {
+class Component extends DCLogic {
+  renderVals() {
+    var st = this.state || {};
+    var self = this;
+    var theme = st.theme || 'light';
+    var DEFAULTS = { auto: true, pin: true, bio: false, hide: false };
+
+    function sw(key) {
+      var on = st[key] === undefined ? DEFAULTS[key] : st[key];
+      return {
+        checked: on ? 'true' : 'false',
+        bg: on ? '#0B1B2E' : '#CBD3DE',
+        x: on ? 22 : 2,
+        toggle: function () { var p = {}; p[key] = !on; self.setState(p); }
+      };
+    }
+
+    var themes = [
+      { id: 'light', name: "Yorug'" },
+      { id: 'dark', name: "Qorong'i" },
+      { id: 'system', name: 'Tizim' }
+    ].map(function (t) {
+      var on = t.id === theme;
+      return {
+        name: t.name,
+        checked: on ? 'true' : 'false',
+        bg: on ? '#0B1B2E' : 'transparent',
+        color: on ? '#FFFFFF' : '#0B1B2E',
+        pick: function () { self.setState({ theme: t.id }); }
+      };
+    });
+
+    return { themes: themes, auto: sw('auto'), pin: sw('pin'), bio: sw('bio'), hide: sw('hide') };
+  }
+}
+return Component;
+} };
+
+SCREENS["yangi-kirim"] = { name: "Yangi kirim", make: function (DCLogic) {
+class Component extends DCLogic {
+  fmt(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  renderVals() {
+    var st = this.state || {};
+    var self = this;
+    var method = st.method || 'card';
+    var digits = st.amount === undefined ? '8500000' : st.amount;
+    var amount = digits ? parseInt(digits, 10) : 0;
+    var quickId = st.quick === undefined ? 'oylik' : st.quick;
+    var split = st.split === undefined ? true : st.split;
+    var picked = st.wallet || 'oilaga';
+
+    var QUICK = [
+      { id: 'oylik', name: 'Oylik maosh', cat: 'Ish haqi', sub: 'Oylik maosh' },
+      { id: 'avans', name: 'Avans', cat: 'Ish haqi', sub: 'Avans' },
+      { id: 'bonus', name: 'Bonus', cat: 'Ish haqi', sub: 'Bonus' },
+      { id: 'savdo', name: 'Savdo tushumi', cat: 'Biznes', sub: 'Savdo tushumi' },
+      { id: 'mijoz', name: "Mijozdan to'lov", cat: 'Biznes', sub: "Mijozdan to'lov" },
+      { id: 'ijara', name: 'Ijara daromadi', cat: 'Investitsiya', sub: 'Ijara' },
+      { id: 'sovga', name: "Sovg'a", cat: 'Boshqa', sub: "Sovg'a" }
+    ];
+    var current = QUICK.filter(function (q) { return q.id === quickId; })[0];
+    var quick = QUICK.map(function (q) {
+      var on = q.id === quickId;
+      return {
+        name: q.name,
+        checked: on ? 'true' : 'false',
+        bg: on ? '#0B1B2E' : '#F1F4F8',
+        color: on ? '#FFFFFF' : '#0B1B2E',
+        pick: function () { self.setState({ quick: on ? '' : q.id }); }
+      };
+    });
+
+    var W = [
+      { id: 'oilaga', name: 'Oilaga', bg: '#FFE3CF', fg: '#C2410C', share: 50 },
+      { id: 'biznes', name: 'Biznes', bg: '#DCE8FF', fg: '#1D4ED8', share: 25 },
+      { id: 'ota', name: 'Ota-onamga', bg: '#FCE1EE', fg: '#BE185D', share: 12.5 },
+      { id: 'xayriya', name: 'Xayriya', bg: '#D8F5E1', fg: '#15803D', share: 5 },
+      { id: 'shaxsiy', name: 'Shaxsiy rivojlanish', bg: '#E9E0FF', fg: '#6D28D9', share: 7.5 }
+    ];
+    function base(w) {
+      return { name: w.name, bg: w.bg, fg: w.fg, isOilaga: w.id === 'oilaga', isBiznes: w.id === 'biznes', isOta: w.id === 'ota', isXayriya: w.id === 'xayriya', isShaxsiy: w.id === 'shaxsiy' };
+    }
+    var dist = W.map(function (w) {
+      var b = base(w);
+      b.pct = String(w.share).replace('.', ',') + '%';
+      b.amount = self.fmt(Math.round(amount * w.share / 100));
+      return b;
+    });
+    var wallets = W.map(function (w) {
+      var on = w.id === picked;
+      var b = base(w);
+      b.checked = on ? 'true' : 'false';
+      b.chipBg = on ? '#0B1B2E' : '#FFFFFF';
+      b.chipColor = on ? '#FFFFFF' : '#0B1B2E';
+      b.pick = function () { self.setState({ wallet: w.id }); };
+      return b;
+    });
+
+    var isCard = method === 'card';
+    return {
+      cardChecked: isCard ? 'true' : 'false',
+      cashChecked: isCard ? 'false' : 'true',
+      cardBg: isCard ? '#0B1B2E' : 'transparent',
+      cardColor: isCard ? '#FFFFFF' : '#0B1B2E',
+      cashBg: isCard ? 'transparent' : '#0B1B2E',
+      cashColor: isCard ? '#0B1B2E' : '#FFFFFF',
+      pickCard: function () { self.setState({ method: 'card' }); },
+      pickCash: function () { self.setState({ method: 'cash' }); },
+      amountText: digits ? self.fmt(amount) : '',
+      onAmount: function (e) { self.setState({ amount: String(e.target.value || '').replace(/\D/g, '').slice(0, 12) }); },
+      catText: current ? current.cat : 'Tanlang',
+      catColor: current ? '#0B1B2E' : '#8A97A8',
+      subText: current ? current.sub : 'Tanlang',
+      subColor: current ? '#0B1B2E' : '#8A97A8',
+      quick: quick,
+      split: split,
+      single: !split,
+      splitChecked: split ? 'true' : 'false',
+      splitBg: split ? '#0B1B2E' : '#CBD3DE',
+      splitX: split ? 22 : 2,
+      toggleSplit: function () { self.setState({ split: !split }); },
+      dist: dist,
+      wallets: wallets
+    };
+  }
+}
+return Component;
+} };
+
+SCREENS["yangi-chiqim"] = { name: "Yangi chiqim", make: function (DCLogic) {
+class Component extends DCLogic {
+  fmt(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  renderVals() {
+    var st = this.state || {};
+    var self = this;
+    var method = st.method || 'card';
+    var digits = st.amount === undefined ? '185000' : st.amount;
+    var amount = digits ? parseInt(digits, 10) : 0;
+    var quickId = st.quick === undefined ? 'bozorlik' : st.quick;
+
+    var WALLETS = {
+      oilaga: { name: 'Oilaga', bg: '#FFE3CF', fg: '#C2410C', balance: 9320000 },
+      biznes: { name: 'Biznes', bg: '#DCE8FF', fg: '#1D4ED8', balance: 4660000 },
+      ota: { name: 'Ota-onamga', bg: '#FCE1EE', fg: '#BE185D', balance: 2330000 },
+      xayriya: { name: 'Xayriya', bg: '#D8F5E1', fg: '#15803D', balance: 932000 },
+      shaxsiy: { name: 'Shaxsiy rivojlanish', bg: '#E9E0FF', fg: '#6D28D9', balance: 1398000 }
+    };
+
+    var QUICK = [
+      { id: 'bozorlik', name: 'Bozorlik', cat: 'Oziq-ovqat', sub: 'Bozorlik', wallet: 'oilaga' },
+      { id: 'taksi', name: 'Taksi', cat: 'Transport', sub: 'Taksi', wallet: 'oilaga' },
+      { id: 'yoqilgi', name: "Yoqilg'i", cat: 'Transport', sub: "Yoqilg'i", wallet: 'biznes' },
+      { id: 'kommunal', name: 'Kommunal', cat: 'Uy-joy', sub: "Kommunal to'lovlar", wallet: 'oilaga' },
+      { id: 'restoran', name: 'Restoran', cat: 'Oziq-ovqat', sub: 'Restoran', wallet: 'oilaga' },
+      { id: 'aloqa', name: 'Mobil aloqa', cat: 'Aloqa', sub: 'Mobil aloqa', wallet: 'oilaga' },
+      { id: 'kitob', name: 'Kitoblar', cat: "Ta'lim", sub: 'Kitoblar', wallet: 'shaxsiy' },
+      { id: 'sadaqa', name: 'Sadaqa', cat: 'Xayriya', sub: 'Sadaqa', wallet: 'xayriya' }
+    ];
+    var current = QUICK.filter(function (q) { return q.id === quickId; })[0];
+    var quick = QUICK.map(function (q) {
+      var on = q.id === quickId;
+      return {
+        name: q.name,
+        checked: on ? 'true' : 'false',
+        bg: on ? '#0B1B2E' : '#F1F4F8',
+        color: on ? '#FFFFFF' : '#0B1B2E',
+        pick: function () { self.setState({ quick: on ? '' : q.id }); }
+      };
+    });
+
+    var wid = current ? current.wallet : 'oilaga';
+    var wd = WALLETS[wid];
+    var w = {
+      name: wd.name, bg: wd.bg, fg: wd.fg,
+      balance: self.fmt(wd.balance) + " so'm",
+      isOilaga: wid === 'oilaga', isBiznes: wid === 'biznes', isOta: wid === 'ota', isXayriya: wid === 'xayriya', isShaxsiy: wid === 'shaxsiy'
+    };
+
+    var isCard = method === 'card';
+    return {
+      cardChecked: isCard ? 'true' : 'false',
+      cashChecked: isCard ? 'false' : 'true',
+      cardBg: isCard ? '#0B1B2E' : 'transparent',
+      cardColor: isCard ? '#FFFFFF' : '#0B1B2E',
+      cashBg: isCard ? 'transparent' : '#0B1B2E',
+      cashColor: isCard ? '#0B1B2E' : '#FFFFFF',
+      pickCard: function () { self.setState({ method: 'card' }); },
+      pickCash: function () { self.setState({ method: 'cash' }); },
+      amountText: digits ? self.fmt(amount) : '',
+      onAmount: function (e) { self.setState({ amount: String(e.target.value || '').replace(/\D/g, '').slice(0, 12) }); },
+      catText: current ? current.cat : 'Tanlang',
+      catColor: current ? '#0B1B2E' : '#8A97A8',
+      subText: current ? current.sub : 'Tanlang',
+      subColor: current ? '#0B1B2E' : '#8A97A8',
+      quick: quick,
+      w: w
+    };
+  }
+}
+return Component;
+} };
+
+SCREENS["qarz-berish"] = { name: "Qarz berish", make: function (DCLogic) {
+class Component extends DCLogic {
+  fmt(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  renderVals() {
+    var st = this.state || {};
+    var self = this;
+    var method = st.method || 'cash';
+    var digits = st.amount === undefined ? '500000' : st.amount;
+    var amount = digits ? parseInt(digits, 10) : 0;
+    var term = st.term === undefined ? 'month' : st.term;
+    var remindOn = st.remind === undefined ? true : st.remind;
+    var isCard = method === 'card';
+
+    var TERMS = [
+      { id: 'week', name: '1 hafta', due: '28-oktabr, 2026' },
+      { id: 'month', name: '1 oy', due: '21-noyabr, 2026' },
+      { id: 'quarter', name: '3 oy', due: '21-yanvar, 2027' },
+      { id: 'none', name: 'Muddatsiz', due: '' }
+    ];
+    var current = TERMS.filter(function (t) { return t.id === term; })[0];
+    var terms = TERMS.map(function (t) {
+      var on = t.id === term;
+      return {
+        name: t.name,
+        checked: on ? 'true' : 'false',
+        bg: on ? '#0B1B2E' : '#F1F4F8',
+        color: on ? '#FFFFFF' : '#0B1B2E',
+        pick: function () { self.setState({ term: on ? '' : t.id }); }
+      };
+    });
+
+    var dueText = 'Sanani tanlang';
+    var dueColor = '#8A97A8';
+    if (current && current.due) { dueText = current.due; dueColor = '#0B1B2E'; }
+    else if (current) { dueText = 'Muddatsiz'; dueColor = '#0B1B2E'; }
+
+    return {
+      cardChecked: isCard ? 'true' : 'false',
+      cashChecked: isCard ? 'false' : 'true',
+      cardBg: isCard ? '#0B1B2E' : 'transparent',
+      cardColor: isCard ? '#FFFFFF' : '#0B1B2E',
+      cashBg: isCard ? 'transparent' : '#0B1B2E',
+      cashColor: isCard ? '#0B1B2E' : '#FFFFFF',
+      pickCard: function () { self.setState({ method: 'card' }); },
+      pickCash: function () { self.setState({ method: 'cash' }); },
+      amountText: digits ? self.fmt(amount) : '',
+      onAmount: function (e) { self.setState({ amount: String(e.target.value || '').replace(/\D/g, '').slice(0, 12) }); },
+      terms: terms,
+      dueText: dueText,
+      dueColor: dueColor,
+      hasDue: !current || current.id !== 'none',
+      remind: {
+        checked: remindOn ? 'true' : 'false',
+        bg: remindOn ? '#0B1B2E' : '#CBD3DE',
+        x: remindOn ? 22 : 2,
+        toggle: function () { self.setState({ remind: !remindOn }); }
+      }
+    };
+  }
+}
+return Component;
+} };
+
+SCREENS["qarz-olish"] = { name: "Qarz olish", make: function (DCLogic) {
+class Component extends DCLogic {
+  fmt(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  renderVals() {
+    var st = this.state || {};
+    var self = this;
+    var method = st.method || 'cash';
+    var digits = st.amount === undefined ? '2000000' : st.amount;
+    var amount = digits ? parseInt(digits, 10) : 0;
+    var term = st.term === undefined ? 'month' : st.term;
+    var remindOn = st.remind === undefined ? true : st.remind;
+    var isCard = method === 'card';
+
+    var WALLETS = {
+      oilaga: { name: 'Oilaga', bg: '#FFE3CF', fg: '#C2410C', balance: 9320000 },
+      biznes: { name: 'Biznes', bg: '#DCE8FF', fg: '#1D4ED8', balance: 4660000 },
+      ota: { name: 'Ota-onamga', bg: '#FCE1EE', fg: '#BE185D', balance: 2330000 },
+      xayriya: { name: 'Xayriya', bg: '#D8F5E1', fg: '#15803D', balance: 932000 },
+      shaxsiy: { name: 'Shaxsiy rivojlanish', bg: '#E9E0FF', fg: '#6D28D9', balance: 1398000 }
+    };
+    var wid = st.wallet || 'oilaga';
+    var wd = WALLETS[wid];
+    var w = {
+      name: wd.name, bg: wd.bg, fg: wd.fg,
+      balance: self.fmt(wd.balance) + " so'm",
+      isOilaga: wid === 'oilaga', isBiznes: wid === 'biznes', isOta: wid === 'ota', isXayriya: wid === 'xayriya', isShaxsiy: wid === 'shaxsiy'
+    };
+
+    var TERMS = [
+      { id: 'week', name: '1 hafta', due: '28-oktabr, 2026' },
+      { id: 'month', name: '1 oy', due: '21-noyabr, 2026' },
+      { id: 'quarter', name: '3 oy', due: '21-yanvar, 2027' },
+      { id: 'none', name: 'Muddatsiz', due: '' }
+    ];
+    var current = TERMS.filter(function (t) { return t.id === term; })[0];
+    var terms = TERMS.map(function (t) {
+      var on = t.id === term;
+      return {
+        name: t.name,
+        checked: on ? 'true' : 'false',
+        bg: on ? '#0B1B2E' : '#F1F4F8',
+        color: on ? '#FFFFFF' : '#0B1B2E',
+        pick: function () { self.setState({ term: on ? '' : t.id }); }
+      };
+    });
+
+    var dueText = 'Sanani tanlang';
+    var dueColor = '#8A97A8';
+    if (current && current.due) { dueText = current.due; dueColor = '#0B1B2E'; }
+    else if (current) { dueText = 'Muddatsiz'; dueColor = '#0B1B2E'; }
+
+    return {
+      cardChecked: isCard ? 'true' : 'false',
+      cashChecked: isCard ? 'false' : 'true',
+      cardBg: isCard ? '#0B1B2E' : 'transparent',
+      cardColor: isCard ? '#FFFFFF' : '#0B1B2E',
+      cashBg: isCard ? 'transparent' : '#0B1B2E',
+      cashColor: isCard ? '#0B1B2E' : '#FFFFFF',
+      pickCard: function () { self.setState({ method: 'card' }); },
+      pickCash: function () { self.setState({ method: 'cash' }); },
+      amountText: digits ? self.fmt(amount) : '',
+      onAmount: function (e) { self.setState({ amount: String(e.target.value || '').replace(/\D/g, '').slice(0, 12) }); },
+      terms: terms,
+      w: w,
+      dueText: dueText,
+      dueColor: dueColor,
+      hasDue: !current || current.id !== 'none',
+      remind: {
+        checked: remindOn ? 'true' : 'false',
+        bg: remindOn ? '#0B1B2E' : '#CBD3DE',
+        x: remindOn ? 22 : 2,
+        toggle: function () { self.setState({ remind: !remindOn }); }
+      }
+    };
+  }
+}
+return Component;
+} };
+
+  Object.keys(SCREENS).forEach(function (r) {
+    SCREENS[r].tpl = document.getElementById('tpl-' + r);
+    SCREENS[r].Comp = SCREENS[r].make(DCLogic);
+  });
+
+  function paint(entry) {
+    var root = entry.el;
+    var active = document.activeElement;
+    var focusId = active && root.contains(active) && active.id ? active.id : null;
+    var scrolls = {};
+    root.querySelectorAll('[data-scroll]').forEach(function (e) { scrolls[e.getAttribute('data-scroll')] = [e.scrollTop, e.scrollLeft]; });
+    var drafts = {};
+    root.querySelectorAll('input[id]:not([data-controlled]), textarea[id]').forEach(function (e) { drafts[e.id] = e.value; });
+
+    var vals = entry.comp.renderVals ? entry.comp.renderVals() : {};
+    var frag = document.createDocumentFragment();
+    renderInto(SCREENS[entry.route].tpl.content, vals || {}, frag, { scroll: 0 });
+    root.replaceChildren(frag);
+
+    root.querySelectorAll('[data-scroll]').forEach(function (e) {
+      var p = scrolls[e.getAttribute('data-scroll')];
+      if (p) { e.scrollTop = p[0]; e.scrollLeft = p[1]; }
+    });
+    Object.keys(drafts).forEach(function (id) {
+      var e = root.querySelector('#' + CSS.escape(id));
+      if (e && !e.hasAttribute('data-controlled')) e.value = drafts[id];
+    });
+    if (focusId) {
+      var f = root.querySelector('#' + CSS.escape(focusId));
+      if (f) {
+        f.focus({ preventScroll: true });
+        if (typeof f.setSelectionRange === 'function' && typeof f.value === 'string') {
+          try { f.setSelectionRange(f.value.length, f.value.length); } catch (err) { /* not a text field */ }
+        }
+      }
+    }
+  }
+
+  /* ---------- navigation stack ---------- */
+  var screensEl = document.getElementById('screens');
+  var stack = [];
+
+  function makeEntry(route, params) {
+    var def = SCREENS[route];
+    var comp = new def.Comp();
+    if (params) comp.state = Object.assign({}, params);
+    var el = document.createElement('div');
+    el.className = 'screen';
+    el.setAttribute('data-route', route);
+    var entry = { route: route, comp: comp, el: el };
+    comp.__paint = function () { paint(entry); };
+    paint(entry);
+    return entry;
+  }
+
+  function settle() {
+    stack.forEach(function (e, i) {
+      var top = i === stack.length - 1;
+      e.el.classList.toggle('is-under', !top);
+      if (top) { e.el.removeAttribute('inert'); e.el.removeAttribute('aria-hidden'); }
+      else { e.el.setAttribute('inert', ''); e.el.setAttribute('aria-hidden', 'true'); }
+    });
+    var cur = stack[stack.length - 1];
+    document.querySelectorAll('[data-jump]').forEach(function (b) {
+      b.setAttribute('aria-current', b.getAttribute('data-jump') === cur.route ? 'true' : 'false');
+    });
+    try { history.replaceState(null, '', '#' + cur.route); } catch (err) { /* file:// or sandbox */ }
+  }
+
+  function go(route, params) {
+    if (!SCREENS[route]) { toast('Bu ekran hali chizilmagan'); return; }
+    var entry = makeEntry(route, params);
+    screensEl.appendChild(entry.el);
+    stack.push(entry);
+    entry.el.classList.add('enter');
+    entry.el.addEventListener('animationend', function done() {
+      entry.el.classList.remove('enter');
+      entry.el.removeEventListener('animationend', done);
+    });
+    settle();
+  }
+
+  function back(fallback) {
+    if (stack.length < 2) {
+      if (fallback && SCREENS[fallback]) reset(fallback);
+      return;
+    }
+    var top = stack.pop();
+    settle();
+    top.el.classList.add('leave');
+    top.el.setAttribute('inert', '');
+    setTimeout(function () { top.el.remove(); }, 230);
+  }
+
+  function reset(route) {
+    stack.forEach(function (e) { e.el.remove(); });
+    stack = [];
+    var home = makeEntry('asosiy');
+    screensEl.appendChild(home.el);
+    stack.push(home);
+    if (route && route !== 'asosiy') go(route);
+    else settle();
+  }
+
+  /* ---------- toast ---------- */
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1800);
+  }
+
+  /* ---------- wiring: clicks, swipe, side panel ---------- */
+  document.getElementById('device').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-back],[data-save],[data-toast],[data-go],a[href^="#"]');
+    if (!t) return;
+    e.preventDefault();
+    if (t.hasAttribute('data-back')) { back((t.getAttribute('href') || '').slice(1)); return; }
+    if (t.hasAttribute('data-save')) { var m = t.getAttribute('data-save'); back(); setTimeout(function () { toast(m); }, 120); return; }
+    if (t.hasAttribute('data-toast')) { toast(t.getAttribute('data-toast')); return; }
+    var route = t.getAttribute('data-go') || (t.getAttribute('href') || '').slice(1);
+    var params = null;
+    if (t.hasAttribute('data-params')) { try { params = JSON.parse(t.getAttribute('data-params')); } catch (err) { params = null; } }
+    go(route, params);
+  });
+
+  var swipe = null;
+  screensEl.addEventListener('pointerdown', function (e) {
+    var s = e.target.closest('[data-swipe]');
+    swipe = s ? { y: e.clientY, route: s.getAttribute('data-swipe') } : null;
+  });
+  screensEl.addEventListener('pointerup', function (e) {
+    if (swipe && swipe.y - e.clientY > 40) go(swipe.route);
+    swipe = null;
+  });
+
+  document.querySelectorAll('[data-jump]').forEach(function (b) {
+    b.addEventListener('click', function () { reset(b.getAttribute('data-jump')); });
+  });
+
+  /* ---------- fit the 390x844 phone into the viewport ---------- */
+  var stage = document.getElementById('stage');
+  function fit() {
+    var w = window.innerWidth, h = window.innerHeight;
+    var phone = w <= 760;
+    var s = phone ? Math.min(w / 390, h / 844) : Math.min(1, (h - 48) / 844);
+    stage.style.transform = 'scale(' + s + ')';
+    stage.style.margin = ((844 * s - 844) / 2) + 'px ' + ((390 * s - 390) / 2) + 'px';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  var start = (location.hash || '').slice(1);
+  reset(SCREENS[start] ? start : 'asosiy');
+})();
+</script>
+</body>
+</html>
