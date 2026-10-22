@@ -69,6 +69,7 @@ app/
 components/
   ScreenHeader.tsx       the blue strip + rounded sheet top every screen wears
   HomeSky.tsx            the home screen's gradient backdrop
+  SplashOverlay.tsx      the splash, redrawn in React for as long as it loads
   AmountCard.tsx         a form's amount, pay method and unit
   BottomBar.tsx          actions pinned to the bottom of a sheet
   TransactionRow.tsx     one line of the ledger
@@ -103,6 +104,10 @@ lib/
   telegramBackup.ts      Telegram settings, sending, the daily rule
   backupTask.ts          background task that sends the daily backup
 assets/fonts/            Manrope 400–800, linked natively by app.json
+assets/*.svg             the logo and the app-icon mark, as drawn
+assets/images/           PNGs rendered from those SVGs: app icons (iOS light /
+                         dark / tinted, Android adaptive + monochrome) and the
+                         splash wordmark for light and dark
 global.css               Tailwind theme + semantic tokens (light & dark)
 ```
 

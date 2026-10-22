@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="24 24 72 72">
+  <title>Taqsim</title>
+  <g transform="translate(30.89 78) scale(0.78)">
+    <path d="M39.4 0Q33.8 1.05 28.43 0.93Q23.05 0.8 18.83 -0.97Q14.6 -2.75 12.4 -6.7Q10.4 -10.4 10.3 -14.23Q10.2 -18.05 10.2 -22.9V-69H23.8V-23.7Q23.8 -20.55 23.88 -18.02Q23.95 -15.5 24.9 -14Q26.7 -11.15 30.65 -10.9Q34.6 -10.65 39.4 -11.3ZM1 -43.5V-54H39.4V-43.5Z" fill="#FFFFFF"/>
+    <clipPath id="taqsim-bar">
+      <rect x="-7" y="10" width="88.4" height="13" rx="6.5"/>
+    </clipPath>
+    <g clip-path="url(#taqsim-bar)">
+      <rect x="-7" y="10" width="39.2" height="13" fill="#F26B1D"/>
+      <rect x="37.2" y="10" width="23.52" height="13" fill="#8B5CF6"/>
+      <rect x="65.72" y="10" width="15.68" height="13" fill="#EC4899"/>
+    </g>
+  </g>
+</svg>
