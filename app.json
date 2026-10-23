@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "uz.iqboljonhasan.taqsim",
+      "bundleIdentifier": "uz.taqsim.pul",
       "icon": {
         "light": "./assets/images/icon.png",
         "dark": "./assets/images/icon-dark.png",
@@ -17,7 +17,7 @@
       }
     },
     "android": {
-      "package": "uz.iqboljonhasan.taqsim",
+      "package": "uz.taqsim.pul",
       "predictiveBackGestureEnabled": false,
       "allowBackup": false,
       "adaptiveIcon": {
