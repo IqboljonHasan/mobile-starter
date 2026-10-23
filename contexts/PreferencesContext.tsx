@@ -14,6 +14,42 @@ const KEY_INCLUDE_DEBTS = "include_debts_in_stats";
 const KEY_SPLIT_INCOME = "split_income";
 const KEY_STATS_CHART = "stats_chart";
 const KEY_STATS_LEVEL = "stats_level";
+const KEY_REMINDERS = "debt_reminders";
+
+/**
+ * When debt reminders go off: how many days before the due date, and at what
+ * hour of that day. Whether a debt has one at all is its own `remind` switch.
+ */
+export type ReminderSettings = {
+	/** Off silences every reminder without touching the debts' own switches. */
+	enabled: boolean;
+	/** 0 is the due date itself. */
+	daysBefore: number;
+	hour: number;
+};
+
+export const REMINDER_DAY_OPTIONS = [0, 1, 3] as const;
+export const REMINDER_HOUR_OPTIONS = [9, 13, 20] as const;
+
+const DEFAULT_REMINDERS: ReminderSettings = { enabled: true, daysBefore: 1, hour: 9 };
+
+function asReminderSettings(value: string): ReminderSettings {
+	try {
+		const raw = JSON.parse(value) as Partial<ReminderSettings>;
+		return {
+			enabled: typeof raw.enabled === "boolean" ? raw.enabled : DEFAULT_REMINDERS.enabled,
+			daysBefore: (REMINDER_DAY_OPTIONS as readonly number[]).includes(raw.daysBefore ?? -1)
+				? (raw.daysBefore as number)
+				: DEFAULT_REMINDERS.daysBefore,
+			hour:
+				typeof raw.hour === "number" && raw.hour >= 0 && raw.hour <= 23
+					? raw.hour
+					: DEFAULT_REMINDERS.hour,
+		};
+	} catch {
+		return DEFAULT_REMINDERS;
+	}
+}
 
 const DEFAULT_STATS_CHART: ChartKind = "pie";
 const DEFAULT_STATS_LEVEL: BreakdownLevel = "category";
@@ -49,6 +85,9 @@ type PreferencesContextType = {
 	setStatsChart: (kind: ChartKind) => void;
 	statsLevel: BreakdownLevel;
 	setStatsLevel: (level: BreakdownLevel) => void;
+	/** When debt reminders are sent. See lib/debtReminders.ts. */
+	reminders: ReminderSettings;
+	setReminders: (next: ReminderSettings) => void;
 };
 
 const PreferencesContext = createContext<PreferencesContextType>({
@@ -62,6 +101,8 @@ const PreferencesContext = createContext<PreferencesContextType>({
 	setStatsChart: () => {},
 	statsLevel: DEFAULT_STATS_LEVEL,
 	setStatsLevel: () => {},
+	reminders: DEFAULT_REMINDERS,
+	setReminders: () => {},
 });
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
@@ -70,6 +111,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 	const [splitIncome, setSplitIncomeState] = useState(true);
 	const [statsChart, setStatsChartState] = useState(DEFAULT_STATS_CHART);
 	const [statsLevel, setStatsLevelState] = useState(DEFAULT_STATS_LEVEL);
+	const [reminders, setRemindersState] = useState(DEFAULT_REMINDERS);
 
 	useEffect(() => {
 		getSetting(KEY_HIDE_INCOME, "0").then((value) => setHideIncomeState(value === "1"));
@@ -82,6 +124,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 		);
 		getSetting(KEY_STATS_LEVEL, DEFAULT_STATS_LEVEL).then((value) =>
 			setStatsLevelState(asBreakdownLevel(value)),
+		);
+		getSetting(KEY_REMINDERS, JSON.stringify(DEFAULT_REMINDERS)).then((value) =>
+			setRemindersState(asReminderSettings(value)),
 		);
 	}, []);
 
@@ -113,6 +158,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 		setSetting(KEY_STATS_LEVEL, level);
 	}, []);
 
+	const setReminders = useCallback((next: ReminderSettings) => {
+		setRemindersState(next);
+		setSetting(KEY_REMINDERS, JSON.stringify(next));
+	}, []);
+
 	return (
 		<PreferencesContext.Provider
 			value={{
@@ -126,6 +176,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 				setStatsChart,
 				statsLevel,
 				setStatsLevel,
+				reminders,
+				setReminders,
 			}}
 		>
 			{children}

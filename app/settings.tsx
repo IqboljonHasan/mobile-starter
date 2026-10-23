@@ -57,6 +57,7 @@ export default function SettingsScreen() {
 		transfers,
 		contacts,
 		debts,
+		templates,
 		defaultUnit,
 		setDefaultUnit,
 		resetLedger,
@@ -82,6 +83,7 @@ export default function SettingsScreen() {
 				transfers,
 				contacts,
 				debts,
+				templates,
 				defaultUnit,
 			});
 			// A cancelled picker is a decision, not a failure — say nothing.

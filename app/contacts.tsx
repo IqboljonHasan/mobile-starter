@@ -6,6 +6,7 @@ import { Text, TextInput } from "@/components/ui/Text";
 import ContactAvatar from "@/components/ContactAvatar";
 import ContactImportSheet from "@/components/ContactImportSheet";
 import ContactSheet from "@/components/ContactSheet";
+import TagPill from "@/components/TagPill";
 import { Button, Card, EmptyState } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
@@ -276,13 +277,16 @@ function ContactRow({
 			<ContactAvatar name={contact.name} id={contact.id} />
 
 			<View className="flex-1">
-				<Text
-					className="font-medium text-foreground"
-					style={{ fontSize: tf.base }}
-					numberOfLines={1}
-				>
-					{contact.name}
-				</Text>
+				<View className="flex-row items-center gap-2">
+					<Text
+						className="font-bold text-foreground shrink"
+						style={{ fontSize: tf.base }}
+						numberOfLines={1}
+					>
+						{contact.name}
+					</Text>
+					{!!contact.tag && <TagPill tag={contact.tag} />}
+				</View>
 				{open.length > 0 ? (
 					<View className="flex-row flex-wrap gap-x-3">
 						{open.map((line) => (

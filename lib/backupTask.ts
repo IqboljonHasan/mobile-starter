@@ -9,6 +9,7 @@ import {
 	KEY_CATEGORIES,
 	KEY_CONTACTS,
 	KEY_DEBTS,
+	KEY_TEMPLATES,
 	KEY_TRANSACTIONS,
 	KEY_TRANSFERS,
 	KEY_UNIT,
@@ -27,6 +28,7 @@ import type {
 	Contact,
 	Debt,
 	Transaction,
+	TransactionTemplate,
 	Transfer,
 	Wallet,
 } from "@/lib/types";
@@ -56,7 +58,7 @@ const WAKE_INTERVAL_MINUTES = 6 * 60;
 
 /** The ledger as LedgerContext last stored it. */
 async function readStoredPayload(): Promise<BackupPayload> {
-	const [categories, transactions, wallets, transfers, contacts, debts, defaultUnit] =
+	const [categories, transactions, wallets, transfers, contacts, debts, templates, defaultUnit] =
 		await Promise.all([
 			getJSON<Category[] | null>(KEY_CATEGORIES, null),
 			getJSON<Transaction[]>(KEY_TRANSACTIONS, []),
@@ -64,6 +66,7 @@ async function readStoredPayload(): Promise<BackupPayload> {
 			getJSON<Transfer[]>(KEY_TRANSFERS, []),
 			getJSON<Contact[]>(KEY_CONTACTS, []),
 			getJSON<Debt[]>(KEY_DEBTS, []),
+			getJSON<TransactionTemplate[]>(KEY_TEMPLATES, []),
 			getSetting(KEY_UNIT, DEFAULT_UNIT),
 		]);
 	// Null only before the app has ever saved — the same reading LedgerContext
@@ -75,6 +78,7 @@ async function readStoredPayload(): Promise<BackupPayload> {
 		transfers,
 		contacts,
 		debts,
+		templates,
 		defaultUnit,
 	};
 }

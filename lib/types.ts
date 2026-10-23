@@ -112,11 +112,18 @@ export type Transaction = {
  * contact is deleted from the phone, and the app must work at all for a user
  * who never grants contacts permission.
  */
+/** What a person is to the user — shown as a pill and filtered by when picking. */
+export type ContactTag = "friend" | "relative";
+
+export const CONTACT_TAGS: ContactTag[] = ["friend", "relative"];
+
 export type Contact = {
 	id: string;
 	name: string;
 	phone: string;
 	note: string;
+	/** Null when the user hasn't said. Absent in data stored before tags. */
+	tag: ContactTag | null;
 	/** The address-book id this was imported from, when it was. Re-importing
 	 *  the same person then updates this contact instead of adding a twin. */
 	sourceId: string | null;
@@ -177,6 +184,9 @@ export type Debt = {
 	date: string;
 	/** When it is meant to be settled. Null when nothing was agreed. */
 	dueDate: string | null;
+	/** Whether a notification is wanted ahead of `dueDate`. See lib/debtReminders.ts.
+	 *  Absent in data stored before reminders, which reads as off. */
+	remind: boolean;
 	/** The ledger entry the principal wrote. */
 	transactionId: string | null;
 	payments: DebtPayment[];
@@ -186,6 +196,7 @@ export type Debt = {
 /** What the contact editor collects. */
 export type ContactDraft = Pick<Contact, "name" | "phone" | "note"> & {
 	sourceId?: string | null;
+	tag?: ContactTag | null;
 };
 
 /** What the debt form collects — the payments and the ledger link are the
@@ -218,6 +229,32 @@ export type WalletDraft = Pick<Wallet, "name" | "color" | "icon" | "percent">;
 export type TransactionInput = Omit<Transaction, "id" | "createdAt" | "allocations">;
 
 export type TransferInput = Omit<Transfer, "id" | "createdAt">;
+
+/**
+ * A filled-in entry form kept under a name — "Oylik maosh", "Bozorlik" — and
+ * offered as a one-tap pick on the form for its side of the ledger. Everything
+ * but the date is kept; the amount only when one was typed.
+ */
+export type TransactionTemplate = {
+	id: string;
+	name: string;
+	type: TxType;
+	/** Null when the amount is left to be typed each time. */
+	amount: number | null;
+	unit: string;
+	method: PayMethod;
+	categoryId: string;
+	subcategoryId: string | null;
+	description: string;
+	/** Expense: the wallet that pays. Income: the one it lands in whole, when
+	 *  it isn't split. */
+	walletId: string | null;
+	/** Income: whether it's divided across the wallets. */
+	split: boolean;
+	createdAt: number;
+};
+
+export type TemplateInput = Omit<TransactionTemplate, "id" | "createdAt">;
 
 /** Collision-safe enough for a single-device store, and readable in a dump. */
 export function uid(prefix = ""): string {

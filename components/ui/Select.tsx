@@ -42,6 +42,13 @@ export interface SelectProps<T extends string | number> {
 		selected: SelectOption<T> | undefined;
 	}) => ReactNode;
 	disabled?: boolean;
+	/**
+	 * Makes the sheet's visibility the caller's — for opening it from somewhere
+	 * other than its own trigger, a menu item say. Pass `trigger={() => null}`
+	 * when there is no trigger to draw.
+	 */
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
 }
 
 export function Select<T extends string | number>({
@@ -57,10 +64,17 @@ export function Select<T extends string | number>({
 	emptyMessage,
 	trigger,
 	disabled,
+	open: controlledOpen,
+	onOpenChange,
 }: SelectProps<T>) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
-	const [open, setOpen] = useState(false);
+	const [innerOpen, setInnerOpen] = useState(false);
+	const open = controlledOpen ?? innerOpen;
+	const setOpen = (next: boolean) => {
+		if (controlledOpen === undefined) setInnerOpen(next);
+		onOpenChange?.(next);
+	};
 	const allOptions = sections
 		? sections.flatMap((s) => s.options)
 		: (options ?? []);

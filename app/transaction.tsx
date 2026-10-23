@@ -6,16 +6,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AmountCard from "@/components/AmountCard";
 import BottomBar, { BOTTOM_BAR_SPACE } from "@/components/BottomBar";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import TemplateSheet from "@/components/TemplateSheet";
 import TransferSheet from "@/components/TransferSheet";
 import WalletIcon from "@/components/WalletIcon";
 import WalletPicker from "@/components/WalletPicker";
 import {
-	ActionSheet,
 	Button,
 	Chip,
 	DateField,
 	FieldLabel,
-	IconButton,
+	HeaderMenu,
 	NumberPad,
 	PickerField,
 	Select,
@@ -43,7 +43,14 @@ import {
 	walletById,
 	walletName,
 } from "@/lib/wallets";
-import type { Debt, PayMethod, Transaction, TxType, Wallet } from "@/lib/types";
+import type {
+	Debt,
+	PayMethod,
+	Transaction,
+	TransactionTemplate,
+	TxType,
+	Wallet,
+} from "@/lib/types";
 import "../global.css";
 
 /**
@@ -223,6 +230,9 @@ function TransactionForm({
 		updateTransaction,
 		deleteTransaction,
 		addTransfer,
+		templates,
+		addTemplate,
+		deleteTemplate,
 	} = useLedger();
 	const { hideIncome, splitIncome } = usePreferences();
 
@@ -248,7 +258,9 @@ function TransactionForm({
 	);
 	const [coverOpen, setCoverOpen] = useState(false);
 	const [padOpen, setPadOpen] = useState(false);
-	const [menuOpen, setMenuOpen] = useState(false);
+	const [templateOpen, setTemplateOpen] = useState(false);
+	// The template last applied — its chip shows as picked until the form moves on.
+	const [templateId, setTemplateId] = useState<string | null>(null);
 	// Errors only appear once the user has tried to save — a form that turns red
 	// while it's still being filled in is nagging, not helping.
 	const [submitted, setSubmitted] = useState(false);
@@ -327,6 +339,97 @@ function TransactionForm({
 		[typeCategories],
 	);
 
+	// This side's templates whose category still exists — one filed under a
+	// deleted category has nothing left to fill the form with.
+	const typeTemplates = useMemo(
+		() =>
+			templates.filter(
+				(t) => t.type === type && typeCategories.some((c) => c.id === t.categoryId),
+			),
+		[templates, type, typeCategories],
+	);
+
+	const applyTemplate = (template: TransactionTemplate) => {
+		const templateCategory = typeCategories.find((c) => c.id === template.categoryId);
+		setTemplateId(template.id);
+		if (template.amount !== null) setAmountText(String(template.amount));
+		setUnit(template.unit);
+		setMethod(template.method);
+		setCategoryId(template.categoryId);
+		setSubcategoryId(
+			templateCategory?.subcategories.some((s) => s.id === template.subcategoryId)
+				? template.subcategoryId
+				: null,
+		);
+		setDescription(template.description);
+		if (template.type === "expense") {
+			// A wallet the template named wins; otherwise the category decides,
+			// exactly as picking it by hand would.
+			const mapped = templateCategory?.walletIds ?? [];
+			setWalletId(template.walletId ?? (mapped.length === 1 ? mapped[0] : null));
+			setWalletTouched(!!template.walletId);
+		} else {
+			setSplitThis(template.split);
+			setIncomeWalletId(template.split ? null : template.walletId);
+		}
+	};
+
+	const confirmDeleteTemplate = (template: TransactionTemplate) => {
+		Alert.alert(`"${template.name}" shabloni o'chirilsinmi?`, "Yozilgan yozuvlarga tegmaydi.", [
+			{ text: "Bekor qilish", style: "cancel" },
+			{
+				text: "O'chirish",
+				style: "destructive",
+				onPress: () => {
+					deleteTemplate(template.id);
+					if (templateId === template.id) setTemplateId(null);
+				},
+			},
+		]);
+	};
+
+	const openTemplateSheet = () => {
+		if (!category) {
+			Alert.alert("Avval kategoriyani tanlang", "Shablon kategoriyasi bilan saqlanadi.");
+			return;
+		}
+		setTemplateOpen(true);
+	};
+
+	const saveTemplate = (name: string, keepAmount: boolean) => {
+		if (!categoryId) return;
+		const template = addTemplate({
+			name,
+			type,
+			amount: keepAmount && !amountError ? amount : null,
+			unit,
+			method,
+			categoryId,
+			subcategoryId,
+			description: description.trim(),
+			walletId: type === "expense" ? walletId : dividing ? null : incomeWalletId,
+			split: type === "income" && dividing,
+		});
+		setTemplateId(template.id);
+	};
+
+	// Back to a blank form, as it opened — the date included.
+	const clearForm = () => {
+		setAmountText("");
+		setUnit(defaultUnit);
+		setMethod(DEFAULT_METHOD);
+		setCategoryId(null);
+		setSubcategoryId(null);
+		setDescription("");
+		setDate(todayISO());
+		setWalletId(null);
+		setWalletTouched(false);
+		setSplitThis(true);
+		setIncomeWalletId(null);
+		setTemplateId(null);
+		setSubmitted(false);
+	};
+
 	const changeType = (next: TxType) => {
 		if (next === type) return;
 		setType(next);
@@ -338,11 +441,14 @@ function TransactionForm({
 		setWalletTouched(false);
 		setIncomeWalletId(null);
 		setSplitThis(true);
+		setTemplateId(null);
 	};
 
 	const changeCategory = (next: string | null) => {
 		setCategoryId(next);
 		setSubcategoryId(null);
+		// Picked by hand, the form is no longer the template it started from.
+		setTemplateId(null);
 		if (walletTouched) return;
 		const mappedIds = categories.find((c) => c.id === next)?.walletIds ?? [];
 		// Auto-fill only when the category leaves no doubt about which wallet
@@ -433,11 +539,38 @@ function TransactionForm({
 				options={{
 					title,
 					headerRight: () => (
-						<IconButton
-							variant="filled"
-							icon="ellipsis-vertical"
-							accessibilityLabel="Boshqa amallar"
-							onPress={() => setMenuOpen(true)}
+						<HeaderMenu
+							items={[
+								{
+									key: "template",
+									label: "Shablon sifatida saqlash",
+									icon: "bookmark-outline",
+									onPress: openTemplateSheet,
+								},
+								{
+									key: "type",
+									label: income ? "Chiqimga aylantirish" : "Kirimga aylantirish",
+									icon: "swap-vertical-outline",
+									onPress: () => changeType(income ? "expense" : "income"),
+								},
+								existing
+									? {
+											key: "delete",
+											label: "Yozuvni o'chirish",
+											icon: "trash-outline",
+											danger: true,
+											separatorBefore: true,
+											onPress: confirmDelete,
+										}
+									: {
+											key: "clear",
+											label: "Formani tozalash",
+											icon: "refresh-outline",
+											danger: true,
+											separatorBefore: true,
+											onPress: clearForm,
+										},
+							]}
 						/>
 					),
 				}}
@@ -564,8 +697,9 @@ function TransactionForm({
 					)}
 				</View>
 
-				{/* Pinned subcategories: one tap sets category and subcategory ---- */}
-				{pinnedShortcuts.length > 0 && (
+				{/* Templates fill the whole form; pinned subcategories set the
+				    category and subcategory. A template is removed by holding it. */}
+				{typeTemplates.length + pinnedShortcuts.length > 0 && (
 					<ScrollView
 						horizontal
 						accessibilityRole="radiogroup"
@@ -575,6 +709,19 @@ function TransactionForm({
 						style={{ marginTop: -8, marginHorizontal: -18 }}
 						contentContainerStyle={{ gap: 6, paddingHorizontal: 18 }}
 					>
+						{typeTemplates.map((template) => (
+							<Chip
+								key={template.id}
+								size="sm"
+								role="radio"
+								leadingIcon="bookmark"
+								label={template.name}
+								active={templateId === template.id}
+								accessibilityLabel={`Shablon: ${template.name}`}
+								onPress={() => applyTemplate(template)}
+								onLongPress={() => confirmDeleteTemplate(template)}
+							/>
+						))}
 						{pinnedShortcuts.map(({ category: c, sub }) => {
 							const selected = categoryId === c.id && subcategoryId === sub.id;
 							return (
@@ -785,35 +932,19 @@ function TransactionForm({
 				</BottomBar>
 			)}
 
-			<ActionSheet
-				visible={menuOpen}
-				onClose={() => setMenuOpen(false)}
-				items={[
-					{
-						key: "type",
-						label: income ? "Chiqimga aylantirish" : "Kirimga aylantirish",
-						hint: "Kategoriya qaytadan tanlanadi",
-						icon: "swap-vertical-outline",
-						onPress: () => changeType(income ? "expense" : "income"),
-					},
-					{
-						key: "categories",
-						label: "Kategoriyalarni boshqarish",
-						icon: "pricetags-outline",
-						onPress: () => router.push("/categories"),
-					},
-					...(existing
-						? [
-								{
-									key: "delete",
-									label: "Yozuvni o'chirish",
-									icon: "trash-outline" as const,
-									danger: true,
-									onPress: confirmDelete,
-								},
-							]
-						: []),
-				]}
+			<TemplateSheet
+				key={templateOpen ? "template-open" : "template-closed"}
+				visible={templateOpen}
+				onClose={() => setTemplateOpen(false)}
+				onSubmit={saveTemplate}
+				initialName={subcategory?.name ?? category?.name ?? ""}
+				summary={[
+					[category?.name, subcategory?.name].filter(Boolean).join(" / "),
+					amountError ? null : formatAmount(amount, unit),
+				]
+					.filter(Boolean)
+					.join(" · ")}
+				hasAmount={!amountError}
 			/>
 
 			{/* Covering a shortfall: the transfer lands first, then the expense it

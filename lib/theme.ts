@@ -10,7 +10,7 @@
  * Keep every value here in sync with its counterpart in global.css.
  *
  * The design system in one paragraph: every screen is a white sheet with
- * rounded top corners laid over the brand blue. On the sheet, related things
+ * rounded top corners laid over a navy backdrop (Home alone is the blue sky). On the sheet, related things
  * are grouped on quiet grey (`card`) panels with no borders; ink (`primary`)
  * marks what is picked or pressed; green and red are kept for money coming in
  * and going out; and colour otherwise belongs to the wallets. The type is
@@ -35,6 +35,8 @@ export type ThemeColors = {
 	/** The blue behind every sheet and on the home screen. */
 	brand: string;
 	brandFg: string;
+	/** What shows above a pushed screen's sheet, behind its rounded top. */
+	backdrop: string;
 	/** The ring around a focused field. */
 	focus: string;
 	success: string;
@@ -61,6 +63,7 @@ const light: ThemeColors = {
 	primaryHighlight: "#e3e9f2",
 	brand: "#1556c9",
 	brandFg: "#ffffff",
+	backdrop: "#0b1b2e",
 	focus: "#1556c9",
 	success: "#15803d",
 	successSoft: "#e3f6e9",
@@ -86,6 +89,7 @@ const dark: ThemeColors = {
 	primaryHighlight: "#26344a",
 	brand: "#123b80",
 	brandFg: "#ffffff",
+	backdrop: "#070b11",
 	focus: "#5b93e6",
 	success: "#22a05a",
 	successSoft: "#15301f",

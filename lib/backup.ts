@@ -2,19 +2,22 @@ import { isCategoryColor } from "@/lib/categoryColors";
 import { toISODate } from "@/lib/date";
 import { asPayMethod, DEFAULT_UNIT, unitByCode } from "@/lib/money";
 import { redistribute, SEED_WALLETS } from "@/lib/wallets";
-import type {
-	Allocation,
-	Category,
-	Contact,
-	Debt,
-	DebtDirection,
-	DebtPayment,
-	IconName,
-	Subcategory,
-	Transaction,
-	Transfer,
-	TxType,
-	Wallet,
+import {
+	type Allocation,
+	type Category,
+	CONTACT_TAGS,
+	type Contact,
+	type ContactTag,
+	type Debt,
+	type DebtDirection,
+	type DebtPayment,
+	type IconName,
+	type Subcategory,
+	type Transaction,
+	type TransactionTemplate,
+	type Transfer,
+	type TxType,
+	type Wallet,
 } from "@/lib/types";
 
 /**
@@ -50,8 +53,11 @@ export const BACKUP_FORMAT = "taqsim.backup";
  * honest reading — a ledger written before the Debts tab existed recorded its
  * borrowing as plain entries under the debt categories, and those come across
  * untouched.
+ *
+ * 4 added a contact's tag, a debt's reminder switch, and entry templates.
+ * Older files import with untagged contacts, no reminders, and no templates.
  */
-export const BACKUP_VERSION = 3;
+export const BACKUP_VERSION = 4;
 
 /** The part of the ledger worth carrying between devices. */
 export type BackupPayload = {
@@ -61,6 +67,7 @@ export type BackupPayload = {
 	transfers: Transfer[];
 	contacts: Contact[];
 	debts: Debt[];
+	templates: TransactionTemplate[];
 	defaultUnit: string;
 };
 
@@ -286,6 +293,7 @@ function parseContact(raw: unknown): Contact | null {
 		phone: typeof raw.phone === "string" ? raw.phone : "",
 		note: typeof raw.note === "string" ? raw.note : "",
 		sourceId: nonEmptyString(raw.sourceId) ? raw.sourceId : null,
+		tag: CONTACT_TAGS.includes(raw.tag as ContactTag) ? (raw.tag as ContactTag) : null,
 		createdAt:
 			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
 				? raw.createdAt
@@ -352,8 +360,39 @@ function parseDebt(raw: unknown): Debt | null {
 			typeof raw.dueDate === "string" && ISO_DATE.test(raw.dueDate)
 				? raw.dueDate
 				: null,
+		remind: raw.remind === true,
 		transactionId: nonEmptyString(raw.transactionId) ? raw.transactionId : null,
 		payments,
+		createdAt:
+			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
+				? raw.createdAt
+				: Date.now(),
+	};
+}
+
+function parseTemplate(raw: unknown): TransactionTemplate | null {
+	if (!isRecord(raw)) return null;
+	if (!nonEmptyString(raw.id) || !nonEmptyString(raw.name)) return null;
+	if (!isTxType(raw.type) || !nonEmptyString(raw.categoryId) || !nonEmptyString(raw.unit)) {
+		return null;
+	}
+
+	return {
+		id: raw.id,
+		name: raw.name,
+		type: raw.type,
+		// A template keeps no amount rather than a broken one.
+		amount:
+			typeof raw.amount === "number" && Number.isFinite(raw.amount) && raw.amount > 0
+				? raw.amount
+				: null,
+		unit: unitByCode(raw.unit).code,
+		method: asPayMethod(raw.method),
+		categoryId: raw.categoryId,
+		subcategoryId: nonEmptyString(raw.subcategoryId) ? raw.subcategoryId : null,
+		description: typeof raw.description === "string" ? raw.description : "",
+		walletId: nonEmptyString(raw.walletId) ? raw.walletId : null,
+		split: raw.split !== false,
 		createdAt:
 			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
 				? raw.createdAt
@@ -438,6 +477,11 @@ export function parseBackupData(raw: unknown): ParseResult {
 		.filter((c): c is Contact => c !== null);
 	const rawDebts = Array.isArray(raw.debts) ? raw.debts : [];
 	const debts = rawDebts.map(parseDebt).filter((d): d is Debt => d !== null);
+	// Absent below version 4.
+	const rawTemplates = Array.isArray(raw.templates) ? raw.templates : [];
+	const templates = rawTemplates
+		.map(parseTemplate)
+		.filter((t): t is TransactionTemplate => t !== null);
 
 	const skipped =
 		raw.categories.length -
@@ -445,7 +489,8 @@ export function parseBackupData(raw: unknown): ParseResult {
 		(raw.transactions.length - transactions.length) +
 		(rawWallets.length - parsedWallets.length) +
 		(rawContacts.length - contacts.length) +
-		(rawDebts.length - debts.length);
+		(rawDebts.length - debts.length) +
+		(rawTemplates.length - templates.length);
 
 	if (categories.length === 0 && transactions.length === 0) {
 		return { ok: false, error: "Faylda tiklash uchun ma'lumot yo'q." };
@@ -462,6 +507,7 @@ export function parseBackupData(raw: unknown): ParseResult {
 			transfers,
 			contacts,
 			debts,
+			templates,
 			// An unknown code would leave every new entry in a currency that
 			// doesn't exist; `unitByCode` falls back to the default.
 			defaultUnit:
@@ -538,6 +584,7 @@ export function prepareRestore(
 				walletId: known(d.walletId),
 				payments: d.payments.map((p) => ({ ...p, walletId: known(p.walletId) })),
 			})),
+			templates: payload.templates.map((t) => ({ ...t, walletId: known(t.walletId) })),
 		};
 	}
 
@@ -556,6 +603,7 @@ export function prepareRestore(
 			walletId: null,
 			payments: d.payments.map((p) => ({ ...p, walletId: null })),
 		})),
+		templates: payload.templates.map((t) => ({ ...t, walletId: null })),
 	};
 }
 

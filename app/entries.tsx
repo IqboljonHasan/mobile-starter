@@ -5,16 +5,9 @@ import { ActivityIndicator, ScrollView, SectionList, View } from "react-native";
 import BottomBar, { BOTTOM_BAR_SPACE } from "@/components/BottomBar";
 import FilterTile from "@/components/FilterTile";
 import MonthSwitcher from "@/components/MonthSwitcher";
+import SearchBar from "@/components/SearchBar";
 import TransactionRow from "@/components/TransactionRow";
-import {
-	ActionSheet,
-	Button,
-	Chip,
-	EmptyState,
-	IconButton,
-	PillTabs,
-	Select,
-} from "@/components/ui";
+import { Button, Chip, EmptyState, HeaderMenu, PillTabs, Select } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -23,8 +16,9 @@ import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";
 import { currentMonthKey, formatSectionDay, monthName } from "@/lib/date";
-import { excludeDebts, inMonth, unitsUsed } from "@/lib/ledger";
+import { excludeDebts, inMonth, resolveCategory, unitsUsed } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
+import { foldForSearch, matchesSearch } from "@/lib/search";
 import type { Transaction, TxType } from "@/lib/types";
 import "../global.css";
 
@@ -50,7 +44,8 @@ function shareOf(t: Transaction, walletId: string | null): number {
  * income counts only for the share that wallet actually received.
  *
  * Opened from Home with the filter already set — a wallet tile, the month's
- * income or spending — through `?wallet=`, `?type=` and `?month=`.
+ * income or spending — through `?wallet=`, `?type=` and `?month=`. The ⋮
+ * menu adds a search over the month and a category filter.
  */
 export default function EntriesScreen() {
 	const router = useRouter();
@@ -69,20 +64,32 @@ export default function EntriesScreen() {
 	const [walletFilter, setWalletFilter] = useState<string | null>(params.wallet ?? null);
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
-	const [menuOpen, setMenuOpen] = useState(false);
+	const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+	const [searching, setSearching] = useState(false);
+	const [query, setQuery] = useState("");
 
 	const monthly = useMemo(() => inMonth(transactions, month), [transactions, month]);
 
 	// Everything that narrows the list except the side, which the tiles show
-	// both of: the wallet (by share) and the category.
+	// both of: the wallet (by share), the category, and the search — which
+	// reads what a row shows: its note, its category and subcategory, and the
+	// amount's digits.
+	const folded = foldForSearch(query);
 	const narrowed = useMemo(
 		() =>
-			monthly.filter(
-				(t) =>
-					(!categoryFilter || t.categoryId === categoryFilter) &&
-					shareOf(t, walletFilter) > 0,
-			),
-		[monthly, categoryFilter, walletFilter],
+			monthly.filter((t) => {
+				if (categoryFilter && t.categoryId !== categoryFilter) return false;
+				if (shareOf(t, walletFilter) <= 0) return false;
+				if (!folded) return true;
+				const { category, subcategory } = resolveCategory(t, categories);
+				return matchesSearch(folded, [
+					t.description,
+					category?.name,
+					subcategory?.name,
+					String(t.amount),
+				]);
+			}),
+		[monthly, categoryFilter, walletFilter, folded, categories],
 	);
 
 	const visible = useMemo(
@@ -179,11 +186,27 @@ export default function EntriesScreen() {
 			<Stack.Screen
 				options={{
 					headerRight: () => (
-						<IconButton
-							variant="filled"
-							icon="ellipsis-vertical"
-							accessibilityLabel="Boshqa amallar"
-							onPress={() => setMenuOpen(true)}
+						<HeaderMenu
+							items={[
+								{
+									key: "search",
+									label: "Qidirish",
+									icon: "search-outline",
+									onPress: () => setSearching(true),
+								},
+								{
+									key: "filters",
+									label: "Filtrlar",
+									icon: "options-outline",
+									onPress: () => setCategoryPickerOpen(true),
+								},
+								{
+									key: "stats",
+									label: "Hisobot",
+									icon: "bar-chart-outline",
+									onPress: () => router.push(`/stats?month=${month}`),
+								},
+							]}
 						/>
 					),
 				}}
@@ -191,6 +214,17 @@ export default function EntriesScreen() {
 
 			{/* What the list is scoped to — stays put while the list scrolls ---- */}
 			<View style={{ paddingHorizontal: 18, gap: 14, paddingTop: 6 }}>
+				{searching && (
+					<SearchBar
+						value={query}
+						onChangeText={setQuery}
+						placeholder={`${monthName(month)} yozuvlaridan qidirish`}
+						onClose={() => {
+							setQuery("");
+							setSearching(false);
+						}}
+					/>
+				)}
 				<MonthSwitcher value={month} onChange={setMonth} />
 				{units.length > 1 && (
 					<PillTabs
@@ -231,6 +265,17 @@ export default function EntriesScreen() {
 				style={{ flexGrow: 0, marginTop: 14 }}
 				contentContainerStyle={{ gap: 6, paddingHorizontal: 18, paddingBottom: 8 }}
 			>
+				{/* A category picked from the menu's "Filtrlar" leads the row, so
+				    what narrows the list is always in sight — and one tap undoes it. */}
+				{pickedCategory && (
+					<Chip
+						label={pickedCategory.name}
+						icon="close"
+						active
+						accessibilityLabel={`Kategoriya: ${pickedCategory.name}. Filtrni olib tashlash`}
+						onPress={() => setCategoryFilter(null)}
+					/>
+				)}
 				<Chip
 					label="Hammasi"
 					active={walletFilter === null && categoryFilter === null}
@@ -248,29 +293,19 @@ export default function EntriesScreen() {
 						onPress={() => setWalletFilter((current) => (current === w.id ? null : w.id))}
 					/>
 				))}
-				{categorySections.length > 0 && (
-					<Select
-						label="Kategoriya bo'yicha"
-						value={categoryFilter}
-						onChange={setCategoryFilter}
-						sections={categorySections}
-						clearable
-						trigger={({ open }) => (
-							<Chip
-								label={pickedCategory?.name ?? "Kategoriya"}
-								icon={pickedCategory ? "close" : "chevron-down"}
-								active={!!pickedCategory}
-								accessibilityLabel={
-									pickedCategory
-										? `Kategoriya: ${pickedCategory.name}. Filtrni olib tashlash`
-										: "Kategoriya bo'yicha filtr"
-								}
-								onPress={pickedCategory ? () => setCategoryFilter(null) : open}
-							/>
-						)}
-					/>
-				)}
 			</ScrollView>
+
+			<Select
+				label="Kategoriya bo'yicha"
+				value={categoryFilter}
+				onChange={setCategoryFilter}
+				sections={categorySections}
+				clearable
+				emptyMessage={`${monthName(month)}da hali yozuv yo'q.`}
+				open={categoryPickerOpen}
+				onOpenChange={setCategoryPickerOpen}
+				trigger={() => null}
+			/>
 
 			<SectionList
 				sections={sections}
@@ -316,7 +351,9 @@ export default function EntriesScreen() {
 						message={
 							monthly.length === 0
 								? `${monthName(month)}da hali yozuv yo'q. Kirim yoki chiqim qo'shing — u shu yerda ko'rinadi.`
-								: `Bu filtr bo'yicha ${monthName(month).toLowerCase()}da yozuv yo'q`
+								: folded
+									? `"${query.trim()}" bo'yicha ${monthName(month).toLowerCase()}da yozuv yo'q`
+									: `Bu filtr bo'yicha ${monthName(month).toLowerCase()}da yozuv yo'q`
 						}
 					/>
 				}
@@ -349,31 +386,6 @@ export default function EntriesScreen() {
 				</View>
 			</BottomBar>
 
-			<ActionSheet
-				visible={menuOpen}
-				onClose={() => setMenuOpen(false)}
-				items={[
-					{
-						key: "stats",
-						label: "Hisobot",
-						hint: "Kategoriyalar bo'yicha tahlil",
-						icon: "bar-chart-outline",
-						onPress: () => router.push(`/stats?month=${month}`),
-					},
-					{
-						key: "categories",
-						label: "Kategoriyalar",
-						icon: "pricetags-outline",
-						onPress: () => router.push("/categories"),
-					},
-					{
-						key: "wallets",
-						label: "Hamyonlar",
-						icon: "wallet-outline",
-						onPress: () => router.push("/wallets"),
-					},
-				]}
-			/>
 		</View>
 	);
 }

@@ -51,7 +51,17 @@ type TelegramBackupContextType = {
 const TelegramBackupContext = createContext<TelegramBackupContextType | null>(null);
 
 export function TelegramBackupProvider({ children }: { children: ReactNode }) {
-	const { ready, categories, transactions, wallets, transfers, contacts, debts, defaultUnit } =
+	const {
+		ready,
+		categories,
+		transactions,
+		wallets,
+		transfers,
+		contacts,
+		debts,
+		templates,
+		defaultUnit,
+	} =
 		useLedger();
 	const [loaded, setLoaded] = useState(false);
 	const [config, setConfig] = useState(EMPTY_TELEGRAM_CONFIG);
@@ -71,9 +81,10 @@ export function TelegramBackupProvider({ children }: { children: ReactNode }) {
 			transfers,
 			contacts,
 			debts,
+			templates,
 			defaultUnit,
 		};
-	}, [categories, transactions, wallets, transfers, contacts, debts, defaultUnit]);
+	}, [categories, transactions, wallets, transfers, contacts, debts, templates, defaultUnit]);
 
 	useEffect(() => {
 		Promise.all([loadTelegramConfig(), loadTelegramStatus()]).then(

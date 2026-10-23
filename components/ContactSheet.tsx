@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { Text } from "@/components/ui/Text";
-import { BottomSheet, Button, InputField, Textarea } from "@/components/ui";
+import { BottomSheet, Button, Chip, FieldLabel, InputField, Textarea } from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
-import type { Contact, ContactDraft } from "@/lib/types";
+import { TAG_META } from "@/lib/debts";
+import { CONTACT_TAGS, type Contact, type ContactDraft, type ContactTag } from "@/lib/types";
 
 /**
  * Adds or edits one person. Opened from the contacts screen and from the
@@ -33,6 +34,7 @@ export default function ContactSheet({
 	const [name, setName] = useState(existing?.name ?? initialName);
 	const [phone, setPhone] = useState(existing?.phone ?? "");
 	const [note, setNote] = useState(existing?.note ?? "");
+	const [tag, setTag] = useState<ContactTag | null>(existing?.tag ?? null);
 	const [submitted, setSubmitted] = useState(false);
 
 	const nameError = name.trim() ? undefined : "Ismni kiriting";
@@ -44,6 +46,7 @@ export default function ContactSheet({
 			name: name.trim(),
 			phone: phone.trim(),
 			note: note.trim(),
+			tag,
 			// An edited contact keeps whatever address-book link it arrived with;
 			// one typed in here has none until an import matches it by number.
 			sourceId: existing?.sourceId ?? null,
@@ -57,7 +60,7 @@ export default function ContactSheet({
 				contentContainerStyle={{ padding: 16, gap: 16 }}
 				keyboardShouldPersistTaps="handled"
 			>
-				<Text className="font-bold text-foreground" style={{ fontSize: tf.xl }}>
+				<Text className="font-extrabold text-foreground" style={{ fontSize: tf.xl }}>
 					{existing ? "Kontaktni tahrirlash" : "Yangi kontakt"}
 				</Text>
 
@@ -80,6 +83,27 @@ export default function ContactSheet({
 					inputMode="tel"
 					hint="Ixtiyoriy"
 				/>
+
+				<View>
+					<FieldLabel>{"Kim bo'ladi"}</FieldLabel>
+					<View accessibilityRole="radiogroup" className="flex-row flex-wrap" style={{ gap: 6 }}>
+						<Chip
+							role="radio"
+							label="Belgilanmagan"
+							active={tag === null}
+							onPress={() => setTag(null)}
+						/>
+						{CONTACT_TAGS.map((option) => (
+							<Chip
+								key={option}
+								role="radio"
+								label={TAG_META[option].label}
+								active={tag === option}
+								onPress={() => setTag(option)}
+							/>
+						))}
+					</View>
+				</View>
 
 				<Textarea
 					label="Izoh"

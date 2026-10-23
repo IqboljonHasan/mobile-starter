@@ -16,6 +16,8 @@ export interface IconButtonProps {
 	 * the same circle, translucent white, for laying over the brand blue.
 	 */
 	variant?: "plain" | "filled" | "glass";
+	/** Drawn pressed-in — a menu button while its menu is open. */
+	active?: boolean;
 	disabled?: boolean;
 	accessibilityLabel?: string;
 }
@@ -26,6 +28,7 @@ export function IconButton({
 	size = 20,
 	color,
 	variant = "plain",
+	active = false,
 	disabled = false,
 	accessibilityLabel,
 }: IconButtonProps) {
@@ -37,7 +40,9 @@ export function IconButton({
 	const diameter = variant === "plain" ? 36 : 44;
 	const base =
 		variant === "filled"
-			? tc.muted
+			? active
+				? tc.primaryHighlight
+				: tc.muted
 			: variant === "glass"
 				? "rgba(255,255,255,0.16)"
 				: "transparent";
@@ -51,7 +56,7 @@ export function IconButton({
 		<Pressable
 			accessibilityRole="button"
 			accessibilityLabel={accessibilityLabel ?? icon}
-			accessibilityState={{ disabled }}
+			accessibilityState={{ disabled, expanded: active || undefined }}
 			disabled={disabled}
 			onPress={handlePress}
 			onPressIn={() => {

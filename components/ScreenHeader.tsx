@@ -8,9 +8,9 @@ import { useTheme } from "@/hooks/useTheme";
 import { RADIUS } from "@/lib/theme";
 
 /**
- * The top of every pushed screen: a strip of the brand blue under the status
- * bar, and the white sheet the screen lives on starting below it with rounded
- * corners — so each screen reads as a card laid over the home screen's sky.
+ * The top of every pushed screen: a navy strip under the status bar, and the
+ * white sheet the screen lives on starting below it with rounded corners — so
+ * each screen reads as a card laid over a dark backdrop.
  *
  * It is the stack's `header`, so a screen keeps declaring its title and
  * `headerRight` through `<Stack.Screen options>` exactly as before and gets
@@ -26,7 +26,7 @@ export default function ScreenHeader({ options, navigation, back, route }: Nativ
 	const right = options.headerRight?.({ tintColor: tc.foreground, canGoBack: !!back });
 
 	return (
-		<View style={{ backgroundColor: tc.brand, paddingTop: insets.top + 8 }}>
+		<View style={{ backgroundColor: tc.backdrop, paddingTop: insets.top + 8 }}>
 			<View
 				style={{
 					backgroundColor: tc.background,

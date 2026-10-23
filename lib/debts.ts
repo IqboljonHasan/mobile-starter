@@ -1,6 +1,9 @@
-import { roundAmount } from "@/lib/money";
+import type { CategoryColor } from "@/lib/categoryColors";
+import { formatDayMonth } from "@/lib/date";
+import { formatAmount, roundAmount } from "@/lib/money";
 import type {
 	Contact,
+	ContactTag,
 	Debt,
 	DebtDirection,
 	DebtPayment,
@@ -100,6 +103,48 @@ export function paymentCategoryId(direction: DebtDirection): string {
 	return direction === "borrowed" ? REPAY_CATEGORY_ID : COLLECT_CATEGORY_ID;
 }
 
+/**
+ * What "Qarzdorga yuborish" sends: a short, polite note of the debt as the
+ * form holds it — who, how much, since when, and until when — for the user to
+ * pass on through whichever messenger they pick.
+ */
+export function debtShareMessage({
+	direction,
+	name,
+	amount,
+	remaining,
+	unit,
+	date,
+	dueDate,
+}: {
+	direction: DebtDirection;
+	name: string;
+	amount: number;
+	/** What is still owed, when some of it has come back already. */
+	remaining?: number;
+	unit: string;
+	date: string;
+	dueDate: string | null;
+}): string {
+	const lines = [
+		`Assalomu alaykum${name ? `, ${name}` : ""}!`,
+		direction === "lent"
+			? `${formatDayMonth(date)} kuni sizga ${formatAmount(amount, unit)} qarz berganman.`
+			: `${formatDayMonth(date)} kuni sizdan ${formatAmount(amount, unit)} qarz olganman.`,
+	];
+	if (remaining !== undefined && remaining > 0 && remaining < amount) {
+		lines.push(`Qolgan qarz: ${formatAmount(remaining, unit)}.`);
+	}
+	if (dueDate) lines.push(`Qaytarish muddati: ${formatDayMonth(dueDate)}.`);
+	return lines.join("\n");
+}
+
+/** How each contact tag is named, and the hue its pill is drawn in. */
+export const TAG_META: Record<ContactTag, { label: string; plural: string; color: CategoryColor }> = {
+	friend: { label: "Do'st", plural: "Do'stlar", color: "blue" },
+	relative: { label: "Qarindosh", plural: "Qarindoshlar", color: "orange" },
+};
+
 /* Amounts ------------------------------------------------------------------ */
 
 /** Everything paid against a debt so far, in the debt's own unit. */
@@ -186,6 +231,34 @@ export function outstandingByUnit(debts: Debt[]): DebtTotal[] {
 /** The same totals narrowed to one person — what a contact row shows. */
 export function contactTotals(debts: Debt[], contactId: string): DebtTotal[] {
 	return outstandingByUnit(debts.filter((d) => d.contactId === contactId));
+}
+
+/**
+ * Where things stand with one person, netted in one unit: positive when they
+ * owe the user, negative when the user owes them. The preferred unit when the
+ * person has debts in it, otherwise whichever holds the most. Null when
+ * nothing is open with them.
+ */
+export function contactBalance(
+	debts: Debt[],
+	contactId: string,
+	preferredUnit?: string,
+): { unit: string; net: number } | null {
+	const totals = contactTotals(debts, contactId);
+	if (totals.length === 0) return null;
+	const total = totals.find((t) => t.unit === preferredUnit) ?? totals[0];
+	return { unit: total.unit, net: roundAmount(total.owedToMe - total.owedByMe, total.unit) };
+}
+
+/** "Sizga qarzdor · 600 000 so'm", "Siz qarzdorsiz · …" or "Qarz yo'q", with its tone. */
+export function contactBalanceText(balance: { unit: string; net: number } | null): {
+	text: string;
+	tone: "success" | "danger" | "muted";
+} {
+	if (!balance || balance.net === 0) return { text: "Qarz yo'q", tone: "muted" };
+	return balance.net > 0
+		? { text: `Sizga qarzdor · ${formatAmount(balance.net, balance.unit)}`, tone: "success" }
+		: { text: `Siz qarzdorsiz · ${formatAmount(-balance.net, balance.unit)}`, tone: "danger" };
 }
 
 export function debtsOfContact(debts: Debt[], contactId: string): Debt[] {

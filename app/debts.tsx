@@ -5,7 +5,9 @@ import { ActivityIndicator, ScrollView, SectionList, View } from "react-native";
 import BottomBar, { BOTTOM_BAR_SPACE } from "@/components/BottomBar";
 import DebtRow from "@/components/DebtRow";
 import FilterTile from "@/components/FilterTile";
-import { Button, Chip, EmptyState, IconButton, PillTabs } from "@/components/ui";
+import RemindersSheet from "@/components/RemindersSheet";
+import SearchBar from "@/components/SearchBar";
+import { Button, Chip, EmptyState, HeaderMenu, PillTabs } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
@@ -21,6 +23,7 @@ import {
 	sortDebts,
 } from "@/lib/debts";
 import { formatAmount } from "@/lib/money";
+import { foldForSearch, matchesSearch } from "@/lib/search";
 import type { DebtDirection } from "@/lib/types";
 import "../global.css";
 
@@ -63,6 +66,10 @@ export default function DebtsScreen() {
 	const [direction, setDirection] = useState<DebtDirection | null>(null);
 	const [filter, setFilter] = useState<Filter>("all");
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
+	const [searching, setSearching] = useState(false);
+	const [query, setQuery] = useState("");
+	const [remindersOpen, setRemindersOpen] = useState(false);
+	const folded = foldForSearch(query);
 	const today = todayISO();
 
 	// One unit at a time, as everywhere else — som owed and dollars owed are
@@ -80,6 +87,11 @@ export default function DebtsScreen() {
 	const sections = useMemo(() => {
 		const matched = debts.filter((debt) => {
 			if (direction && debt.direction !== direction) return false;
+			// The person is what a debt is looked up by; its note too.
+			const contact = contactById(contacts, debt.contactId);
+			if (!matchesSearch(folded, [contact?.name, contact?.phone, debt.description])) {
+				return false;
+			}
 			const status = debtStatus(debt, today);
 			if (filter === "all") return true;
 			if (filter === "open") return status !== "settled";
@@ -104,7 +116,7 @@ export default function DebtsScreen() {
 				data,
 			};
 		}).filter((section) => section.data.length > 0);
-	}, [debts, direction, filter, today]);
+	}, [debts, direction, filter, today, contacts, folded]);
 
 	const openDebt = (next: DebtDirection) => router.push(`/debt?direction=${next}`);
 
@@ -121,17 +133,44 @@ export default function DebtsScreen() {
 			<Stack.Screen
 				options={{
 					headerRight: () => (
-						<IconButton
-							variant="filled"
-							icon="people-outline"
-							accessibilityLabel="Kontaktlar"
-							onPress={() => router.push("/contacts")}
+						<HeaderMenu
+							items={[
+								{
+									key: "search",
+									label: "Qidirish",
+									icon: "search-outline",
+									onPress: () => setSearching(true),
+								},
+								{
+									key: "reminders",
+									label: "Eslatmalar",
+									icon: "notifications-outline",
+									onPress: () => setRemindersOpen(true),
+								},
+								{
+									key: "contacts",
+									label: "Kontaktlar",
+									icon: "people-outline",
+									onPress: () => router.push("/contacts"),
+								},
+							]}
 						/>
 					),
 				}}
 			/>
 
 			<View style={{ paddingHorizontal: 18, gap: 14, paddingTop: 6 }}>
+				{searching && (
+					<SearchBar
+						value={query}
+						onChangeText={setQuery}
+						placeholder="Ism yoki izoh bo'yicha qidirish"
+						onClose={() => {
+							setQuery("");
+							setSearching(false);
+						}}
+					/>
+				)}
 				{units.length > 1 && (
 					<PillTabs
 						compact
@@ -232,7 +271,9 @@ export default function DebtsScreen() {
 						message={
 							debts.length === 0
 								? "Qarz berganingizni yoki olganingizni shu yerda yuriting — har biri hisobingizga ham yoziladi."
-								: "Bu filtr bo'yicha qarz yo'q"
+								: folded
+									? `"${query.trim()}" bo'yicha qarz topilmadi`
+									: "Bu filtr bo'yicha qarz yo'q"
 						}
 					/>
 				}
@@ -267,6 +308,8 @@ export default function DebtsScreen() {
 					/>
 				</View>
 			</BottomBar>
+
+			<RemindersSheet visible={remindersOpen} onClose={() => setRemindersOpen(false)} />
 		</View>
 	);
 }

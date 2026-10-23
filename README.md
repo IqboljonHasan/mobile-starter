@@ -39,14 +39,18 @@ There is one home screen; everything else is a sheet pushed over it.
 - **Kirim va chiqimlar** — both sides of the ledger in one list, a month at a
   time, grouped by day with a per-day net. Two tiles total the month and filter
   to one side; chips narrow it to a wallet (counting only the share that wallet
-  received) or to a category.
+  received). The ⋮ menu searches the month and filters by category.
 - **Qarzlar** — what is owed either way, grouped into overdue, open and
-  settled, filterable by direction and state.
+  settled, filterable by direction and state. The ⋮ menu searches by person or
+  note and opens **Eslatmalar**: local notifications before a due date.
 - **Hisobot** (Stats) — one month or year at a time: the summary, a 12-month
   chart, and a breakdown by category or subcategory.
 - **Entry and debt forms** — amount with pay method and unit, category and
-  subcategory, pinned quick picks, the wallet (or the income's split), note and
-  date; a debt adds the person and a due date with one-tap terms.
+  subcategory, quick picks (saved templates and pinned subcategories), the
+  wallet (or the income's split), note and date; a debt adds the person —
+  picked with their Do'st/Qarindosh tag and where things stand with them — a
+  due date with one-tap terms, and a reminder. The ⋮ menu saves the form as a
+  template, sends a debt's note to the other person, or clears the form.
 - **Wallets**, **Categories**, **Contacts**, **Settings**, **Telegram backup**.
 
 ## Layout
@@ -67,13 +71,17 @@ app/
   settings.tsx           look, distribution, privacy, data
   telegram.tsx           Telegram backup: bot token, chat ID, send now
 components/
-  ScreenHeader.tsx       the blue strip + rounded sheet top every screen wears
+  ScreenHeader.tsx       the navy strip + rounded sheet top every screen wears
   HomeSky.tsx            the home screen's gradient backdrop
   SplashOverlay.tsx      the splash, redrawn in React for as long as it loads
   AmountCard.tsx         a form's amount, pay method and unit
   BottomBar.tsx          actions pinned to the bottom of a sheet
   TransactionRow.tsx     one line of the ledger
   DebtRow.tsx            one debt
+  ContactPicker.tsx      the person a debt is with: search, tags, add, import
+  RemindersSheet.tsx     debt reminder settings and what's lined up
+  TemplateSheet.tsx      names the entry form as a template
+  SearchBar.tsx          the search field a list opens from its menu
   WalletIcon.tsx         a wallet's tile — the one thing drawn in colour
   CategoryAvatar.tsx     a category's icon tile
   MonthSwitcher.tsx      prev / next month control
@@ -83,15 +91,18 @@ contexts/
   TelegramBackupContext.tsx  Telegram settings + the foreground daily check
   ThemeContext.tsx       persisted light/dark/system preference
   FontSizeContext.tsx    persisted text scale
-  PreferencesContext.tsx hide income, debts in stats, split income
+  PreferencesContext.tsx hide income, debts in stats, split income, reminders
 hooks/
   useTheme.ts            isDark, tc (runtime colors), mode, setMode
   useFont.ts             tf — font sizes scaled by the user's setting
+  useDebtReminders.ts    keeps scheduled reminders in step with the debts
 lib/
   types.ts               Category, Transaction, Wallet, Debt, …
   ledger.ts              pure selectors — totals, breakdowns, grouping
   wallets.ts             splits, balances, redistribution
-  debts.ts               debt status, totals, ledger entries
+  debts.ts               debt status, totals, ledger entries, share text
+  debtReminders.ts       scheduling debt reminders (expo-notifications)
+  search.ts              forgiving text matching for the search fields
   money.ts               units, formatting, parsing
   date.ts                calendar-day helpers and the month grid
   categoryColors.ts      the validated category palette
@@ -188,9 +199,12 @@ Colors are defined once in `global.css` as semantic tokens and mirrored in
 
 The design system, in short:
 
-- Every screen is a **white sheet with rounded top corners over the brand
-  blue** (`ScreenHeader` draws it as the stack's header, so a screen only sets
-  its `title` and `headerRight`). Home is the one exception: its own sky.
+- Every screen is a **white sheet with rounded top corners over a navy
+  backdrop** (`ScreenHeader` draws it as the stack's header, so a screen only
+  sets its `title` and `headerRight`). Home is the one exception: its own sky.
+- A screen's less frequent actions sit behind a ⋮ `HeaderMenu`: a white card
+  dropped under the button, a hairline before anything destructive, which is
+  drawn red.
 - On the sheet, related things sit on **quiet grey groups** (`bg-card`, 20px
   corners, no border or shadow). Anything inside a group that needs its own
   surface uses `bg-background`, which reads as white on the grey.
@@ -256,9 +270,9 @@ Keys: `xs`, `sm`, `base`, `lg`, `xl`, `xxl`, `xxxl`. Every component in
 
 Drop a file in `app/`, give it a title in the `Stack` in `app/_layout.tsx`, and
 push it with `router.push` (the `useSafeRouter` one, which ignores a doubled
-tap). It gets the sheet header for free; put a screen's extra actions behind a
-`headerRight` that opens an `ActionSheet`, and pin its main buttons to the
-bottom with `BottomBar`.
+tap). It gets the sheet header for free; put a screen's extra actions in a
+`HeaderMenu` as its `headerRight`, and pin its main buttons to the bottom with
+`BottomBar`.
 
 ## Adding a component
 

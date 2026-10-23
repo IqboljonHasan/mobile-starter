@@ -154,45 +154,11 @@ export default function HomeScreen() {
 				}}
 				showsVerticalScrollIndicator={false}
 			>
-				{/* Top bar ------------------------------------------------------ */}
-				<View className="flex-row items-center justify-end gap-1" style={{ minHeight: 44 }}>
-					{walletUnits.length > 1 && (
-						<Select
-							label="Balans valyutasi"
-							value={walletUnit}
-							toggleOff={false}
-							onChange={(next) => next && setPickedWalletUnit(next)}
-							options={walletUnits.map((code) => ({
-								key: code,
-								label: `${code} — ${unitByCode(code).name}`,
-							}))}
-							trigger={({ open }) => (
-								<Pressable
-									accessibilityRole="button"
-									accessibilityLabel={`Balans valyutasi: ${walletUnit}`}
-									onPress={open}
-									className="flex-row items-center gap-1 rounded-full px-4 active:opacity-70"
-									style={{ height: 44, backgroundColor: "rgba(255,255,255,0.16)" }}
-								>
-									<Text className="font-bold" style={{ fontSize: tf.sm, color: "#fff" }}>
-										{walletUnit}
-									</Text>
-									<Ionicons name="chevron-down" size={14} color="#fff" />
-								</Pressable>
-							)}
-						/>
-					)}
-					<IconButton
-						variant="glass"
-						icon="settings-outline"
-						accessibilityLabel="Sozlamalar"
-						onPress={() => router.push("/settings")}
-					/>
-				</View>
-
 				{/* Balance ------------------------------------------------------ */}
-				<View accessibilityLabel="Jami balans" style={{ marginTop: -4 }}>
-					<View className="flex-row items-center gap-1">
+				<View accessibilityLabel="Jami balans">
+					{/* The label shares its row with the screen's controls, as the
+					    prototype draws it — the figure under them is the headline. */}
+					<View className="flex-row items-center gap-1" style={{ minHeight: 44 }}>
 						<Text className="font-semibold" style={{ fontSize: tf.base, color: "#fff" }}>
 							Jami balans
 						</Text>
@@ -206,6 +172,41 @@ export default function HomeScreen() {
 						>
 							<Ionicons name={hideIncome ? "eye-off-outline" : "eye-outline"} size={21} color="#fff" />
 						</Pressable>
+
+						<View className="flex-row items-center gap-1 ml-auto">
+							{walletUnits.length > 1 && (
+								<Select
+									label="Balans valyutasi"
+									value={walletUnit}
+									toggleOff={false}
+									onChange={(next) => next && setPickedWalletUnit(next)}
+									options={walletUnits.map((code) => ({
+										key: code,
+										label: `${code} — ${unitByCode(code).name}`,
+									}))}
+									trigger={({ open }) => (
+										<Pressable
+											accessibilityRole="button"
+											accessibilityLabel={`Balans valyutasi: ${walletUnit}`}
+											onPress={open}
+											className="flex-row items-center gap-1 rounded-full px-4 active:opacity-70"
+											style={{ height: 44, backgroundColor: "rgba(255,255,255,0.16)" }}
+										>
+											<Text className="font-bold" style={{ fontSize: tf.sm, color: "#fff" }}>
+												{walletUnit}
+											</Text>
+											<Ionicons name="chevron-down" size={14} color="#fff" />
+										</Pressable>
+									)}
+								/>
+							)}
+							<IconButton
+								variant="glass"
+								icon="settings-outline"
+								accessibilityLabel="Sozlamalar"
+								onPress={() => router.push("/settings")}
+							/>
+						</View>
 					</View>
 					<View
 						accessible

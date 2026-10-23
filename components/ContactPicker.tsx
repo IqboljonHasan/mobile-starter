@@ -1,175 +1,318 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { Pressable, View } from "react-native";
-import { Text } from "@/components/ui/Text";
-import ContactAvatar from "@/components/ContactAvatar";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, View } from "react-native";
 import ContactImportSheet from "@/components/ContactImportSheet";
 import ContactSheet from "@/components/ContactSheet";
-import { FieldLabel, PickerField, Select } from "@/components/ui";
+import TagPill from "@/components/TagPill";
+import { BottomSheet, Button, Chip, FieldLabel, IconButton } from "@/components/ui";
+import { Text, TextInput } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
-import { sortContacts } from "@/lib/debts";
+import { contactBalance, contactBalanceText, contactInitials, sortContacts, TAG_META } from "@/lib/debts";
+import { foldForSearch, matchesSearch } from "@/lib/search";
+import { CONTACT_TAGS, type Contact, type ContactTag, type Debt } from "@/lib/types";
+
+/** Long enough for one sheet to be gone before the next is opened. */
+const SHEET_SWAP_MS = 280;
 
 /**
- * Picks the person a debt is with, and can create them on the spot.
+ * Picks the person a debt is with, and can add them on the spot.
  *
- * Adding and importing live in the sheet's own header rather than behind a
- * trip to the contacts screen: a debt is usually recorded the moment it
- * happens, and being sent away to set up a contact first is how the record
- * ends up never being made.
+ * The field shows who is picked and where things stand with them — whether
+ * they owe the user or the other way round — since that is usually why this
+ * person is being picked. The sheet it opens finds people by name or tag, and
+ * adds somebody new, typed in or from the phone's contacts, without leaving
+ * the form: a debt is recorded the moment it happens, and being sent off to
+ * set up a contact first is how the record ends up never being made.
  */
 export default function ContactPicker({
 	value,
 	onChange,
-	label = "Kontakt",
+	label = "Kim bilan",
+	sheetTitle = "Kimni tanlaysiz?",
+	unit,
 	error,
 }: {
 	value: string | null;
 	onChange: (contactId: string | null) => void;
 	label?: string;
+	/** The question the sheet asks — "Kimga berdingiz?". */
+	sheetTitle?: string;
+	/** The debt's unit — a person's balance is shown in it when they have one. */
+	unit?: string;
 	error?: string;
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
 	const { contacts, debts, addContact, importContacts } = useLedger();
 
+	const [open, setOpen] = useState(false);
+	const [query, setQuery] = useState("");
+	const [tagFilter, setTagFilter] = useState<ContactTag | "all">("all");
 	const [creating, setCreating] = useState(false);
 	const [importing, setImporting] = useState(false);
 
-	const ordered = sortContacts(contacts, debts);
 	const selected = contacts.find((c) => c.id === value) ?? null;
+
+	const folded = foldForSearch(query);
+	const people = useMemo(
+		() =>
+			sortContacts(contacts, debts).filter(
+				(c) =>
+					(tagFilter === "all" || c.tag === tagFilter) &&
+					matchesSearch(folded, [c.name, c.phone]),
+			),
+		[contacts, debts, tagFilter, folded],
+	);
+
+	// One sheet at a time: the picker steps aside for the editor or the import
+	// list and, from the import list, comes back to pick who was just added.
+	const swapTo = (next: () => void) => {
+		setOpen(false);
+		setTimeout(next, SHEET_SWAP_MS);
+	};
 
 	return (
 		<View>
 			<FieldLabel required>{label}</FieldLabel>
-
-			<Select
-				label={label}
-				value={value}
-				toggleOff={false}
-				onChange={onChange}
-				options={ordered.map((c) => ({ key: c.id, label: c.name }))}
-				emptyMessage="Hali kontakt yo'q — quyidagidan qo'shing."
-				headerRight={
-					<View className="flex-row gap-2">
-						<Pressable
-							accessibilityRole="button"
-							accessibilityLabel="Telefondan import qilish"
-							onPress={() => setImporting(true)}
-							className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-full bg-muted active:opacity-70"
-						>
-							<Ionicons
-								name="phone-portrait-outline"
-								size={14}
-								color={tc.foreground}
-							/>
-							<Text
-								className="font-bold text-foreground"
-								style={{ fontSize: tf.sm }}
-							>
-								Import
-							</Text>
-						</Pressable>
-						<Pressable
-							accessibilityRole="button"
-							accessibilityLabel="Yangi kontakt qo'shish"
-							onPress={() => setCreating(true)}
-							className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary active:opacity-70"
-						>
-							<Ionicons name="add" size={14} color={tc.primaryFg} />
-							<Text
-								className="font-bold text-primary-fg"
-								style={{ fontSize: tf.sm }}
-							>
-								Yangi
-							</Text>
-						</Pressable>
-					</View>
-				}
-				renderOption={(option, isSelected) => {
-					const contact = contacts.find((c) => c.id === option.key);
-					return (
-						<View className="flex-row items-center gap-3 py-2.5">
-							<ContactAvatar
-								name={option.label}
-								id={String(option.key)}
-								size={34}
-							/>
-							<View className="flex-1">
-								<Text
-									className={`text-foreground ${isSelected ? "font-extrabold" : "font-semibold"}`}
-									style={{ fontSize: tf.base }}
-									numberOfLines={1}
-								>
-									{option.label}
-								</Text>
-								{!!contact?.phone && (
-									<Text
-										className="text-muted-foreground"
-										style={{ fontSize: tf.sm }}
-										numberOfLines={1}
-									>
-										{contact.phone}
-									</Text>
-								)}
-							</View>
-							{isSelected && (
-								<Ionicons name="checkmark-circle" size={22} color={tc.foreground} />
-							)}
-						</View>
-					);
+			<Pressable
+				accessibilityRole="button"
+				accessibilityLabel={`${label}: ${selected?.name ?? "tanlanmagan"}`}
+				onPress={() => setOpen(true)}
+				className="flex-row items-center active:opacity-70"
+				style={{
+					minHeight: 64,
+					gap: 12,
+					paddingVertical: 10,
+					paddingLeft: 10,
+					paddingRight: 12,
+					borderRadius: 16,
+					backgroundColor: tc.card,
+					borderWidth: 1.5,
+					borderColor: error ? tc.danger : "transparent",
 				}}
-				trigger={({ open }) => (
-					<PickerField
-						accessibilityLabel={`${label}: ${selected?.name ?? "tanlanmagan"}`}
-						text={selected?.name ?? null}
-						placeholder="Ism yoki telefon raqam"
-						onPress={open}
-						error={!!error}
-						leading={
-							selected ? (
-								<ContactAvatar name={selected.name} id={selected.id} size={32} mono />
-							) : undefined
-						}
-						detail={selected?.phone ? { text: selected.phone } : null}
-						trailing={
-							<Pressable
-								accessibilityRole="button"
-								accessibilityLabel="Kontaktlardan tanlash"
-								onPress={() => setImporting(true)}
-								className="items-center justify-center bg-background active:opacity-70"
-								style={{ width: 44, height: 44, borderRadius: 12, marginRight: -8 }}
-							>
-								<Ionicons name="id-card-outline" size={20} color={tc.foreground} />
-							</Pressable>
-						}
-					/>
+			>
+				{selected ? (
+					<PersonLine contact={selected} debts={debts} unit={unit} avatarBg={tc.background} />
+				) : (
+					<Text
+						className="flex-1 font-bold"
+						style={{ fontSize: tf.base, color: tc.placeholder, paddingLeft: 4 }}
+					>
+						Tanlang
+					</Text>
 				)}
-			/>
-
+				<Ionicons name="chevron-down" size={18} color={tc.mutedForeground} />
+			</Pressable>
 			{!!error && (
 				<Text className="font-semibold text-danger mt-1.5 ml-1" style={{ fontSize: tf.sm }}>
 					{error}
 				</Text>
 			)}
 
-			{/* A contact created here is selected straight away — creating one and
-			    then having to find it in the list again is a step with no purpose. */}
+			<BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight="80%">
+				<View className="flex-row items-center justify-between gap-3" style={{ paddingLeft: 20, paddingRight: 12 }}>
+					<Text
+						accessibilityRole="header"
+						className="font-extrabold text-foreground"
+						style={{ fontSize: tf.xl, letterSpacing: -0.2 }}
+					>
+						{sheetTitle}
+					</Text>
+					<IconButton
+						variant="filled"
+						icon="close"
+						accessibilityLabel="Yopish"
+						onPress={() => setOpen(false)}
+					/>
+				</View>
+
+				<View style={{ paddingHorizontal: 18, paddingTop: 12 }}>
+					<View
+						className="flex-row items-center"
+						style={{ gap: 10, height: 48, paddingHorizontal: 14, borderRadius: 16, backgroundColor: tc.card }}
+					>
+						<Ionicons name="search" size={18} color={tc.mutedForeground} />
+						<TextInput
+							accessibilityLabel="Ism bo'yicha qidirish"
+							value={query}
+							onChangeText={setQuery}
+							placeholder="Ism bo'yicha qidirish"
+							placeholderTextColor={tc.placeholder}
+							autoCorrect={false}
+							className="flex-1 font-semibold"
+							style={{ fontSize: tf.base, color: tc.foreground, paddingVertical: 0 }}
+						/>
+						{!!query && (
+							<Pressable accessibilityLabel="Tozalash" onPress={() => setQuery("")} hitSlop={10}>
+								<Ionicons name="close-circle" size={18} color={tc.mutedForeground} />
+							</Pressable>
+						)}
+					</View>
+				</View>
+
+				<View
+					accessibilityRole="radiogroup"
+					accessibilityLabel="Teg bo'yicha saralash"
+					className="flex-row"
+					style={{ gap: 6, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 6 }}
+				>
+					<Chip
+						size="sm"
+						role="radio"
+						label="Hammasi"
+						active={tagFilter === "all"}
+						onPress={() => setTagFilter("all")}
+					/>
+					{CONTACT_TAGS.map((tag) => (
+						<Chip
+							key={tag}
+							size="sm"
+							role="radio"
+							label={TAG_META[tag].plural}
+							active={tagFilter === tag}
+							onPress={() => setTagFilter(tag)}
+						/>
+					))}
+				</View>
+
+				<ScrollView
+					style={{ flexShrink: 1 }}
+					contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 2, paddingBottom: 6 }}
+					keyboardShouldPersistTaps="handled"
+				>
+					{people.length === 0 ? (
+						<Text
+							className="font-semibold text-muted-foreground text-center"
+							style={{ fontSize: tf.sm, paddingVertical: 28, paddingHorizontal: 20 }}
+						>
+							{contacts.length === 0
+								? "Hali hech kim yo'q — pastdan qo'shing yoki kontaktlardan oling."
+								: "Bu qidiruv bo'yicha hech kim topilmadi."}
+						</Text>
+					) : (
+						people.map((contact) => {
+							const isSelected = contact.id === value;
+							return (
+								<Pressable
+									key={contact.id}
+									accessibilityRole="radio"
+									accessibilityState={{ checked: isSelected }}
+									onPress={() => {
+										onChange(contact.id);
+										setOpen(false);
+									}}
+									className="flex-row items-center active:opacity-70"
+									style={{
+										minHeight: 64,
+										gap: 12,
+										padding: 10,
+										borderRadius: 16,
+										backgroundColor: isSelected ? tc.card : "transparent",
+									}}
+								>
+									<PersonLine contact={contact} debts={debts} unit={unit} avatarBg={tc.muted} />
+									{isSelected && <Ionicons name="checkmark" size={20} color={tc.foreground} />}
+								</Pressable>
+							);
+						})
+					)}
+				</ScrollView>
+
+				<View className="flex-row" style={{ gap: 6, paddingHorizontal: 18, paddingTop: 6 }}>
+					<View className="flex-1">
+						<Button
+							label="Kontaktlardan"
+							variant="soft"
+							fullWidth
+							accessibilityLabel="Telefon kontaktlaridan import qilish"
+							startIcon={<Ionicons name="id-card-outline" size={18} color={tc.foreground} />}
+							onPress={() => swapTo(() => setImporting(true))}
+						/>
+					</View>
+					<View className="flex-1">
+						<Button
+							label="Yangi kishi"
+							variant="soft"
+							fullWidth
+							startIcon={<Ionicons name="add" size={18} color={tc.foreground} />}
+							onPress={() => swapTo(() => setCreating(true))}
+						/>
+					</View>
+				</View>
+			</BottomSheet>
+
+			{/* Somebody added here is picked straight away — adding them and then
+			    having to find them in the list again is a step with no purpose. */}
 			<ContactSheet
 				key={creating ? "contact-new-open" : "contact-new-closed"}
 				visible={creating}
 				onClose={() => setCreating(false)}
-				onSubmit={(draft) => onChange(addContact(draft).id)}
+				initialName={query.trim()}
+				onSubmit={(draft) => {
+					onChange(addContact(draft).id);
+					setQuery("");
+				}}
 			/>
 
 			<ContactImportSheet
 				key={importing ? "contact-import-open" : "contact-import-closed"}
 				visible={importing}
-				onClose={() => setImporting(false)}
+				onClose={() => {
+					setImporting(false);
+					setTimeout(() => setOpen(true), SHEET_SWAP_MS);
+				}}
 				onImport={importContacts}
 				existing={contacts}
 			/>
 		</View>
+	);
+}
+
+/** Initials, the name with its tag, and where things stand with the person. */
+function PersonLine({
+	contact,
+	debts,
+	unit,
+	avatarBg,
+}: {
+	contact: Contact;
+	debts: Debt[];
+	unit?: string;
+	avatarBg: string;
+}) {
+	const { tc } = useTheme();
+	const { tf } = useFont();
+	const status = contactBalanceText(contactBalance(debts, contact.id, unit));
+	const statusColor =
+		status.tone === "success" ? tc.success : status.tone === "danger" ? tc.danger : tc.mutedForeground;
+
+	return (
+		<>
+			<View
+				className="items-center justify-center"
+				style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: avatarBg }}
+			>
+				<Text className="font-extrabold text-foreground" style={{ fontSize: tf.sm }}>
+					{contactInitials(contact.name)}
+				</Text>
+			</View>
+			<View className="flex-1" style={{ gap: 3 }}>
+				<View className="flex-row items-center" style={{ gap: 8 }}>
+					<Text
+						className="font-bold text-foreground shrink"
+						style={{ fontSize: tf.base }}
+						numberOfLines={1}
+					>
+						{contact.name}
+					</Text>
+					{!!contact.tag && <TagPill tag={contact.tag} />}
+				</View>
+				<Text className="font-semibold" style={{ fontSize: tf.sm - 0.5, color: statusColor }} numberOfLines={1}>
+					{status.text}
+				</Text>
+			</View>
+		</>
 	);
 }

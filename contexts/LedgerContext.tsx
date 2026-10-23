@@ -18,6 +18,7 @@ import {
 	KEY_CATEGORIES,
 	KEY_CONTACTS,
 	KEY_DEBTS,
+	KEY_TEMPLATES,
 	KEY_TRANSACTIONS,
 	KEY_TRANSFERS,
 	KEY_UNIT,
@@ -46,8 +47,10 @@ import {
 	type DebtPayment,
 	type DebtPaymentInput,
 	type Subcategory,
+	type TemplateInput,
 	type Transaction,
 	type TransactionInput,
+	type TransactionTemplate,
 	type Transfer,
 	type TransferInput,
 	type TxType,
@@ -75,6 +78,8 @@ type LedgerContextType = {
 	transfers: Transfer[];
 	contacts: Contact[];
 	debts: Debt[];
+	/** Entry forms kept under a name, offered as one-tap picks on the form. */
+	templates: TransactionTemplate[];
 	/** Unit a new transaction starts with. */
 	defaultUnit: string;
 	setDefaultUnit: (unit: string) => void;
@@ -127,6 +132,9 @@ type LedgerContextType = {
 	) => void;
 	deleteDebtPayment: (debtId: string, paymentId: string) => void;
 
+	addTemplate: (input: TemplateInput) => TransactionTemplate;
+	deleteTemplate: (id: string) => void;
+
 	/** Re-runs the current percentages and category mappings over the whole
 	 *  history — the one way to change what past entries were divided into. */
 	redistributeHistory: () => void;
@@ -149,6 +157,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 	const [transfers, setTransfers] = useState<Transfer[]>([]);
 	const [contacts, setContacts] = useState<Contact[]>([]);
 	const [debts, setDebts] = useState<Debt[]>([]);
+	const [templates, setTemplates] = useState<TransactionTemplate[]>([]);
 	const [defaultUnit, setDefaultUnitState] = useState(DEFAULT_UNIT);
 
 	useEffect(() => {
@@ -162,6 +171,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 				storedTransfers,
 				storedContacts,
 				storedDebts,
+				storedTemplates,
 				storedUnit,
 			] = await Promise.all([
 				// `null` rather than `[]` as the fallback: it's how a first launch
@@ -173,6 +183,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 				getJSON<Transfer[]>(KEY_TRANSFERS, []),
 				getJSON<Contact[]>(KEY_CONTACTS, []),
 				getJSON<Debt[]>(KEY_DEBTS, []),
+				getJSON<TransactionTemplate[]>(KEY_TEMPLATES, []),
 				getSetting(KEY_UNIT, DEFAULT_UNIT),
 			]);
 			if (cancelled) return;
@@ -200,7 +211,10 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			setCategories(nextCategories);
 			setWallets(nextWallets);
 			setTransfers(storedTransfers);
-			setContacts(storedContacts);
+			// Tags and reminders came later; what was stored before reads as
+			// untagged and with no reminder asked for.
+			setContacts(storedContacts.map((c) => ({ ...c, tag: c.tag ?? null })));
+			setTemplates(storedTemplates);
 			// A debt stored before a field existed would break the arithmetic that
 			// reads it, so the list is normalised once here rather than guarded at
 			// every call site.
@@ -209,6 +223,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 					...d,
 					payments: Array.isArray(d.payments) ? d.payments : [],
 					dueDate: d.dueDate ?? null,
+					remind: d.remind ?? false,
 					walletId: d.walletId ?? null,
 					transactionId: d.transactionId ?? null,
 				})),
@@ -237,6 +252,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		transfers,
 		contacts,
 		debts,
+		templates,
 	});
 	useEffect(() => {
 		if (!ready) return;
@@ -246,7 +262,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			persisted.current.wallets === wallets &&
 			persisted.current.transfers === transfers &&
 			persisted.current.contacts === contacts &&
-			persisted.current.debts === debts
+			persisted.current.debts === debts &&
+			persisted.current.templates === templates
 		) {
 			return;
 		}
@@ -257,6 +274,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			transfers,
 			contacts,
 			debts,
+			templates,
 		};
 		Promise.all([
 			setJSON(KEY_CATEGORIES, categories),
@@ -265,8 +283,9 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			setJSON(KEY_TRANSFERS, transfers),
 			setJSON(KEY_CONTACTS, contacts),
 			setJSON(KEY_DEBTS, debts),
+			setJSON(KEY_TEMPLATES, templates),
 		]).catch((e) => console.warn("[ledger] failed to save", e));
-	}, [ready, categories, transactions, wallets, transfers, contacts, debts]);
+	}, [ready, categories, transactions, wallets, transfers, contacts, debts, templates]);
 
 	const setDefaultUnit = useCallback((unit: string) => {
 		setDefaultUnitState(unit);
@@ -500,6 +519,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			phone: draft.phone,
 			note: draft.note,
 			sourceId: draft.sourceId ?? null,
+			tag: draft.tag ?? null,
 			id: uid("con_"),
 			createdAt: Date.now(),
 		};
@@ -554,6 +574,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 						phone: candidate.phone,
 						note: "",
 						sourceId: candidate.sourceId,
+						tag: null,
 						createdAt: Date.now(),
 					});
 					added += 1;
@@ -718,6 +739,18 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		[debts],
 	);
 
+	/* Templates -------------------------------------------------------- */
+
+	const addTemplate = useCallback((input: TemplateInput) => {
+		const template: TransactionTemplate = { ...input, id: uid("tpl_"), createdAt: Date.now() };
+		setTemplates((prev) => [...prev, template]);
+		return template;
+	}, []);
+
+	const deleteTemplate = useCallback((id: string) => {
+		setTemplates((prev) => prev.filter((t) => t.id !== id));
+	}, []);
+
 	const redistributeHistory = useCallback(() => {
 		setTransactions((prev) => redistribute(prev, categories, wallets, splitIncome));
 	}, [categories, wallets, splitIncome]);
@@ -727,6 +760,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 		setTransfers([]);
 		setContacts([]);
 		setDebts([]);
+		setTemplates([]);
 		setWallets(SEED_WALLETS);
 		setCategories(
 			SEED_CATEGORIES.map((c) =>
@@ -749,6 +783,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			setTransfers(payload.transfers);
 			setContacts(payload.contacts);
 			setDebts(payload.debts);
+			setTemplates(payload.templates);
 			setDefaultUnit(payload.defaultUnit);
 		},
 		[setDefaultUnit],
@@ -763,6 +798,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			transfers,
 			contacts,
 			debts,
+			templates,
 			defaultUnit,
 			setDefaultUnit,
 			addCategory,
@@ -791,6 +827,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			addDebtPayment,
 			updateDebtPayment,
 			deleteDebtPayment,
+			addTemplate,
+			deleteTemplate,
 			redistributeHistory,
 			resetLedger,
 			replaceLedger,
@@ -803,6 +841,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			transfers,
 			contacts,
 			debts,
+			templates,
 			defaultUnit,
 			setDefaultUnit,
 			addCategory,
@@ -831,6 +870,8 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			addDebtPayment,
 			updateDebtPayment,
 			deleteDebtPayment,
+			addTemplate,
+			deleteTemplate,
 			redistributeHistory,
 			resetLedger,
 			replaceLedger,

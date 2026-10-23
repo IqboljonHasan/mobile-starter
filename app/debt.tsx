@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AmountCard from "@/components/AmountCard";
 import BottomBar, { BOTTOM_BAR_SPACE } from "@/components/BottomBar";
@@ -9,19 +9,21 @@ import ContactPicker from "@/components/ContactPicker";
 import DebtPaymentSheet from "@/components/DebtPaymentSheet";
 import WalletPicker from "@/components/WalletPicker";
 import {
-	ActionSheet,
 	Badge,
 	Button,
 	Card,
 	Chip,
 	DateField,
 	FieldLabel,
-	IconButton,
+	HeaderMenu,
+	type HeaderMenuItem,
 	NumberPad,
 	Textarea,
+	Toggle,
 } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
+import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
@@ -29,8 +31,10 @@ import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
 import { addDaysISO, addMonthsISO, formatDate, formatDayLabel, todayISO } from "@/lib/date";
 import {
+	contactName,
 	DIRECTION_META,
 	daysUntilDue,
+	debtShareMessage,
 	debtStatus,
 	paidAmount,
 	paidShare,
@@ -39,6 +43,7 @@ import {
 } from "@/lib/debts";
 import { formatAmount, methodByKey, parseAmount, unitByCode } from "@/lib/money";
 import type { Debt, DebtDirection, DebtPayment, PayMethod } from "@/lib/types";
+import { requestReminderPermission } from "@/lib/debtReminders";
 import { walletBalances } from "@/lib/wallets";
 import "../global.css";
 
@@ -118,6 +123,7 @@ function DebtForm({
 		transactions,
 		transfers,
 		wallets,
+		contacts,
 		defaultUnit,
 		addDebt,
 		updateDebt,
@@ -126,6 +132,7 @@ function DebtForm({
 		updateDebtPayment,
 		deleteDebtPayment,
 	} = useLedger();
+	const { reminders } = usePreferences();
 
 	const [direction, setDirection] = useState<DebtDirection>(
 		existing?.direction ?? initialDirection,
@@ -138,12 +145,14 @@ function DebtForm({
 	const [description, setDescription] = useState(existing?.description ?? "");
 	const [date, setDate] = useState(existing?.date ?? todayISO());
 	const [dueDate, setDueDate] = useState<string | null>(existing?.dueDate ?? null);
+	// On by default for a new debt — a due date is set to be kept — and as
+	// saved for one being edited.
+	const [remind, setRemind] = useState(existing?.remind ?? true);
 	const [payOpen, setPayOpen] = useState(false);
 	// Null while adding a new payment; the payment itself while editing one —
 	// the sheet reads this to seed its fields and to know which mutator to call.
 	const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null);
 	const [padOpen, setPadOpen] = useState(false);
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
 
 	const today = todayISO();
@@ -210,11 +219,49 @@ function DebtForm({
 			description: description.trim(),
 			date,
 			dueDate,
+			remind,
 		};
 
 		if (existing) updateDebt(existing.id, input);
 		else addDebt(input);
+		// Asked here, where a reminder was just wanted, rather than on first
+		// launch; the reminders are scheduled once the answer is in.
+		if (remind && dueDate && reminders.enabled) requestReminderPermission();
 		router.back();
+	};
+
+	// Back to a blank form for this side, as it opened.
+	const clearForm = () => {
+		setContactId(null);
+		setAmountText("");
+		setUnit(defaultUnit);
+		setMethod("cash");
+		setWalletId(null);
+		setDescription("");
+		setDate(todayISO());
+		setDueDate(null);
+		setRemind(true);
+		setSubmitted(false);
+	};
+
+	// A note of the debt for the other person, through whichever messenger
+	// the user picks — the debt as the form holds it, saved or not.
+	const shareDebt = () => {
+		if (!contactId || amountError) {
+			Alert.alert("Avval kishi va summani kiriting", "Xabar shu ma'lumotlardan tuziladi.");
+			return;
+		}
+		Share.share({
+			message: debtShareMessage({
+				direction,
+				name: contactName(contacts, contactId),
+				amount,
+				remaining: existing ? remainingAmount(existing) : undefined,
+				unit,
+				date,
+				dueDate,
+			}),
+		});
 	};
 
 	const confirmDelete = () => {
@@ -257,35 +304,40 @@ function DebtForm({
 	const keyboardLift = Math.max(keyboardInset - insets.bottom, 0);
 	const collecting = paymentType(direction) === "income";
 
-	const menuItems = [
+	const menuItems: HeaderMenuItem[] = [
+		{
+			key: "share",
+			label: incoming ? "Qarz beruvchiga yuborish" : "Qarzdorga yuborish",
+			icon: "share-social-outline",
+			onPress: shareDebt,
+		},
 		...(!existing
 			? [
 					{
 						key: "direction",
 						label: incoming ? "Qarz berishga o'tish" : "Qarz olishga o'tish",
-						hint: incoming ? "Pulni siz berdingiz" : "Pulni siz oldingiz",
 						icon: "swap-vertical-outline" as const,
 						onPress: () => changeDirection(incoming ? "lent" : "borrowed"),
 					},
 				]
 			: []),
-		{
-			key: "contacts",
-			label: "Kontaktlar",
-			icon: "people-outline" as const,
-			onPress: () => router.push("/contacts"),
-		},
-		...(existing
-			? [
-					{
-						key: "delete",
-						label: "Qarzni o'chirish",
-						icon: "trash-outline" as const,
-						danger: true,
-						onPress: confirmDelete,
-					},
-				]
-			: []),
+		existing
+			? {
+					key: "delete",
+					label: "Qarzni o'chirish",
+					icon: "trash-outline",
+					danger: true,
+					separatorBefore: true,
+					onPress: confirmDelete,
+				}
+			: {
+					key: "clear",
+					label: "Formani tozalash",
+					icon: "refresh-outline",
+					danger: true,
+					separatorBefore: true,
+					onPress: clearForm,
+				},
 	];
 
 	return (
@@ -293,14 +345,7 @@ function DebtForm({
 			<Stack.Screen
 				options={{
 					title,
-					headerRight: () => (
-						<IconButton
-							variant="filled"
-							icon="ellipsis-vertical"
-							accessibilityLabel="Boshqa amallar"
-							onPress={() => setMenuOpen(true)}
-						/>
-					),
+					headerRight: () => <HeaderMenu items={menuItems} />,
 				}}
 			/>
 			<ScrollView
@@ -412,6 +457,8 @@ function DebtForm({
 				{/* Who it's with ------------------------------------------------- */}
 				<ContactPicker
 					label={meta.counterparty}
+					sheetTitle={incoming ? "Kimdan oldingiz?" : "Kimga berdingiz?"}
+					unit={unit}
 					value={contactId}
 					onChange={setContactId}
 					error={submitted ? contactError : undefined}
@@ -492,6 +539,38 @@ function DebtForm({
 					)}
 				</View>
 
+				{/* A reminder only makes sense with a date to be reminded of. */}
+				{!!dueDate && (
+					<View
+						className="flex-row items-center bg-card"
+						style={{ borderRadius: 20, gap: 12, paddingVertical: 12, paddingLeft: 14, paddingRight: 8 }}
+					>
+						<View
+							className="items-center justify-center bg-background"
+							style={{ width: 40, height: 40, borderRadius: 12 }}
+						>
+							<Ionicons name="notifications-outline" size={20} color={tc.foreground} />
+						</View>
+						<View className="flex-1" style={{ gap: 2 }}>
+							<Text className="font-bold text-foreground" style={{ fontSize: tf.base }}>
+								Eslatma
+							</Text>
+							<Text className="font-semibold text-muted-foreground" style={{ fontSize: tf.sm - 0.5 }}>
+								{reminders.enabled
+									? reminders.daysBefore === 0
+										? `Muddat kuni, ${String(reminders.hour).padStart(2, "0")}:00`
+										: `Muddatdan ${reminders.daysBefore} kun oldin`
+									: "Eslatmalar o'chirilgan — Qarzlar menyusidan yoqing"}
+							</Text>
+						</View>
+						<Toggle
+							value={remind}
+							onValueChange={setRemind}
+							accessibilityLabel="Muddatdan oldin eslatish"
+						/>
+					</View>
+				)}
+
 				<Textarea
 					label="Izoh"
 					rows={4}
@@ -560,8 +639,6 @@ function DebtForm({
 					</View>
 				</BottomBar>
 			)}
-
-			<ActionSheet visible={menuOpen} onClose={() => setMenuOpen(false)} items={menuItems} />
 
 			{!!existing && (
 				<DebtPaymentSheet

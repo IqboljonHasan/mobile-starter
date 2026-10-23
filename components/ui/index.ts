@@ -1,4 +1,3 @@
-export { ActionSheet, type ActionSheetItem } from "./ActionSheet";
 export { Badge, type BadgeTone } from "./Badge";
 export { default as BottomSheet, type BottomSheetProps } from "./BottomSheet";
 export {
@@ -16,6 +15,7 @@ export { ColorPicker, type ColorPickerProps } from "./ColorPicker";
 export { DateField, type DateFieldProps } from "./DateField";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { FieldLabel } from "./FieldLabel";
+export { HeaderMenu, type HeaderMenuItem } from "./HeaderMenu";
 export { IconButton, type IconButtonProps } from "./IconButton";
 export { CATEGORY_ICONS, IconPicker, type IconPickerProps } from "./IconPicker";
 export {

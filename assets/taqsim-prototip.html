@@ -51,6 +51,7 @@ body {
 .device a:hover { color: #0B1B2E; }
 .device a[href]:active { transform: scale(0.98); }
 .device input::placeholder, .device textarea::placeholder { color: #8A97A8; }
+.device [role="menuitem"]:hover { background: #F1F4F8 !important; }
 .device button:focus-visible, .device a:focus-visible, .device input:focus-visible, .device textarea:focus-visible {
   outline: 2px solid #1556C9; outline-offset: 2px;
 }
@@ -271,7 +272,7 @@ body {
 </div>
 </template>
 <template id="tpl-kirim-chiqimlar">
-<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #0B1B2E">
 
   <section aria-label="Oktabr 2026 yozuvlari" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
     <div style="flex: none; padding: 10px 18px 0; display: flex; flex-direction: column; gap: 14px">
@@ -281,7 +282,7 @@ body {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
         </a>
         <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; color: #0B1B2E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Kirim va chiqimlar</h1>
-        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <button type="button" aria-label="Boshqa amallar" aria-haspopup="menu" aria-expanded="{{menuExpanded}}" onClick="{{toggleMenu}}" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: {{menuBtnBg}}; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
         </button>
       </header>
@@ -389,6 +390,15 @@ body {
         <span aria-hidden="true" style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Chiqim
       </button>
     </div>
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeMenu}}" style="position: absolute; inset: 0; z-index: 30"></div>
+      <div role="menu" aria-label="Boshqa amallar" style="position: absolute; z-index: 31; top: 74px; right: 18px; min-width: 232px; box-sizing: border-box; padding: 6px; border-radius: 20px; background: #FFFFFF; box-shadow: 0 16px 40px rgba(11,27,46,0.18), 0 2px 8px rgba(11,27,46,0.08); display: flex; flex-direction: column">
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Qidirish</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><line x1="21" x2="14" y1="4" y2="4"></line><line x1="10" x2="3" y1="4" y2="4"></line><line x1="21" x2="12" y1="12" y2="12"></line><line x1="8" x2="3" y1="12" y2="12"></line><line x1="21" x2="16" y1="20" y2="20"></line><line x1="12" x2="3" y1="20" y2="20"></line><line x1="14" x2="14" y1="2" y2="6"></line><line x1="8" x2="8" y1="10" y2="14"></line><line x1="16" x2="16" y1="18" y2="22"></line></svg>Filtrlar</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg>Hisobot</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>Excel'ga eksport</button>
+      </div>
+    </sc-if>
   </section>
   <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
     <span>17:25</span>
@@ -406,7 +416,7 @@ body {
 </div>
 </template>
 <template id="tpl-qarzlar">
-<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #0B1B2E">
 
   <section aria-label="Qarzlar" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
     <div style="flex: none; padding: 10px 18px 0; display: flex; flex-direction: column; gap: 14px">
@@ -416,7 +426,7 @@ body {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
         </a>
         <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; color: #0B1B2E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Qarzlar</h1>
-        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <button type="button" aria-label="Boshqa amallar" aria-haspopup="menu" aria-expanded="{{menuExpanded}}" onClick="{{toggleMenu}}" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: {{menuBtnBg}}; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
         </button>
       </header>
@@ -504,6 +514,14 @@ body {
         <span aria-hidden="true" style="display: flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span>Qarz oldim
       </button>
     </div>
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeMenu}}" style="position: absolute; inset: 0; z-index: 30"></div>
+      <div role="menu" aria-label="Boshqa amallar" style="position: absolute; z-index: 31; top: 74px; right: 18px; min-width: 232px; box-sizing: border-box; padding: 6px; border-radius: 20px; background: #FFFFFF; box-shadow: 0 16px 40px rgba(11,27,46,0.18), 0 2px 8px rgba(11,27,46,0.08); display: flex; flex-direction: column">
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Qidirish</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>Eslatmalar</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>Excel'ga eksport</button>
+      </div>
+    </sc-if>
   </section>
   <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
     <span>17:25</span>
@@ -521,7 +539,7 @@ body {
 </div>
 </template>
 <template id="tpl-sozlamalar">
-<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #0B1B2E">
 
   <section aria-label="Sozlamalar" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
     <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
@@ -531,9 +549,6 @@ body {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
         </a>
         <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Sozlamalar</h1>
-        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-        </button>
       </header>
     </div>
 
@@ -637,7 +652,7 @@ body {
 </div>
 </template>
 <template id="tpl-yangi-kirim">
-<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #0B1B2E">
 
   <section aria-label="Yangi kirim" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
     <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
@@ -647,7 +662,7 @@ body {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
         </a>
         <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Yangi kirim</h1>
-        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <button type="button" aria-label="Boshqa amallar" aria-haspopup="menu" aria-expanded="{{menuExpanded}}" onClick="{{toggleMenu}}" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: {{menuBtnBg}}; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
         </button>
       </header>
@@ -761,6 +776,15 @@ body {
 
     <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to top, #FFFFFF 62%, rgba(255,255,255,0)); pointer-events: none"></div>
     <button type="button" data-save="Kirim qo'shildi" style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; height: 58px; border: none; border-radius: 29px; background: #0B1B2E; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Yangi kirim qo'shish</button>
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeMenu}}" style="position: absolute; inset: 0; z-index: 30"></div>
+      <div role="menu" aria-label="Boshqa amallar" style="position: absolute; z-index: 31; top: 74px; right: 18px; min-width: 232px; box-sizing: border-box; padding: 6px; border-radius: 20px; background: #FFFFFF; box-shadow: 0 16px 40px rgba(11,27,46,0.18), 0 2px 8px rgba(11,27,46,0.08); display: flex; flex-direction: column">
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>Shablon sifatida saqlash</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>Har oy takrorlash</button>
+      <div role="separator" style="height: 1px; margin: 4px 12px; background: rgba(11,27,46,0.08)"></div>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #B91C1C; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Formani tozalash</button>
+      </div>
+    </sc-if>
   </section>
   <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
     <span>17:25</span>
@@ -778,7 +802,7 @@ body {
 </div>
 </template>
 <template id="tpl-yangi-chiqim">
-<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #0B1B2E">
 
   <section aria-label="Yangi chiqim" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
     <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
@@ -788,7 +812,7 @@ body {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
         </a>
         <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Yangi chiqim</h1>
-        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <button type="button" aria-label="Boshqa amallar" aria-haspopup="menu" aria-expanded="{{menuExpanded}}" onClick="{{toggleMenu}}" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: {{menuBtnBg}}; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
         </button>
       </header>
@@ -871,6 +895,16 @@ body {
 
     <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to top, #FFFFFF 62%, rgba(255,255,255,0)); pointer-events: none"></div>
     <button type="button" data-save="Chiqim qo'shildi" style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; height: 58px; border: none; border-radius: 29px; background: #0B1B2E; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Yangi chiqim qo'shish</button>
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeMenu}}" style="position: absolute; inset: 0; z-index: 30"></div>
+      <div role="menu" aria-label="Boshqa amallar" style="position: absolute; z-index: 31; top: 74px; right: 18px; min-width: 232px; box-sizing: border-box; padding: 6px; border-radius: 20px; background: #FFFFFF; box-shadow: 0 16px 40px rgba(11,27,46,0.18), 0 2px 8px rgba(11,27,46,0.08); display: flex; flex-direction: column">
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>Chek rasmini qo'shish</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>Shablon sifatida saqlash</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>Har oy takrorlash</button>
+      <div role="separator" style="height: 1px; margin: 4px 12px; background: rgba(11,27,46,0.08)"></div>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #B91C1C; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Formani tozalash</button>
+      </div>
+    </sc-if>
   </section>
   <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
     <span>17:25</span>
@@ -888,7 +922,7 @@ body {
 </div>
 </template>
 <template id="tpl-qarz-berish">
-<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #0B1B2E">
 
   <section aria-label="Qarz berish" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
     <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
@@ -898,7 +932,7 @@ body {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
         </a>
         <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Qarz berish</h1>
-        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <button type="button" aria-label="Boshqa amallar" aria-haspopup="menu" aria-expanded="{{menuExpanded}}" onClick="{{toggleMenu}}" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: {{menuBtnBg}}; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
         </button>
       </header>
@@ -925,13 +959,20 @@ body {
       </div>
 
       <div style="flex: none">
-        <label for="kim" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Kimga</label>
-        <div style="display: flex; align-items: center; gap: 4px; height: 52px; box-sizing: border-box; padding: 0 4px 0 14px; border-radius: 16px; background: #F4F6F9">
-          <input id="kim" type="text" autocomplete="off" placeholder="Ism yoki telefon raqam" style="flex: 1 1 auto; min-width: 0; height: 44px; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 15px; font-weight: 700; color: #0B1B2E">
-          <button type="button" aria-label="Kontaktlardan tanlash" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 12px; background: #FFFFFF; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 2v2"></path><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path><path d="M8 2v2"></path><circle cx="12" cy="11" r="3"></circle><rect x="3" y="4" width="18" height="18" rx="2"></rect></svg>
-          </button>
-        </div>
+        <span id="kim-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Kimga</span>
+        <button type="button" aria-haspopup="dialog" aria-expanded="{{pickerExpanded}}" aria-labelledby="kim-lbl kim-val" onClick="{{openPicker}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; box-sizing: border-box; padding: 10px 12px 10px 10px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <sc-if value="{{hasPerson}}" hint-placeholder-val="{{ true }}">
+            <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 20px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800">{{person.ini}}</span>
+            <span id="kim-val" style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+              <span style="display: flex; align-items: center; gap: 8px; min-width: 0"><span style="min-width: 0; font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{person.name}}</span><span style="flex: none; height: 20px; padding: 0 8px; border-radius: 10px; background: {{person.tagBg}}; color: {{person.tagFg}}; font-size: 11.5px; font-weight: 700; line-height: 20px">{{person.tag}}</span></span>
+              <span style="font-size: 12.5px; line-height: 16px; font-weight: 600; color: {{person.statusColor}}">{{person.status}}</span>
+            </span>
+          </sc-if>
+          <sc-if value="{{noPerson}}" hint-placeholder-val="{{ false }}">
+            <span id="kim-val" style="flex: 1 1 auto; min-width: 0; padding-left: 4px; font-size: 15px; font-weight: 700; color: #8A97A8">Tanlang</span>
+          </sc-if>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
       </div>
 
       <div style="flex: none">
@@ -976,6 +1017,60 @@ body {
 
     <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to top, #FFFFFF 62%, rgba(255,255,255,0)); pointer-events: none"></div>
     <button type="button" data-save="Berilgan qarz qo'shildi" style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; height: 58px; border: none; border-radius: 29px; background: #0B1B2E; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Berilgan qarzni qo'shish</button>
+    <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closePicker}}" style="position: absolute; inset: 0; z-index: 40; background: rgba(11,27,46,0.42)"></div>
+      <div role="dialog" aria-modal="true" aria-labelledby="picker-title" style="position: absolute; z-index: 41; left: 0; right: 0; bottom: 0; max-height: 80%; display: flex; flex-direction: column; box-sizing: border-box; padding: 10px 0 60px; border-radius: 28px 28px 0 0; background: #FFFFFF; box-shadow: 0 -12px 40px rgba(8,20,60,0.25)">
+        <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center"></div>
+        <div style="flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 0 20px">
+          <h2 id="picker-title" style="margin: 0; font-size: 19px; line-height: 24px; font-weight: 800; letter-spacing: -0.01em">Kimga berdingiz?</h2>
+          <button type="button" aria-label="Yopish" onClick="{{closePicker}}" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+        </div>
+        <div style="flex: none; padding: 12px 18px 0">
+          <div style="display: flex; align-items: center; gap: 10px; height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 16px; background: #F4F6F9; color: #5B6B80">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input type="search" aria-label="Ism bo'yicha qidirish" placeholder="Ism bo'yicha qidirish" autocomplete="off" style="flex: 1 1 auto; min-width: 0; height: 44px; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 15px; font-weight: 600; color: #0B1B2E">
+          </div>
+        </div>
+        <div role="group" aria-label="Teg bo'yicha saralash" style="flex: none; display: flex; gap: 6px; padding: 12px 18px 6px">
+          <sc-for list="{{pchips}}" as="c" hint-placeholder-count="3">
+            <button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="flex: none; height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: {{c.bg}}; color: {{c.color}}; font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer">{{c.name}}</button>
+          </sc-for>
+        </div>
+        <ul role="listbox" aria-label="Odamlar" style="flex: 1 1 auto; min-height: 0; overflow-y: auto; list-style: none; margin: 0; padding: 2px 10px 6px">
+          <sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+            <li role="none">
+              <button type="button" role="option" aria-selected="{{p.checked}}" onClick="{{p.pick}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; box-sizing: border-box; padding: 10px; border: none; border-radius: 16px; background: {{p.rowBg}}; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+                <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 20px; background: #F1F4F8; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800">{{p.ini}}</span>
+                <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                  <span style="display: flex; align-items: center; gap: 8px; min-width: 0"><span style="min-width: 0; font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.name}}</span><span style="flex: none; height: 20px; padding: 0 8px; border-radius: 10px; background: {{p.tagBg}}; color: {{p.tagFg}}; font-size: 11.5px; font-weight: 700; line-height: 20px">{{p.tag}}</span></span>
+                  <span style="font-size: 12.5px; line-height: 16px; font-weight: 600; color: {{p.statusColor}}">{{p.status}}</span>
+                </span>
+                <sc-if value="{{p.selected}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B1B2E" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+              </button>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="flex: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 6px 18px 0">
+          <button type="button" aria-label="Telefon kontaktlaridan import qilish" data-toast="Telefon kontaktlari ro'yxati ochiladi" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; height: 52px; border: none; border-radius: 26px; background: #F1F4F8; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 800; white-space: nowrap; cursor: pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M16 2v2"></path><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path><path d="M8 2v2"></path><circle cx="12" cy="11" r="3"></circle><rect x="3" y="4" width="18" height="18" rx="2"></rect></svg>Kontaktlardan
+          </button>
+          <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; height: 52px; border: none; border-radius: 26px; background: #F1F4F8; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 800; white-space: nowrap; cursor: pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Yangi kishi
+          </button>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeMenu}}" style="position: absolute; inset: 0; z-index: 30"></div>
+      <div role="menu" aria-label="Boshqa amallar" style="position: absolute; z-index: 31; top: 74px; right: 18px; min-width: 232px; box-sizing: border-box; padding: 6px; border-radius: 20px; background: #FFFFFF; box-shadow: 0 16px 40px rgba(11,27,46,0.18), 0 2px 8px rgba(11,27,46,0.08); display: flex; flex-direction: column">
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>Tilxat rasmini qo'shish</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"></line><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line></svg>Qarzdorga yuborish</button>
+      <div role="separator" style="height: 1px; margin: 4px 12px; background: rgba(11,27,46,0.08)"></div>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #B91C1C; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Formani tozalash</button>
+      </div>
+    </sc-if>
   </section>
   <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
     <span>17:25</span>
@@ -993,7 +1088,7 @@ body {
 </div>
 </template>
 <template id="tpl-qarz-olish">
-<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #1556C9">
+<div style="position: relative; width: 390px; height: 844px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif; color: #0B1B2E; font-variant-numeric: tabular-nums; background: #0B1B2E">
 
   <section aria-label="Qarz olish" style="position: absolute; left: 0; right: 0; top: 40px; bottom: 0; z-index: 2; display: flex; flex-direction: column; box-sizing: border-box; color: #0B1B2E; background: #FFFFFF; border-radius: 32px 32px 0 0; box-shadow: 0 -12px 40px rgba(8,20,60,0.25); overflow: hidden">
     <div style="flex: none; padding: 10px 18px 8px; display: flex; flex-direction: column; gap: 14px">
@@ -1003,7 +1098,7 @@ body {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>
         </a>
         <h1 style="flex: 1 1 auto; min-width: 0; margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Qarz olish</h1>
-        <button type="button" aria-label="Boshqa amallar" data-toast="Menyu hali chizilmagan" aria-haspopup="menu" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+        <button type="button" aria-label="Boshqa amallar" aria-haspopup="menu" aria-expanded="{{menuExpanded}}" onClick="{{toggleMenu}}" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: {{menuBtnBg}}; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
         </button>
       </header>
@@ -1030,13 +1125,20 @@ body {
       </div>
 
       <div style="flex: none">
-        <label for="kim" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Kimdan</label>
-        <div style="display: flex; align-items: center; gap: 4px; height: 52px; box-sizing: border-box; padding: 0 4px 0 14px; border-radius: 16px; background: #F4F6F9">
-          <input id="kim" type="text" autocomplete="off" placeholder="Ism yoki telefon raqam" style="flex: 1 1 auto; min-width: 0; height: 44px; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 15px; font-weight: 700; color: #0B1B2E">
-          <button type="button" aria-label="Kontaktlardan tanlash" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 12px; background: #FFFFFF; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 2v2"></path><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path><path d="M8 2v2"></path><circle cx="12" cy="11" r="3"></circle><rect x="3" y="4" width="18" height="18" rx="2"></rect></svg>
-          </button>
-        </div>
+        <span id="kim-lbl" style="display: block; margin: 0 0 8px 4px; font-size: 13px; font-weight: 700; color: #5B6B80">Kimdan</span>
+        <button type="button" aria-haspopup="dialog" aria-expanded="{{pickerExpanded}}" aria-labelledby="kim-lbl kim-val" onClick="{{openPicker}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; box-sizing: border-box; padding: 10px 12px 10px 10px; border: none; border-radius: 16px; background: #F4F6F9; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+          <sc-if value="{{hasPerson}}" hint-placeholder-val="{{ true }}">
+            <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 20px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800">{{person.ini}}</span>
+            <span id="kim-val" style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+              <span style="display: flex; align-items: center; gap: 8px; min-width: 0"><span style="min-width: 0; font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{person.name}}</span><span style="flex: none; height: 20px; padding: 0 8px; border-radius: 10px; background: {{person.tagBg}}; color: {{person.tagFg}}; font-size: 11.5px; font-weight: 700; line-height: 20px">{{person.tag}}</span></span>
+              <span style="font-size: 12.5px; line-height: 16px; font-weight: 600; color: {{person.statusColor}}">{{person.status}}</span>
+            </span>
+          </sc-if>
+          <sc-if value="{{noPerson}}" hint-placeholder-val="{{ false }}">
+            <span id="kim-val" style="flex: 1 1 auto; min-width: 0; padding-left: 4px; font-size: 15px; font-weight: 700; color: #8A97A8">Tanlang</span>
+          </sc-if>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6B80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
       </div>
 
       <div style="flex: none">
@@ -1097,6 +1199,60 @@ body {
 
     <div aria-hidden="true" style="position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(to top, #FFFFFF 62%, rgba(255,255,255,0)); pointer-events: none"></div>
     <button type="button" data-save="Olingan qarz qo'shildi" style="position: absolute; z-index: 4; left: 18px; right: 18px; bottom: 56px; height: 58px; border: none; border-radius: 29px; background: #0B1B2E; color: #FFFFFF; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer">Olingan qarzni qo'shish</button>
+    <sc-if value="{{pickerOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closePicker}}" style="position: absolute; inset: 0; z-index: 40; background: rgba(11,27,46,0.42)"></div>
+      <div role="dialog" aria-modal="true" aria-labelledby="picker-title" style="position: absolute; z-index: 41; left: 0; right: 0; bottom: 0; max-height: 80%; display: flex; flex-direction: column; box-sizing: border-box; padding: 10px 0 60px; border-radius: 28px 28px 0 0; background: #FFFFFF; box-shadow: 0 -12px 40px rgba(8,20,60,0.25)">
+        <div aria-hidden="true" style="width: 38px; height: 5px; flex: none; border-radius: 3px; background: rgba(11,27,46,0.16); align-self: center"></div>
+        <div style="flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 0 20px">
+          <h2 id="picker-title" style="margin: 0; font-size: 19px; line-height: 24px; font-weight: 800; letter-spacing: -0.01em">Kimdan oldingiz?</h2>
+          <button type="button" aria-label="Yopish" onClick="{{closePicker}}" style="width: 44px; height: 44px; flex: none; padding: 0; border: none; border-radius: 22px; background: #F1F4F8; color: #0B1B2E; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+        </div>
+        <div style="flex: none; padding: 12px 18px 0">
+          <div style="display: flex; align-items: center; gap: 10px; height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 16px; background: #F4F6F9; color: #5B6B80">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input type="search" aria-label="Ism bo'yicha qidirish" placeholder="Ism bo'yicha qidirish" autocomplete="off" style="flex: 1 1 auto; min-width: 0; height: 44px; padding: 0; border: none; background: transparent; font-family: inherit; font-size: 15px; font-weight: 600; color: #0B1B2E">
+          </div>
+        </div>
+        <div role="group" aria-label="Teg bo'yicha saralash" style="flex: none; display: flex; gap: 6px; padding: 12px 18px 6px">
+          <sc-for list="{{pchips}}" as="c" hint-placeholder-count="3">
+            <button type="button" aria-pressed="{{c.pressed}}" onClick="{{c.pick}}" style="flex: none; height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: {{c.bg}}; color: {{c.color}}; font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer">{{c.name}}</button>
+          </sc-for>
+        </div>
+        <ul role="listbox" aria-label="Odamlar" style="flex: 1 1 auto; min-height: 0; overflow-y: auto; list-style: none; margin: 0; padding: 2px 10px 6px">
+          <sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+            <li role="none">
+              <button type="button" role="option" aria-selected="{{p.checked}}" onClick="{{p.pick}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; box-sizing: border-box; padding: 10px; border: none; border-radius: 16px; background: {{p.rowBg}}; color: #0B1B2E; font-family: inherit; text-align: left; cursor: pointer">
+                <span aria-hidden="true" style="width: 40px; height: 40px; flex: none; border-radius: 20px; background: #F1F4F8; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800">{{p.ini}}</span>
+                <span style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+                  <span style="display: flex; align-items: center; gap: 8px; min-width: 0"><span style="min-width: 0; font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{p.name}}</span><span style="flex: none; height: 20px; padding: 0 8px; border-radius: 10px; background: {{p.tagBg}}; color: {{p.tagFg}}; font-size: 11.5px; font-weight: 700; line-height: 20px">{{p.tag}}</span></span>
+                  <span style="font-size: 12.5px; line-height: 16px; font-weight: 600; color: {{p.statusColor}}">{{p.status}}</span>
+                </span>
+                <sc-if value="{{p.selected}}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B1B2E" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+              </button>
+            </li>
+          </sc-for>
+        </ul>
+        <div style="flex: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 6px 18px 0">
+          <button type="button" aria-label="Telefon kontaktlaridan import qilish" data-toast="Telefon kontaktlari ro'yxati ochiladi" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; height: 52px; border: none; border-radius: 26px; background: #F1F4F8; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 800; white-space: nowrap; cursor: pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M16 2v2"></path><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path><path d="M8 2v2"></path><circle cx="12" cy="11" r="3"></circle><rect x="3" y="4" width="18" height="18" rx="2"></rect></svg>Kontaktlardan
+          </button>
+          <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; height: 52px; border: none; border-radius: 26px; background: #F1F4F8; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 800; white-space: nowrap; cursor: pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Yangi kishi
+          </button>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+      <div aria-hidden="true" onClick="{{closeMenu}}" style="position: absolute; inset: 0; z-index: 30"></div>
+      <div role="menu" aria-label="Boshqa amallar" style="position: absolute; z-index: 31; top: 74px; right: 18px; min-width: 232px; box-sizing: border-box; padding: 6px; border-radius: 20px; background: #FFFFFF; box-shadow: 0 16px 40px rgba(11,27,46,0.18), 0 2px 8px rgba(11,27,46,0.08); display: flex; flex-direction: column">
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>Tilxat rasmini qo'shish</button>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #0B1B2E; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"></line><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"></line></svg>Qarz beruvchiga yuborish</button>
+      <div role="separator" style="height: 1px; margin: 4px 12px; background: rgba(11,27,46,0.08)"></div>
+      <button type="button" role="menuitem" data-toast="Bu amal hali chizilmagan" onClick="{{closeMenu}}" style="display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: none; border-radius: 14px; background: transparent; color: #B91C1C; font-family: inherit; font-size: 15px; font-weight: 600; text-align: left; white-space: nowrap; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Formani tozalash</button>
+      </div>
+    </sc-if>
   </section>
   <div aria-hidden="true" style="position: absolute; z-index: 20; left: 0; right: 0; top: 0; height: 32px; box-sizing: border-box; padding: 0 20px 0 24px; display: flex; align-items: center; justify-content: space-between; color: #FFFFFF; font-size: 14px; font-weight: 600; pointer-events: none">
     <span>17:25</span>
@@ -1222,6 +1378,18 @@ class Component extends DCLogic {
   }
 
   renderVals() {
+    var self = this;
+    var open = !!(this.state && this.state.menu);
+    var v = this._vals();
+    v.menuOpen = open;
+    v.menuExpanded = open ? 'true' : 'false';
+    v.menuBtnBg = open ? '#E3E8EF' : '#F1F4F8';
+    v.toggleMenu = function () { self.setState({ menu: !open }); };
+    v.closeMenu = function () { self.setState({ menu: false }); };
+    return v;
+  }
+
+  _vals() {
     var st = this.state || {};
     var type = st.type || 'all';
     var cat = st.cat || 'all';
@@ -1358,6 +1526,18 @@ class Component extends DCLogic {
   }
 
   renderVals() {
+    var self = this;
+    var open = !!(this.state && this.state.menu);
+    var v = this._vals();
+    v.menuOpen = open;
+    v.menuExpanded = open ? 'true' : 'false';
+    v.menuBtnBg = open ? '#E3E8EF' : '#F1F4F8';
+    v.toggleMenu = function () { self.setState({ menu: !open }); };
+    v.closeMenu = function () { self.setState({ menu: false }); };
+    return v;
+  }
+
+  _vals() {
     var st = this.state || {};
     var type = st.type || 'all';
     var filter = st.filter || 'all';
@@ -1513,6 +1693,18 @@ class Component extends DCLogic {
   }
 
   renderVals() {
+    var self = this;
+    var open = !!(this.state && this.state.menu);
+    var v = this._vals();
+    v.menuOpen = open;
+    v.menuExpanded = open ? 'true' : 'false';
+    v.menuBtnBg = open ? '#E3E8EF' : '#F1F4F8';
+    v.toggleMenu = function () { self.setState({ menu: !open }); };
+    v.closeMenu = function () { self.setState({ menu: false }); };
+    return v;
+  }
+
+  _vals() {
     var st = this.state || {};
     var self = this;
     var method = st.method || 'card';
@@ -1607,6 +1799,18 @@ class Component extends DCLogic {
   }
 
   renderVals() {
+    var self = this;
+    var open = !!(this.state && this.state.menu);
+    var v = this._vals();
+    v.menuOpen = open;
+    v.menuExpanded = open ? 'true' : 'false';
+    v.menuBtnBg = open ? '#E3E8EF' : '#F1F4F8';
+    v.toggleMenu = function () { self.setState({ menu: !open }); };
+    v.closeMenu = function () { self.setState({ menu: false }); };
+    return v;
+  }
+
+  _vals() {
     var st = this.state || {};
     var self = this;
     var method = st.method || 'card';
@@ -1683,6 +1887,65 @@ class Component extends DCLogic {
   }
 
   renderVals() {
+    var self = this;
+    var open = !!(this.state && this.state.menu);
+    var v = this._vals();
+    v.menuOpen = open;
+    v.menuExpanded = open ? 'true' : 'false';
+    v.menuBtnBg = open ? '#E3E8EF' : '#F1F4F8';
+    v.toggleMenu = function () { self.setState({ menu: !open }); };
+    v.closeMenu = function () { self.setState({ menu: false }); };
+    var PEOPLE = [
+      { id: 'aziz', name: 'Aziz Karimov', ini: 'AK', tag: 'friend', bal: 600000 },
+      { id: 'dilnoza', name: 'Dilnoza Rahimova', ini: 'DR', tag: 'friend', bal: 500000 },
+      { id: 'sardor', name: 'Sardor aka', ini: 'SA', tag: 'relative', bal: -800000 },
+      { id: 'jasur', name: 'Jasur Toshmatov', ini: 'JT', tag: 'friend', bal: 400000 },
+      { id: 'otabek', name: "Otabek tog'a", ini: 'OT', tag: 'relative', bal: 0 },
+      { id: 'nodira', name: 'Nodira Aliyeva', ini: 'NA', tag: 'relative', bal: 0 },
+      { id: 'bobur', name: 'Bobur Qodirov', ini: 'BQ', tag: 'friend', bal: 0 }
+    ];
+    var pst = this.state || {};
+    var pid = pst.person === undefined ? 'aziz' : pst.person;
+    var pOpen = pst.picker === undefined ? false : !!pst.picker;
+    var pf = pst.pfilter || 'all';
+    function pStatus(b) {
+      if (b > 0) return { text: 'Sizga qarzdor \u00b7 ' + self.fmt(b) + " so'm", color: '#15803D' };
+      if (b < 0) return { text: 'Siz qarzdorsiz \u00b7 ' + self.fmt(-b) + " so'm", color: '#B91C1C' };
+      return { text: "Qarz yo'q", color: '#5B6B80' };
+    }
+    function pTag(t) {
+      return t === 'friend' ? { tag: "Do'st", tagBg: '#E3ECFB', tagFg: '#1D4ED8' } : { tag: 'Qarindosh', tagBg: '#FDEBDD', tagFg: '#C2410C' };
+    }
+    function pView(p) {
+      var s = pStatus(p.bal), t = pTag(p.tag);
+      return { name: p.name, ini: p.ini, tag: t.tag, tagBg: t.tagBg, tagFg: t.tagFg, status: s.text, statusColor: s.color };
+    }
+    var sel = PEOPLE.filter(function (p) { return p.id === pid; })[0];
+    v.hasPerson = !!sel;
+    v.noPerson = !sel;
+    v.person = sel ? pView(sel) : {};
+    v.pickerOpen = pOpen;
+    v.pickerExpanded = pOpen ? 'true' : 'false';
+    v.openPicker = function () { self.setState({ picker: true, menu: false }); };
+    v.closePicker = function () { self.setState({ picker: false }); };
+    v.pchips = [{ id: 'all', name: 'Hammasi' }, { id: 'friend', name: "Do'stlar" }, { id: 'relative', name: 'Qarindoshlar' }].map(function (c) {
+      var on = c.id === pf;
+      return { name: c.name, pressed: on ? 'true' : 'false', bg: on ? '#0B1B2E' : '#F1F4F8', color: on ? '#FFFFFF' : '#0B1B2E',
+               pick: function () { self.setState({ pfilter: c.id }); } };
+    });
+    v.people = PEOPLE.filter(function (p) { return pf === 'all' || p.tag === pf; }).map(function (p) {
+      var on = p.id === pid;
+      var o = pView(p);
+      o.selected = on;
+      o.checked = on ? 'true' : 'false';
+      o.rowBg = on ? '#F4F6F9' : 'transparent';
+      o.pick = function () { self.setState({ person: p.id, picker: false }); };
+      return o;
+    });
+    return v;
+  }
+
+  _vals() {
     var st = this.state || {};
     var self = this;
     var method = st.method || 'cash';
@@ -1749,6 +2012,65 @@ class Component extends DCLogic {
   }
 
   renderVals() {
+    var self = this;
+    var open = !!(this.state && this.state.menu);
+    var v = this._vals();
+    v.menuOpen = open;
+    v.menuExpanded = open ? 'true' : 'false';
+    v.menuBtnBg = open ? '#E3E8EF' : '#F1F4F8';
+    v.toggleMenu = function () { self.setState({ menu: !open }); };
+    v.closeMenu = function () { self.setState({ menu: false }); };
+    var PEOPLE = [
+      { id: 'aziz', name: 'Aziz Karimov', ini: 'AK', tag: 'friend', bal: 600000 },
+      { id: 'dilnoza', name: 'Dilnoza Rahimova', ini: 'DR', tag: 'friend', bal: 500000 },
+      { id: 'sardor', name: 'Sardor aka', ini: 'SA', tag: 'relative', bal: -800000 },
+      { id: 'jasur', name: 'Jasur Toshmatov', ini: 'JT', tag: 'friend', bal: 400000 },
+      { id: 'otabek', name: "Otabek tog'a", ini: 'OT', tag: 'relative', bal: 0 },
+      { id: 'nodira', name: 'Nodira Aliyeva', ini: 'NA', tag: 'relative', bal: 0 },
+      { id: 'bobur', name: 'Bobur Qodirov', ini: 'BQ', tag: 'friend', bal: 0 }
+    ];
+    var pst = this.state || {};
+    var pid = pst.person === undefined ? 'sardor' : pst.person;
+    var pOpen = pst.picker === undefined ? false : !!pst.picker;
+    var pf = pst.pfilter || 'all';
+    function pStatus(b) {
+      if (b > 0) return { text: 'Sizga qarzdor \u00b7 ' + self.fmt(b) + " so'm", color: '#15803D' };
+      if (b < 0) return { text: 'Siz qarzdorsiz \u00b7 ' + self.fmt(-b) + " so'm", color: '#B91C1C' };
+      return { text: "Qarz yo'q", color: '#5B6B80' };
+    }
+    function pTag(t) {
+      return t === 'friend' ? { tag: "Do'st", tagBg: '#E3ECFB', tagFg: '#1D4ED8' } : { tag: 'Qarindosh', tagBg: '#FDEBDD', tagFg: '#C2410C' };
+    }
+    function pView(p) {
+      var s = pStatus(p.bal), t = pTag(p.tag);
+      return { name: p.name, ini: p.ini, tag: t.tag, tagBg: t.tagBg, tagFg: t.tagFg, status: s.text, statusColor: s.color };
+    }
+    var sel = PEOPLE.filter(function (p) { return p.id === pid; })[0];
+    v.hasPerson = !!sel;
+    v.noPerson = !sel;
+    v.person = sel ? pView(sel) : {};
+    v.pickerOpen = pOpen;
+    v.pickerExpanded = pOpen ? 'true' : 'false';
+    v.openPicker = function () { self.setState({ picker: true, menu: false }); };
+    v.closePicker = function () { self.setState({ picker: false }); };
+    v.pchips = [{ id: 'all', name: 'Hammasi' }, { id: 'friend', name: "Do'stlar" }, { id: 'relative', name: 'Qarindoshlar' }].map(function (c) {
+      var on = c.id === pf;
+      return { name: c.name, pressed: on ? 'true' : 'false', bg: on ? '#0B1B2E' : '#F1F4F8', color: on ? '#FFFFFF' : '#0B1B2E',
+               pick: function () { self.setState({ pfilter: c.id }); } };
+    });
+    v.people = PEOPLE.filter(function (p) { return pf === 'all' || p.tag === pf; }).map(function (p) {
+      var on = p.id === pid;
+      var o = pView(p);
+      o.selected = on;
+      o.checked = on ? 'true' : 'false';
+      o.rowBg = on ? '#F4F6F9' : 'transparent';
+      o.pick = function () { self.setState({ person: p.id, picker: false }); };
+      return o;
+    });
+    return v;
+  }
+
+  _vals() {
     var st = this.state || {};
     var self = this;
     var method = st.method || 'cash';
@@ -1879,10 +2201,10 @@ return Component;
     return entry;
   }
 
-  function settle() {
+  function settle(keepUnderVisible) {
     stack.forEach(function (e, i) {
       var top = i === stack.length - 1;
-      e.el.classList.toggle('is-under', !top);
+      if (!(keepUnderVisible && !top)) e.el.classList.toggle('is-under', !top);
       if (top) { e.el.removeAttribute('inert'); e.el.removeAttribute('aria-hidden'); }
       else { e.el.setAttribute('inert', ''); e.el.setAttribute('aria-hidden', 'true'); }
     });
@@ -1902,8 +2224,9 @@ return Component;
     entry.el.addEventListener('animationend', function done() {
       entry.el.classList.remove('enter');
       entry.el.removeEventListener('animationend', done);
+      if (stack[stack.length - 1] === entry) settle();
     });
-    settle();
+    settle(true);
   }
 
   function back(fallback) {
@@ -1950,6 +2273,12 @@ return Component;
     var params = null;
     if (t.hasAttribute('data-params')) { try { params = JSON.parse(t.getAttribute('data-params')); } catch (err) { params = null; } }
     go(route, params);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !stack.length) return;
+    var top = stack[stack.length - 1];
+    if (top.comp.state && top.comp.state.menu) top.comp.setState({ menu: false });
   });
 
   var swipe = null;

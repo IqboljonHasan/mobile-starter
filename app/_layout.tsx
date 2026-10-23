@@ -16,6 +16,7 @@ import { LedgerProvider, useLedger } from "@/contexts/LedgerContext";
 import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import { TelegramBackupProvider } from "@/contexts/TelegramBackupContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { useDebtReminders } from "@/hooks/useDebtReminders";
 import { useTheme } from "@/hooks/useTheme";
 import "../global.css";
 
@@ -31,6 +32,7 @@ function AppContent() {
 	const { isDark, tc } = useTheme();
 	const insets = useSafeAreaInsets();
 	const { ready } = useLedger();
+	useDebtReminders();
 
 	// Paints the window behind the navigation bar, so an overscroll or a
 	// translucent system bar doesn't flash white in dark mode.
@@ -61,8 +63,8 @@ function AppContent() {
 					paddingRight: insets.right,
 				}}
 			>
-				{/* Every screen has the brand blue under the status bar — the home
-				    screen's sky, or the strip above a sheet — so its icons are light
+				{/* Every screen is dark under the status bar — the home screen's
+				    blue sky, or the navy strip above a sheet — so its icons are light
 				    in both themes. */}
 				<StatusBar style="light" />
 				<Stack

@@ -93,6 +93,7 @@
   --color-primary-fg: var(--primary-fg);
   --color-brand: var(--brand);
   --color-brand-fg: var(--brand-fg);
+  --color-backdrop: var(--backdrop);
   --color-success: var(--success);
   --color-success-fg: var(--success-fg);
   --color-success-soft: var(--success-soft);
@@ -131,6 +132,8 @@
   /* The blue behind the sheets and on the home screen. */
   --brand: #1556c9;
   --brand-fg: #ffffff;
+  /* What shows above a sheet, behind its rounded top. */
+  --backdrop: #0b1b2e;
   --success: #15803d;
   --success-fg: #ffffff;
   --success-soft: #e3f6e9;
@@ -167,6 +170,7 @@
     --primary-fg: #0b1b2e;
     --brand: #123b80;
     --brand-fg: #ffffff;
+    --backdrop: #070b11;
     --success: #22a05a;
     --success-fg: #ffffff;
     --success-soft: #15301f;
