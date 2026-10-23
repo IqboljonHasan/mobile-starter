@@ -32,28 +32,15 @@ export default function ScreenHeader({ options, navigation, back, route }: Nativ
 					backgroundColor: tc.background,
 					borderTopLeftRadius: RADIUS.sheet,
 					borderTopRightRadius: RADIUS.sheet,
-					paddingTop: 10,
+					paddingTop: 6,
 					paddingHorizontal: 18,
 					paddingBottom: 8,
 				}}
 			>
-				<View
-					accessibilityElementsHidden
-					importantForAccessibility="no-hide-descendants"
-					style={{
-						alignSelf: "center",
-						width: 38,
-						height: 5,
-						borderRadius: 3,
-						backgroundColor: tc.disabled,
-						opacity: 0.7,
-						marginBottom: 10,
-					}}
-				/>
 				<View className="flex-row items-center" style={{ gap: 10, minHeight: 44 }}>
 					{back && (
 						<IconButton
-							variant="filled"
+							variant="ghost"
 							icon="arrow-back"
 							accessibilityLabel="Orqaga"
 							onPress={navigation.goBack}

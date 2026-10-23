@@ -34,12 +34,15 @@ There is one home screen; everything else is a sheet pushed over it.
 - **Home** — the total balance with this month's net under it, a row of
   wallet tiles, the debts either way, and a link to the report. The month sits
   in a panel at the bottom with its income, its spending and the two add
-  buttons; swiping the panel up opens the month's entries. Every figure is a
-  way in — a wallet tile opens the entries narrowed to that wallet.
-- **Kirim va chiqimlar** — both sides of the ledger in one list, a month at a
-  time, grouped by day with a per-day net. Two tiles total the month and filter
-  to one side; chips narrow it to a wallet (counting only the share that wallet
-  received). The ⋮ menu searches the month and filters by category.
+  buttons. Home doesn't scroll on its own: pulling the panel up scrolls it away
+  and the panel becomes the month's ledger (below), which then stays at the
+  top; pulling it down or pressing back scrolls Home back. A wallet tile pulls
+  the ledger up narrowed to that wallet.
+- **Kirim va chiqimlar** — Home's panel pulled up (`components/LedgerSheet.tsx`):
+  both sides of the ledger in one list, a month at a time, grouped by day with
+  a per-day net. The two totals filter to one side; chips narrow it to a wallet
+  (counting only the share that wallet received). The ⋮ menu searches the
+  month and filters by category.
 - **Qarzlar** — what is owed either way, grouped into overdue, open and
   settled, filterable by direction and state. The ⋮ menu searches by person or
   note and opens **Eslatmalar**: local notifications before a due date.
@@ -60,7 +63,6 @@ index.ts                 entry: expo-router + the background backup task
 app/
   _layout.tsx            root Stack + providers; every screen gets ScreenHeader
   index.tsx              Home
-  entries.tsx            Kirim va chiqimlar — the month's ledger
   debts.tsx              Qarzlar
   transaction.tsx        create / edit / delete one entry
   debt.tsx               create / edit / settle one debt
@@ -73,6 +75,7 @@ app/
 components/
   ScreenHeader.tsx       the navy strip + rounded sheet top every screen wears
   HomeSky.tsx            the home screen's gradient backdrop
+  LedgerSheet.tsx        Home's month panel, pulled up into the month's ledger
   SplashOverlay.tsx      the splash, redrawn in React for as long as it loads
   AmountCard.tsx         a form's amount, pay method and unit
   BottomBar.tsx          actions pinned to the bottom of a sheet

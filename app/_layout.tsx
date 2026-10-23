@@ -80,7 +80,6 @@ function AppContent() {
 					}}
 				>
 					<Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
-					<Stack.Screen name="entries" options={{ title: "Kirim va chiqimlar" }} />
 					<Stack.Screen name="debts" options={{ title: "Qarzlar" }} />
 					<Stack.Screen name="transaction" options={{ title: "Yozuv" }} />
 					<Stack.Screen name="categories" options={{ title: "Kategoriyalar" }} />

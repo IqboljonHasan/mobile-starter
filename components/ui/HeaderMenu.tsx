@@ -53,7 +53,7 @@ export function HeaderMenu({
 		<>
 			<View ref={anchor} collapsable={false}>
 				<IconButton
-					variant="filled"
+					variant="ghost"
 					icon="ellipsis-vertical"
 					accessibilityLabel={accessibilityLabel}
 					active={position !== null}

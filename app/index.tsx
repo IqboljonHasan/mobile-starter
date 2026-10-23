@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeSky from "@/components/HomeSky";
-import MonthSwitcher from "@/components/MonthSwitcher";
+import LedgerSheet, { type LedgerSheetHandle } from "@/components/LedgerSheet";
 import WalletIcon from "@/components/WalletIcon";
-import { Button, IconButton, PillTabs, Select } from "@/components/ui";
+import { IconButton, Select } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -17,11 +17,10 @@ import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue, softTint } from "@/lib/categoryColors";
 import { currentMonthKey } from "@/lib/date";
 import { outstandingByUnit } from "@/lib/debts";
-import { excludeDebts, inMonth, inUnit, ofType, sum, unitsUsed } from "@/lib/ledger";
+import { excludeDebts, inMonth, inUnit, ofType, sum } from "@/lib/ledger";
 import { formatAmount, formatCompact, maskAmount, unitByCode } from "@/lib/money";
-import { periodSummary } from "@/lib/stats";
 import { homePalette } from "@/lib/theme";
-import { UNALLOCATED_ID, walletBalances, walletUnitsUsed } from "@/lib/wallets";
+import { walletBalances, walletUnitsUsed } from "@/lib/wallets";
 import "../global.css";
 
 const TILE_W = 116;
@@ -33,9 +32,11 @@ const TILE_GAP = 4;
  * way. The month itself sits in the panel at the bottom with the two things
  * done most — adding money in and money out — so they never scroll away.
  *
- * Every figure is a way in: a wallet opens the ledger narrowed to it, the
- * month's income or spending opens the ledger on that side, the debts card
- * opens the debts, and a swipe up on the panel opens the whole month.
+ * The screen doesn't scroll on its own: the panel is the top of the month's
+ * ledger (LedgerSheet), and pulling it up scrolls Home away above it until
+ * the ledger has the screen. Every figure is a way in — a wallet pulls the
+ * ledger up narrowed to it, the month's income or spending on that side, and
+ * the debts card opens the debts.
  */
 export default function HomeScreen() {
 	const router = useRouter();
@@ -48,30 +49,19 @@ export default function HomeScreen() {
 	useDoubleBackToExit();
 
 	const [month, setMonth] = useState(currentMonthKey);
-	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
 	const [pickedWalletUnit, setPickedWalletUnit] = useState<string | null>(null);
 	const [panelHeight, setPanelHeight] = useState(272);
+	const [screenHeight, setScreenHeight] = useState(0);
+	const ledger = useRef<LedgerSheetHandle>(null);
 
-	// Amounts in different units can't be added up, so the month reports one
-	// unit at a time: the user's default when the month contains it, otherwise
-	// the busiest unit in the month. The chooser only appears when there's an
-	// actual choice to make.
-	const units = useMemo(() => unitsUsed(inMonth(transactions, month)), [transactions, month]);
-	const unit =
-		pickedUnit && units.includes(pickedUnit)
-			? pickedUnit
-			: units.includes(defaultUnit)
-				? defaultUnit
-				: (units[0] ?? defaultUnit);
-
-	// Debt categories (borrowing, lending, collection, repayment) are money
-	// moving against a debt, not real income or spending — left out of every
-	// stat below unless the user opts back in from Settings.
-	const relevant = useMemo(() => {
-		const scoped = inUnit(transactions, unit);
-		return includeDebtsInStats ? scoped : excludeDebts(scoped);
-	}, [transactions, unit, includeDebtsInStats]);
-	const summary = useMemo(() => periodSummary(relevant, "month", month), [relevant, month]);
+	// Home scrolls with the ledger: whatever the sheet's top edge has risen
+	// above its resting place, the content above it has gone up by the same.
+	// Starts below any screen, so nothing moves before the sheet has reported in.
+	const sheetTop = useSharedValue(100_000);
+	const restingTop = screenHeight - panelHeight;
+	const contentStyle = useAnimatedStyle(() => ({
+		transform: [{ translateY: screenHeight ? Math.min(sheetTop.get() - restingTop, 0) : 0 }],
+	}));
 
 	// The balance is deliberately independent of the month in the panel: what
 	// a jar holds is an all-time running balance, not something a month resets,
@@ -114,19 +104,6 @@ export default function HomeScreen() {
 	}, [debts, walletUnit]);
 	const debtUnit = debtTotal?.unit ?? walletUnit;
 
-	const openMonth = () => router.push(`/entries?month=${month}`);
-
-	// A swipe up on the panel pulls the month's whole ledger up, the way the
-	// panel's handle suggests it would. Taps still reach the buttons: the pan
-	// only takes over once the finger has moved.
-	const swipeUp = Gesture.Pan()
-		.runOnJS(true)
-		.activeOffsetY(-16)
-		.failOffsetX([-24, 24])
-		.onEnd((e) => {
-			if (e.translationY < -40) openMonth();
-		});
-
 	const { symbol, position } = unitByCode(walletUnit);
 	const hero = Math.round(tf.xxxl * 1.7);
 	const glass = { backgroundColor: sky.glass };
@@ -143,17 +120,10 @@ export default function HomeScreen() {
 	}
 
 	return (
-		<View className="flex-1">
+		<View className="flex-1" onLayout={(e) => setScreenHeight(e.nativeEvent.layout.height)}>
 			<HomeSky />
 
-			<ScrollView
-				contentContainerStyle={{
-					paddingTop: insets.top + 12,
-					paddingHorizontal: 18,
-					paddingBottom: panelHeight + 20,
-				}}
-				showsVerticalScrollIndicator={false}
-			>
+			<Animated.View style={[{ paddingTop: insets.top + 12, paddingHorizontal: 18 }, contentStyle]}>
 				{/* Balance ------------------------------------------------------ */}
 				<View accessibilityLabel="Jami balans">
 					{/* The label shares its row with the screen's controls, as the
@@ -263,17 +233,14 @@ export default function HomeScreen() {
 					style={{ marginHorizontal: -18, marginTop: 56 }}
 					contentContainerStyle={{ gap: TILE_GAP }}
 				>
+					{/* Read-only: the balances are shown here, and the last tile is
+					    the way to the wallets themselves. */}
 					{balances.map((b) => (
-						<Pressable
+						<View
 							key={b.walletId}
-							accessibilityRole="button"
+							accessible
 							accessibilityLabel={`${b.name}, ${hideIncome ? "yashirilgan" : formatAmount(b.balance, walletUnit)}`}
-							onPress={() =>
-								b.walletId === UNALLOCATED_ID
-									? router.push("/wallets")
-									: router.push(`/entries?wallet=${b.walletId}`)
-							}
-							className="items-center justify-center active:opacity-70"
+							className="items-center justify-center"
 							style={[glass, { width: TILE_W, height: 104, borderRadius: 22, gap: 12 }]}
 						>
 							<WalletIcon icon={b.icon} color={b.color} size={48} />
@@ -287,7 +254,7 @@ export default function HomeScreen() {
 							>
 								{hideIncome ? "••••" : formatCompact(b.balance, walletUnit)}
 							</Text>
-						</Pressable>
+						</View>
 					))}
 					{/* The way to the jars themselves — their shares, transfers and
 					    history — which no single tile opens. */}
@@ -385,104 +352,16 @@ export default function HomeScreen() {
 					</View>
 					<Ionicons name="chevron-forward" size={18} color={sky.glassMuted} />
 				</Pressable>
-			</ScrollView>
+			</Animated.View>
 
-			{/* The month panel -------------------------------------------------- */}
-			<GestureDetector gesture={swipeUp}>
-				<View
-					onLayout={(e) => setPanelHeight(e.nativeEvent.layout.height)}
-					style={[
-						glass,
-						{
-							position: "absolute",
-							left: 0,
-							right: 0,
-							bottom: 0,
-							borderTopLeftRadius: 32,
-							borderTopRightRadius: 32,
-							paddingHorizontal: 18,
-							paddingTop: 10,
-							paddingBottom: 16,
-							gap: 14,
-						},
-					]}
-				>
-					<Pressable
-						accessibilityRole="button"
-						accessibilityLabel="Oyning barcha yozuvlari"
-						onPress={openMonth}
-						hitSlop={{ top: 10, bottom: 6, left: 40, right: 40 }}
-						className="self-center"
-					>
-						<View
-							style={{
-								width: 38,
-								height: 5,
-								borderRadius: 3,
-								backgroundColor: isDark ? "rgba(232,238,246,0.22)" : "rgba(11,27,46,0.16)",
-							}}
-						/>
-					</Pressable>
-
-					<MonthSwitcher value={month} onChange={setMonth} surface="glass" />
-					{units.length > 1 && (
-						<PillTabs
-							compact
-							fill
-							items={units.map((code) => ({ key: code, label: code }))}
-							value={unit}
-							onChange={setPickedUnit}
-						/>
-					)}
-
-					<View className="flex-row">
-						<MonthSide
-							type="income"
-							amount={summary.income}
-							unit={unit}
-							showUnit={unit !== defaultUnit}
-							mask={hideIncome}
-							onPress={() => router.push(`/entries?type=income&month=${month}`)}
-						/>
-						<View style={{ width: 1, backgroundColor: sky.glassDivider }} />
-						<MonthSide
-							type="expense"
-							amount={summary.expense}
-							unit={unit}
-							showUnit={unit !== defaultUnit}
-							mask={false}
-							onPress={() => router.push(`/entries?type=expense&month=${month}`)}
-						/>
-					</View>
-
-					<View className="flex-row" style={{ gap: 4 }}>
-						<View className="flex-1">
-							<Button
-								label="Kirim"
-								variant="soft"
-								color="success"
-								size="lg"
-								fullWidth
-								accessibilityLabel="Kirim qo'shish"
-								startIcon={<Ionicons name="add" size={20} color={tc.success} />}
-								onPress={() => router.push("/transaction?type=income")}
-							/>
-						</View>
-						<View className="flex-1">
-							<Button
-								label="Chiqim"
-								variant="soft"
-								color="danger"
-								size="lg"
-								fullWidth
-								accessibilityLabel="Chiqim qo'shish"
-								startIcon={<Ionicons name="add" size={20} color={tc.danger} />}
-								onPress={() => router.push("/transaction?type=expense")}
-							/>
-						</View>
-					</View>
-				</View>
-			</GestureDetector>
+			{/* The month, and pulled up, its whole ledger --------------------- */}
+			<LedgerSheet
+				ref={ledger}
+				month={month}
+				onMonthChange={setMonth}
+				animatedPosition={sheetTop}
+				onCollapsedHeight={setPanelHeight}
+			/>
 		</View>
 	);
 }
@@ -537,56 +416,5 @@ function DebtSide({
 				</Text>
 			</View>
 		</View>
-	);
-}
-
-/** The month's income or spending in the panel — a way into that side of it. */
-function MonthSide({
-	type,
-	amount,
-	unit,
-	showUnit,
-	mask,
-	onPress,
-}: {
-	type: "income" | "expense";
-	amount: number;
-	unit: string;
-	showUnit: boolean;
-	mask: boolean;
-	onPress: () => void;
-}) {
-	const { tc, isDark } = useTheme();
-	const { tf } = useFont();
-	const sky = homePalette(isDark);
-	const income = type === "income";
-	const label = income ? "Kirim" : "Chiqim";
-
-	return (
-		<Pressable
-			accessibilityRole="button"
-			accessibilityLabel={`${label}, ${mask ? "yashirilgan" : formatAmount(amount, unit)}`}
-			onPress={onPress}
-			className={`flex-1 gap-1 active:opacity-70 ${income ? "pr-2.5" : "px-2.5"}`}
-		>
-			<View className="flex-row items-center gap-1.5">
-				<Ionicons
-					name={income ? "arrow-down" : "arrow-up"}
-					size={13}
-					color={income ? tc.success : tc.danger}
-				/>
-				<Text className="font-semibold" style={{ fontSize: tf.xs + 1, color: sky.glassMuted }}>
-					{label}
-				</Text>
-			</View>
-			<Text
-				className="font-extrabold text-foreground"
-				style={{ fontSize: tf.xl + 1, letterSpacing: -0.2 }}
-				numberOfLines={1}
-				adjustsFontSizeToFit
-			>
-				{mask ? maskAmount(unit) : formatAmount(amount, unit, { showUnit })}
-			</Text>
-		</Pressable>
 	);
 }

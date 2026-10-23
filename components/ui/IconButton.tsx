@@ -11,11 +11,12 @@ export interface IconButtonProps {
 	/** Icon tint. Defaults to the foreground color. */
 	color?: string;
 	/**
-	 * `plain` — a bare 36px icon, for inline use. `filled` — a 44px circle on
-	 * the muted tone, the way header and switcher buttons are drawn. `glass` —
-	 * the same circle, translucent white, for laying over the brand blue.
+	 * `plain` — a bare 36px icon, for inline use. `ghost` — the same icon with
+	 * a full 44px touch target and no fill, the way a sheet's header buttons
+	 * are drawn. `filled` — a 44px circle on the muted tone. `glass` — the same
+	 * circle, translucent white, for laying over the brand blue.
 	 */
-	variant?: "plain" | "filled" | "glass";
+	variant?: "plain" | "ghost" | "filled" | "glass";
 	/** Drawn pressed-in — a menu button while its menu is open. */
 	active?: boolean;
 	disabled?: boolean;
