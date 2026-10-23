@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taqsim — Maxfiylik siyosati</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --card: #f4f6f9;
+    --fg: #0b1b2e;
+    --muted: #5b6b80;
+    --border: #e5e9ef;
+    --accent: #1556c9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1722;
+      --card: #18222f;
+      --fg: #e8eef6;
+      --muted: #8e9db0;
+      --border: #253142;
+      --accent: #5b93e6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Manrope, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 20px 64px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 { font-size: 20px; margin: 36px 0 10px; }
+  h3 { font-size: 16px; margin: 20px 0 6px; }
+  p, li { color: var(--fg); }
+  .meta { color: var(--muted); margin: 0 0 28px; }
+  .summary {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 18px 20px;
+  }
+  .summary ul { margin: 8px 0 0; padding-left: 20px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 700; }
+  a { color: var(--accent); }
+  code { background: var(--card); padding: 1px 6px; border-radius: 6px; font-size: 14px; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Maxfiylik siyosati</h1>
+  <p class="meta">Taqsim ilovasi · Kuchga kirgan sana: 23-oktabr, 2026</p>
+
+  <div class="summary">
+    <strong>Qisqacha</strong>
+    <ul>
+      <li>Taqsimda hisob (akkaunt) yo'q va bizning serverimiz yo'q. Barcha ma'lumotlaringiz faqat telefoningizda saqlanadi.</li>
+      <li>Biz hech qanday ma'lumot to'plamaymiz, ko'rmaymiz va hech kimga sotmaymiz. Ilovada reklama, analitika yoki kuzatuv vositalari yo'q.</li>
+      <li>Ma'lumot telefondan faqat siz o'zingiz yoqqan holatlarda chiqadi: zaxira faylini saqlaganingizda yoki Telegram orqali zaxira yuborishni sozlaganingizda.</li>
+    </ul>
+  </div>
+
+  <h2>1. Ushbu siyosat nima haqida</h2>
+  <p>
+    Ushbu hujjat Taqsim mobil ilovasi (keyingi o'rinlarda — «ilova») qanday ma'lumotlar bilan ishlashini,
+    ular qayerda saqlanishini va siz ularni qanday boshqarishingiz mumkinligini tushuntiradi.
+    Ilova shaxsiy moliyani yuritish uchun mo'ljallangan: kirim va chiqimlar, hamyonlar, qarzlar va kontaktlar.
+  </p>
+
+  <h2>2. Ilova qanday ma'lumotlarni saqlaydi</h2>
+  <p>Ilovaga siz kiritgan quyidagi ma'lumotlar <strong>faqat qurilmangizning o'zida</strong> saqlanadi:</p>
+  <ul>
+    <li>kirim va chiqim yozuvlari: summa, valyuta, kategoriya, izoh, sana, to'lov turi (karta yoki naqd);</li>
+    <li>kategoriyalar, hamyonlar, ularning ulushlari va hamyonlar orasidagi o'tkazmalar;</li>
+    <li>qarzlar va ularga qilingan to'lovlar, qaytarish muddatlari, eslatma sozlamalari;</li>
+    <li>siz qo'shgan yoki telefon kontaktlaridan import qilgan kishilar: ism, telefon raqami, izoh va teg («Do'st», «Qarindosh»);</li>
+    <li>yozuv shablonlari;</li>
+    <li>ilova sozlamalari (mavzu, matn o'lchami, valyuta va boshqalar);</li>
+    <li>Telegram zaxirasini sozlagan bo'lsangiz — bot tokeni va chat ID.</li>
+  </ul>
+  <p>
+    Bu ma'lumotlar bizga yoki boshqa biror tomonga yuborilmaydi. Ular ilova o'chirilganda yoki
+    Sozlamalardagi «Barcha ma'lumotlarni o'chirish» orqali qurilmadan o'chadi.
+  </p>
+
+  <h2>3. Ilova so'raydigan ruxsatlar</h2>
+  <table>
+    <thead>
+      <tr><th>Ruxsat</th><th>Nima uchun</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Kontaktlar</td>
+        <td>
+          Faqat siz «Kontaktlardan» tugmasini bosganingizda, qarz yozish uchun kishilarni tez qo'shishga.
+          Ilova faqat siz tanlagan kishilarning ismi va telefon raqamini o'qiydi va ularni o'z ichida saqlaydi.
+          Telefoningizdagi kontaktlar o'zgartirilmaydi. Ruxsat berilmasa ham ilova to'liq ishlaydi —
+          kishilarni qo'lda qo'shish mumkin.
+        </td>
+      </tr>
+      <tr>
+        <td>Bildirishnomalar</td>
+        <td>
+          Qarz qaytarish muddati yaqinlashganda eslatma ko'rsatish uchun. Eslatmalar telefonning o'zida
+          rejalashtiriladi va hech qayerga yuborilmaydi. Ularni ilovada yoki telefon sozlamalarida o'chirish mumkin.
+        </td>
+      </tr>
+      <tr>
+        <td>Telefon qayta yonganda ishga tushish</td>
+        <td>Telefon o'chib-yonganidan keyin rejalashtirilgan eslatmalar yo'qolib qolmasligi uchun.</td>
+      </tr>
+      <tr>
+        <td>Internet</td>
+        <td>Faqat siz sozlagan Telegram zaxirasini yuborish uchun (4-bo'limga qarang). Boshqa hech qanday internet so'rovi yo'q.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. Ma'lumot telefondan qachon chiqadi</h2>
+
+  <h3>Faylga zaxira</h3>
+  <p>
+    Sozlamalardagi «Faylga saqlash» barcha ma'lumotlaringizni JSON faylga yozadi va uni siz tanlagan joyga
+    saqlaydi. Fayl shifrlanmagan. U qayerga saqlansa yoki kimga yuborilsa, uning xavfsizligi o'sha joyga bog'liq —
+    zaxira faylini ishonchli joyda saqlang.
+  </p>
+
+  <h3>Telegram orqali zaxira (ixtiyoriy)</h3>
+  <p>
+    Agar siz «Telegram orqali» zaxirani sozlasangiz, ilova barcha ma'lumotlaringizni <code>.db</code> fayl qilib
+    Telegram Bot API (<code>api.telegram.org</code>) orqali <strong>o'zingiz yaratgan bot va o'zingiz ko'rsatgan chatga</strong>
+    yuboradi — qo'lda yoki kuniga bir marta avtomatik. Bunda ma'lumotlar Telegram serverlari orqali o'tadi va o'sha chatda
+    saqlanadi; ular Telegramning o'z maxfiylik siyosatiga bo'ysunadi:
+    <a href="https://telegram.org/privacy" rel="noopener">telegram.org/privacy</a>.
+    Bot tokeni va chat ID faqat telefoningizda saqlanadi. Bu funksiyani istalgan vaqtda o'chirishingiz mumkin.
+  </p>
+
+  <h3>Qarz haqida xabar yuborish</h3>
+  <p>
+    «Qarzdorga yuborish» tugmasi qarz haqidagi qisqa matnni telefonning «Ulashish» oynasiga beradi. Matn faqat siz
+    tanlagan ilova (masalan, Telegram yoki SMS) orqali va faqat siz tasdiqlaganingizda yuboriladi.
+  </p>
+
+  <h2>5. Biz nimalarni qilmaymiz</h2>
+  <ul>
+    <li>Ro'yxatdan o'tish, login yoki parol talab qilmaymiz.</li>
+    <li>Ma'lumotlaringizni o'z serverlarimizga yubormaymiz — bizda bunday server yo'q.</li>
+    <li>Reklama ko'rsatmaymiz, analitika va kuzatuv (tracking) vositalaridan foydalanmaymiz.</li>
+    <li>Ma'lumotlaringizni sotmaymiz, ijaraga bermaymiz va uchinchi tomonlarga uzatmaymiz.</li>
+    <li>Joylashuvingiz, kamera, mikrofon yoki bank hisoblaringizga kirmaymiz.</li>
+  </ul>
+
+  <h2>6. Ma'lumotlaringizni boshqarish</h2>
+  <ul>
+    <li><strong>Ko'rish va tahrirlash</strong> — barcha yozuvlar ilovaning o'zida ko'rinadi va tahrirlanadi.</li>
+    <li><strong>Eksport</strong> — «Faylga saqlash» orqali ma'lumotlaringizning to'liq nusxasini olasiz.</li>
+    <li><strong>O'chirish</strong> — Sozlamalar → «Barcha ma'lumotlarni o'chirish» yoki ilovani o'chirib tashlash.
+      Telegram chatga yuborilgan zaxiralarni o'sha chatdan o'zingiz o'chirasiz.</li>
+    <li><strong>Ruxsatlarni bekor qilish</strong> — telefon sozlamalarida kontaktlar va bildirishnomalar ruxsatini istalgan vaqtda olib qo'yish mumkin.</li>
+  </ul>
+
+  <h2>7. Xavfsizlik</h2>
+  <p>
+    Ma'lumotlar telefonning ilova uchun ajratilgan xotirasida saqlanadi va boshqa ilovalar ularni o'qiy olmaydi.
+    Ilova o'z ichida qo'shimcha shifrlash yoki PIN-kod qo'llamaydi, shuning uchun telefoningizni ekran qulfi bilan
+    himoyalashni tavsiya qilamiz. Android tizimining avtomatik zaxirasi bu ilova uchun o'chirilgan.
+  </p>
+
+  <h2>8. Bolalar</h2>
+  <p>
+    Ilova bolalarga mo'ljallanmagan va hech kimdan, jumladan bolalardan ham, shaxsiy ma'lumot to'plamaydi.
+  </p>
+
+  <h2>9. O'zgarishlar</h2>
+  <p>
+    Ilova o'zgarsa, ushbu siyosat ham yangilanishi mumkin. Yangilangan versiya shu sahifada, yangi kuchga kirgan sana
+    bilan e'lon qilinadi.
+  </p>
+
+  <h2>10. Aloqa</h2>
+  <p>
+    Savol va takliflar uchun: Iqboljon Xasanov — <a href="mailto:[EMAIL]">[EMAIL]</a>
+  </p>
+
+  <footer>© 2026 Taqsim</footer>
+</main>
+</body>
+</html>
