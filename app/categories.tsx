@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, View } from "react-native";
 import { Text } from "@/components/ui/Text";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import ReorderList from "@/components/ReorderList";
+import ScrollShadow from "@/components/ScrollShadow";
 import {
 	BottomSheet,
 	Button,
@@ -18,6 +19,7 @@ import {
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
+import { useScrolled } from "@/hooks/useScrolled";
 import {
 	type CategoryColor,
 	categoryColorValue,
@@ -73,6 +75,7 @@ export default function CategoriesScreen() {
 	// A drag and a vertical scroll are the same movement, so the list stops
 	// scrolling while a row is in hand.
 	const [dragging, setDragging] = useState(false);
+	const { scrolled, scrollProps } = useScrolled();
 	const [categoryDraft, setCategoryDraft] = useState<CategoryDraftState | null>(null);
 	const [subDraft, setSubDraft] = useState<SubcategoryDraftState | null>(null);
 
@@ -180,6 +183,7 @@ export default function CategoriesScreen() {
 			<Stack.Screen options={{ title: "Kategoriyalar" }} />
 			<View className="flex-1 bg-background">
 				<ScrollView
+					{...scrollProps}
 					contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 12, paddingBottom: 40 }}
 					showsVerticalScrollIndicator={false}
 					scrollEnabled={!dragging}
@@ -436,6 +440,7 @@ export default function CategoriesScreen() {
 							: "Ichki kategoriya nomiga bosing — tahrirlanadi, ★ uni yozuv formasida tezkor tanlashga qo'yadi, × o'chiradi."}
 					</Text>
 				</ScrollView>
+				<ScrollShadow visible={scrolled} />
 			</View>
 
 			{/* Subcategory order ----------------------------------------------- */}

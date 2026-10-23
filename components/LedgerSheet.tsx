@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
 import { type Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { BackHandler, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
 	Extrapolation,
 	interpolate,
@@ -21,15 +22,17 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import MonthSwitcher from "@/components/MonthSwitcher";
 import SearchBar from "@/components/SearchBar";
 import TransactionRow from "@/components/TransactionRow";
-import { Button, Chip, EmptyState, HeaderMenu, IconButton, PillTabs, Select } from "@/components/ui";
+import ScrollShadow from "@/components/ScrollShadow";
+import { Button, Chip, EmptyState, HeaderMenu, PillTabs, Select } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
+import { useScrolled } from "@/hooks/useScrolled";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";
-import { formatSectionDay, monthName } from "@/lib/date";
+import { currentMonthKey, formatSectionDay, monthName, shiftMonth } from "@/lib/date";
 import { excludeDebts, inMonth, resolveCategory, unitsUsed } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
 import { foldForSearch, matchesSearch } from "@/lib/search";
@@ -112,6 +115,8 @@ export default function LedgerSheet({
 	const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
+	// Whether the list has scrolled under the fixed filters above it.
+	const { scrolled, scrollProps } = useScrolled();
 
 	const collapsedHeight = HANDLE_HEIGHT + blockHeight + FOOTER_HEIGHT;
 	const snapPoints = useMemo(() => [collapsedHeight, "100%"], [collapsedHeight]);
@@ -126,6 +131,31 @@ export default function LedgerSheet({
 	}));
 
 	const close = useCallback(() => sheet.current?.snapToIndex(0), []);
+
+	// A sideways swipe moves the month: left for the next, right for the one
+	// before — the same two steps the arrows take, and like them it stops at
+	// the current month. It only takes over from a clearly horizontal drag, so
+	// scrolling the list and pulling the sheet are left alone. One gesture per
+	// place it is attached: the panel, and the list under the filter chips
+	// (which scroll sideways themselves).
+	const swipeMonth = Gesture.Pan()
+		.runOnJS(true)
+		.activeOffsetX([-18, 18])
+		.failOffsetY([-14, 14])
+		.onEnd((e) => {
+			if (Math.abs(e.translationX) < 60 && Math.abs(e.velocityX) < 600) return;
+			const next = shiftMonth(month, e.translationX < 0 ? 1 : -1);
+			if (next <= currentMonthKey()) onMonthChange(next);
+		});
+	const swipeMonthList = Gesture.Pan()
+		.runOnJS(true)
+		.activeOffsetX([-18, 18])
+		.failOffsetY([-14, 14])
+		.onEnd((e) => {
+			if (Math.abs(e.translationX) < 60 && Math.abs(e.velocityX) < 600) return;
+			const next = shiftMonth(month, e.translationX < 0 ? 1 : -1);
+			if (next <= currentMonthKey()) onMonthChange(next);
+		});
 
 	// At rest a side's total opens the ledger on that side; with the ledger up
 	// it narrows the list to that side and back.
@@ -295,6 +325,11 @@ export default function LedgerSheet({
 			animatedPosition={animatedPosition}
 			animateOnMount={false}
 			enableOverDrag={false}
+			// Only an up-or-down drag moves the sheet. Without these it took any
+			// drag past a few pixels — sideways too — and the month swipe
+			// underneath never got a turn.
+			activeOffsetY={[-10, 10]}
+			failOffsetX={[-12, 12]}
 			onAnimate={(_from, to) => setExpanded(to > 0)}
 			onChange={settle}
 			handleComponent={SheetHandle}
@@ -324,10 +359,9 @@ export default function LedgerSheet({
 						</View>
 					) : (
 						<>
-							<IconButton variant="ghost" icon="arrow-back" accessibilityLabel="Orqaga" onPress={close} />
 							<Text
 								accessibilityRole="header"
-								className="flex-1 font-extrabold text-foreground"
+								className="flex-1 font-extrabold text-foreground ml-1.5"
 								style={{ fontSize: tf.xxl, letterSpacing: -0.2 }}
 								numberOfLines={1}
 							>
@@ -362,35 +396,40 @@ export default function LedgerSheet({
 
 			<Animated.View style={[{ flex: 1 }, bodyStyle]}>
 				{/* The panel itself: month and its totals ----------------------- */}
-				<View
-					onLayout={(e) => setBlockHeight(Math.round(e.nativeEvent.layout.height))}
-					style={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 14, gap: 14 }}
-				>
-					<MonthSwitcher value={month} onChange={onMonthChange} surface="glass" />
-					{units.length > 1 && (
-						<PillTabs
-							compact
-							fill
-							items={units.map((code) => ({ key: code, label: code }))}
-							value={unit}
-							onChange={setPickedUnit}
-						/>
-					)}
-					<View className="flex-row" style={{ gap: 4 }}>
-						<SideTotal
-							type="income"
-							text={hideIncome ? maskAmount(unit) : money(totals.income, unit)}
-							active={type === "income"}
-							onPress={() => pickSide("income")}
-						/>
-						<SideTotal
-							type="expense"
-							text={money(totals.expense, unit)}
-							active={type === "expense"}
-							onPress={() => pickSide("expense")}
-						/>
+				<GestureDetector gesture={swipeMonth}>
+					<View
+						onLayout={(e) => setBlockHeight(Math.round(e.nativeEvent.layout.height))}
+						style={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 14, gap: 14 }}
+					>
+						<View className="flex-row items-center" style={{ gap: 8 }}>
+							<View className="flex-1">
+								<MonthSwitcher value={month} onChange={onMonthChange} surface="glass" />
+							</View>
+							{units.length > 1 && (
+								<PillTabs
+									compact
+									items={units.map((code) => ({ key: code, label: code }))}
+									value={unit}
+									onChange={setPickedUnit}
+								/>
+							)}
+						</View>
+						<View className="flex-row" style={{ gap: 4 }}>
+							<SideTotal
+								type="income"
+								text={hideIncome ? maskAmount(unit) : money(totals.income, unit)}
+								active={type === "income"}
+								onPress={() => pickSide("income")}
+							/>
+							<SideTotal
+								type="expense"
+								text={money(totals.expense, unit)}
+								active={type === "expense"}
+								onPress={() => pickSide("expense")}
+							/>
+						</View>
 					</View>
-				</View>
+				</GestureDetector>
 
 				{/* The ledger: filters, then the days --------------------------- */}
 				<Animated.View style={[{ flex: 1 }, ledgerStyle]} pointerEvents={expanded ? "auto" : "none"}>
@@ -429,63 +468,69 @@ export default function LedgerSheet({
 						))}
 					</ScrollView>
 
-					<BottomSheetSectionList
-						sections={sections}
-						keyExtractor={(item: Transaction) => item.id}
-						stickySectionHeadersEnabled
-						showsVerticalScrollIndicator={false}
-						keyboardShouldPersistTaps="handled"
-						contentContainerStyle={{
-							paddingHorizontal: 18,
-							// Clear of the pinned buttons, and of the title row the
-							// content steps down for.
-							paddingBottom: FOOTER_HEIGHT + TITLE_HEIGHT + 24,
-						}}
-						renderSectionHeader={({ section }) => {
-							const masked = hideIncome && section.hasIncome;
-							return (
-								<View
-									className="flex-row items-center justify-between bg-background"
-									style={{ height: 40, marginTop: section.title === sections[0]?.title ? 0 : 8 }}
-								>
-									<Text
-										accessibilityRole="header"
-										className="font-bold text-muted-foreground"
-										style={{ fontSize: tf.sm - 0.5 }}
-									>
-										{formatSectionDay(section.title)}
-									</Text>
-									<Text className="font-bold text-muted-foreground" style={{ fontSize: tf.sm - 0.5 }}>
-										{section.totals
-											.map((t) => (masked ? maskAmount(t.unit) : money(t.amount, t.unit, true)))
-											.join("  ·  ")}
-									</Text>
-								</View>
-							);
-						}}
-						renderItem={({ item, index }) => (
-							<TransactionRow
-								transaction={item}
-								categories={categories}
-								divider={index > 0}
-								amountOverride={walletFilter ? shareOf(item, walletFilter) : undefined}
-								onPress={() => router.push(`/transaction?id=${item.id}`)}
-							/>
-						)}
-						ListEmptyComponent={
-							<EmptyState
-								icon="receipt-outline"
-								title="Yozuv topilmadi"
-								message={
-									monthly.length === 0
-										? `${monthName(month)}da hali yozuv yo'q. Kirim yoki chiqim qo'shing — u shu yerda ko'rinadi.`
-										: folded
-											? `"${query.trim()}" bo'yicha ${monthName(month).toLowerCase()}da yozuv yo'q`
-											: `Bu filtr bo'yicha ${monthName(month).toLowerCase()}da yozuv yo'q`
+					<GestureDetector gesture={swipeMonthList}>
+						<View style={{ flex: 1 }}>
+							<BottomSheetSectionList
+								sections={sections}
+								keyExtractor={(item: Transaction) => item.id}
+								stickySectionHeadersEnabled
+								showsVerticalScrollIndicator={false}
+								keyboardShouldPersistTaps="handled"
+								{...scrollProps}
+								contentContainerStyle={{
+									paddingHorizontal: 18,
+									// Clear of the pinned buttons, and of the title row the
+									// content steps down for.
+									paddingBottom: FOOTER_HEIGHT + TITLE_HEIGHT + 24,
+								}}
+								renderSectionHeader={({ section }) => {
+									const masked = hideIncome && section.hasIncome;
+									return (
+										<View
+											className="flex-row items-center justify-between bg-background"
+											style={{ height: 40, marginTop: section.title === sections[0]?.title ? 0 : 8 }}
+										>
+											<Text
+												accessibilityRole="header"
+												className="font-bold text-muted-foreground"
+												style={{ fontSize: tf.sm - 0.5 }}
+											>
+												{formatSectionDay(section.title)}
+											</Text>
+											<Text className="font-bold text-muted-foreground" style={{ fontSize: tf.sm - 0.5 }}>
+												{section.totals
+													.map((t) => (masked ? maskAmount(t.unit) : money(t.amount, t.unit, true)))
+													.join("  ·  ")}
+											</Text>
+										</View>
+									);
+								}}
+								renderItem={({ item, index }) => (
+									<TransactionRow
+										transaction={item}
+										categories={categories}
+										divider={index > 0}
+										amountOverride={walletFilter ? shareOf(item, walletFilter) : undefined}
+										onPress={() => router.push(`/transaction?id=${item.id}`)}
+									/>
+								)}
+								ListEmptyComponent={
+									<EmptyState
+										icon="receipt-outline"
+										title="Yozuv topilmadi"
+										message={
+											monthly.length === 0
+												? `${monthName(month)}da hali yozuv yo'q. Kirim yoki chiqim qo'shing — u shu yerda ko'rinadi.`
+												: folded
+													? `"${query.trim()}" bo'yicha ${monthName(month).toLowerCase()}da yozuv yo'q`
+													: `Bu filtr bo'yicha ${monthName(month).toLowerCase()}da yozuv yo'q`
+										}
+									/>
 								}
 							/>
-						}
-					/>
+							<ScrollShadow visible={scrolled} />
+						</View>
+					</GestureDetector>
 				</Animated.View>
 			</Animated.View>
 

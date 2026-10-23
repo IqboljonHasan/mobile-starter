@@ -23,12 +23,14 @@ import {
 	Toggle,
 } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
+import ScrollShadow from "@/components/ScrollShadow";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
+import { useScrolled } from "@/hooks/useScrolled";
 import { categoryColorValue } from "@/lib/categoryColors";
 import { currentMonthKey, formatDayLabel, monthName, todayISO } from "@/lib/date";
 import { contactName, DIRECTION_META, remainingAmount } from "@/lib/debts";
@@ -136,6 +138,7 @@ function DebtOwnedEntry({
 	const { tc } = useTheme();
 	const { tf } = useFont();
 	const { contacts } = useLedger();
+	const { scrolled, scrollProps } = useScrolled();
 
 	const meta = DIRECTION_META[debt.direction];
 	const isPrincipal = debt.transactionId === transaction.id;
@@ -145,65 +148,69 @@ function DebtOwnedEntry({
 	return (
 		<>
 			<Stack.Screen options={{ title: "Qarz yozuvi" }} />
-			<ScrollView
-				className="flex-1 bg-background"
-				contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 32, gap: 12 }}
-			>
-				<View className="bg-card items-center" style={{ borderRadius: 20, padding: 20 }}>
-					<View
-						className="items-center justify-center bg-background"
-						style={{ width: 52, height: 52, borderRadius: 18 }}
-					>
-						<Ionicons name="people-outline" size={24} color={tc.foreground} />
+			<View className="flex-1 bg-background">
+				<ScrollView
+					{...scrollProps}
+					className="flex-1 bg-background"
+					contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 32, gap: 12 }}
+				>
+					<View className="bg-card items-center" style={{ borderRadius: 20, padding: 20 }}>
+						<View
+							className="items-center justify-center bg-background"
+							style={{ width: 52, height: 52, borderRadius: 18 }}
+						>
+							<Ionicons name="people-outline" size={24} color={tc.foreground} />
+						</View>
+						<Text
+							className="font-extrabold mt-3"
+							style={{ fontSize: tf.xxxl + 4, letterSpacing: -0.6, color: income ? tc.success : tc.foreground }}
+							numberOfLines={1}
+							adjustsFontSizeToFit
+						>
+							{income ? "+" : "−"}
+							{formatAmount(transaction.amount, transaction.unit)}
+						</Text>
+						<Text
+							className="font-semibold text-muted-foreground mt-1 text-center"
+							style={{ fontSize: tf.sm + 1 }}
+						>
+							{`${name} · ${formatDayLabel(transaction.date)}`}
+						</Text>
 					</View>
-					<Text
-						className="font-extrabold mt-3"
-						style={{ fontSize: tf.xxxl + 4, letterSpacing: -0.6, color: income ? tc.success : tc.foreground }}
-						numberOfLines={1}
-						adjustsFontSizeToFit
-					>
-						{income ? "+" : "−"}
-						{formatAmount(transaction.amount, transaction.unit)}
-					</Text>
-					<Text
-						className="font-semibold text-muted-foreground mt-1 text-center"
-						style={{ fontSize: tf.sm + 1 }}
-					>
-						{`${name} · ${formatDayLabel(transaction.date)}`}
-					</Text>
-				</View>
 
-				<View className="bg-card gap-1" style={{ borderRadius: 20, padding: 16 }}>
-					<Text className="font-bold text-foreground" style={{ fontSize: tf.base }}>
-						{isPrincipal
-							? `Bu yozuv "${meta.label}" qarzining o'zi`
-							: `Bu yozuv qarz bo'yicha ${meta.payLabel.toLowerCase()}`}
-					</Text>
-					<Text
-						className="font-semibold text-muted-foreground"
-						style={{ fontSize: tf.sm, lineHeight: Math.round(tf.sm * 1.45) }}
-					>
-						{`Summani yoki sanani o'zgartirish uchun qarzning o'zini tahrirlang — aks holda qarz qoldig'i bilan hisob bir-biriga to'g'ri kelmay qoladi. Hozirgi qoldiq: ${formatAmount(remainingAmount(debt), debt.unit)}.`}
-					</Text>
-				</View>
+					<View className="bg-card gap-1" style={{ borderRadius: 20, padding: 16 }}>
+						<Text className="font-bold text-foreground" style={{ fontSize: tf.base }}>
+							{isPrincipal
+								? `Bu yozuv "${meta.label}" qarzining o'zi`
+								: `Bu yozuv qarz bo'yicha ${meta.payLabel.toLowerCase()}`}
+						</Text>
+						<Text
+							className="font-semibold text-muted-foreground"
+							style={{ fontSize: tf.sm, lineHeight: Math.round(tf.sm * 1.45) }}
+						>
+							{`Summani yoki sanani o'zgartirish uchun qarzning o'zini tahrirlang — aks holda qarz qoldig'i bilan hisob bir-biriga to'g'ri kelmay qoladi. Hozirgi qoldiq: ${formatAmount(remainingAmount(debt), debt.unit)}.`}
+						</Text>
+					</View>
 
-				<View className="gap-1 mt-2">
-					<Button
-						label="Qarzni ochish"
-						size="lg"
-						fullWidth
-						startIcon={<Ionicons name="open-outline" size={18} color={tc.primaryFg} />}
-						onPress={() => router.replace(`/debt?id=${debt.id}`)}
-					/>
-					<Button
-						label="Orqaga"
-						variant="text"
-						color="secondary"
-						fullWidth
-						onPress={() => router.back()}
-					/>
-				</View>
-			</ScrollView>
+					<View className="gap-1 mt-2">
+						<Button
+							label="Qarzni ochish"
+							size="lg"
+							fullWidth
+							startIcon={<Ionicons name="open-outline" size={18} color={tc.primaryFg} />}
+							onPress={() => router.replace(`/debt?id=${debt.id}`)}
+						/>
+						<Button
+							label="Orqaga"
+							variant="text"
+							color="secondary"
+							fullWidth
+							onPress={() => router.back()}
+						/>
+					</View>
+				</ScrollView>
+				<ScrollShadow visible={scrolled} />
+			</View>
 		</>
 	);
 }
@@ -261,6 +268,7 @@ function TransactionForm({
 	const [templateOpen, setTemplateOpen] = useState(false);
 	// The template last applied — its chip shows as picked until the form moves on.
 	const [templateId, setTemplateId] = useState<string | null>(null);
+	const { scrolled: formScrolled, scrollProps: formScrollProps } = useScrolled();
 	// Errors only appear once the user has tried to save — a form that turns red
 	// while it's still being filled in is nagging, not helping.
 	const [submitted, setSubmitted] = useState(false);
@@ -576,6 +584,7 @@ function TransactionForm({
 				}}
 			/>
 			<ScrollView
+				{...formScrollProps}
 				className="flex-1"
 				// Shrinking the scroll viewport, rather than only padding its
 				// content, is what lets a field tapped low in the form scroll itself
@@ -905,6 +914,7 @@ function TransactionForm({
 
 				<DateField label="Sana" required value={date} onChange={setDate} maxDate={todayISO()} />
 			</ScrollView>
+			<ScrollShadow visible={formScrolled} />
 
 			{padOpen ? (
 				<NumberPad

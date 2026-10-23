@@ -8,11 +8,13 @@ import ContactImportSheet from "@/components/ContactImportSheet";
 import ContactSheet from "@/components/ContactSheet";
 import TagPill from "@/components/TagPill";
 import { Button, Card, EmptyState } from "@/components/ui";
+import ScrollShadow from "@/components/ScrollShadow";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
+import { useScrolled } from "@/hooks/useScrolled";
 import {
 	contactTotals,
 	debtsOfContact,
@@ -41,6 +43,7 @@ export default function ContactsScreen() {
 		useLedger();
 
 	const [query, setQuery] = useState("");
+	const { scrolled, scrollProps } = useScrolled();
 	const [editing, setEditing] = useState<Contact | null>(null);
 	const [creating, setCreating] = useState(false);
 	const [importing, setImporting] = useState(false);
@@ -96,104 +99,108 @@ export default function ContactsScreen() {
 	return (
 		<>
 			<Stack.Screen options={{ title: "Kontaktlar" }} />
-			<ScrollView
-				className="flex-1 bg-background"
-				contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 12, paddingBottom: 40 }}
-				keyboardShouldPersistTaps="handled"
-				showsVerticalScrollIndicator={false}
-			>
-				<View className="flex-row gap-3">
-					<View className="flex-1">
-						<Button
-							label="Yangi"
-							variant="soft"
-							fullWidth
-							startIcon={<Ionicons name="add" size={18} color={tc.primary} />}
-							onPress={() => setCreating(true)}
-						/>
-					</View>
-					<View className="flex-1">
-						<Button
-							label="Telefondan"
-							variant="soft"
-							color="secondary"
-							fullWidth
-							startIcon={
-								<Ionicons
-									name="phone-portrait-outline"
-									size={18}
-									color={tc.foreground}
-								/>
-							}
-							onPress={() => setImporting(true)}
-						/>
-					</View>
-				</View>
-
-				{contacts.length > 4 && (
-					<View
-						className="flex-row items-center gap-2 px-4"
-						style={{ backgroundColor: tc.card, borderRadius: 16, minHeight: 48 }}
-					>
-						<Ionicons name="search" size={18} color={tc.mutedForeground} />
-						<TextInput
-							className="flex-1 py-3 font-semibold"
-							style={{ color: tc.foreground, fontSize: tf.base }}
-							placeholder="Ism yoki raqam"
-							placeholderTextColor={tc.placeholder}
-							value={query}
-							onChangeText={setQuery}
-						/>
-					</View>
-				)}
-
-				{contacts.length === 0 ? (
-					<EmptyState
-						icon="people-outline"
-						title="Hali kontakt yo'q"
-						message="Qarzni kim bilan yuritishingizni shu yerda qo'shing yoki telefoningizdan import qiling."
-						actionLabel="Yangi kontakt"
-						onAction={() => setCreating(true)}
-					/>
-				) : visible.length === 0 ? (
-					<EmptyState
-						icon="search-outline"
-						title="Topilmadi"
-						message={`"${query}" bo'yicha hech kim yo'q.`}
-					/>
-				) : (
-					<Card flush>
-						{visible.map((contact, index) => (
-							<ContactRow
-								key={contact.id}
-								contact={contact}
-								totals={contactTotals(debts, contact.id)}
-								debtCount={debtsOfContact(debts, contact.id).length}
-								divider={index > 0}
-								onPress={() => setEditing(contact)}
-								onDelete={() => confirmDelete(contact)}
-								onCall={
-									contact.phone
-										? () => Linking.openURL(`tel:${contact.phone}`)
-										: undefined
-								}
+			<View className="flex-1 bg-background">
+				<ScrollView
+					{...scrollProps}
+					className="flex-1 bg-background"
+					contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 12, paddingBottom: 40 }}
+					keyboardShouldPersistTaps="handled"
+					showsVerticalScrollIndicator={false}
+				>
+					<View className="flex-row gap-3">
+						<View className="flex-1">
+							<Button
+								label="Yangi"
+								variant="soft"
+								fullWidth
+								startIcon={<Ionicons name="add" size={18} color={tc.primary} />}
+								onPress={() => setCreating(true)}
 							/>
-						))}
-					</Card>
-				)}
+						</View>
+						<View className="flex-1">
+							<Button
+								label="Telefondan"
+								variant="soft"
+								color="secondary"
+								fullWidth
+								startIcon={
+									<Ionicons
+										name="phone-portrait-outline"
+										size={18}
+										color={tc.foreground}
+									/>
+								}
+								onPress={() => setImporting(true)}
+							/>
+						</View>
+					</View>
 
-				{contacts.length > 0 && (
-					<Button
-						label="Qarzlarni ko'rish"
-						variant="text"
-						fullWidth
-						endIcon={
-							<Ionicons name="arrow-forward" size={16} color={tc.primary} />
-						}
-						onPress={() => router.back()}
-					/>
-				)}
-			</ScrollView>
+					{contacts.length > 4 && (
+						<View
+							className="flex-row items-center gap-2 px-4"
+							style={{ backgroundColor: tc.card, borderRadius: 16, minHeight: 48 }}
+						>
+							<Ionicons name="search" size={18} color={tc.mutedForeground} />
+							<TextInput
+								className="flex-1 py-3 font-semibold"
+								style={{ color: tc.foreground, fontSize: tf.base }}
+								placeholder="Ism yoki raqam"
+								placeholderTextColor={tc.placeholder}
+								value={query}
+								onChangeText={setQuery}
+							/>
+						</View>
+					)}
+
+					{contacts.length === 0 ? (
+						<EmptyState
+							icon="people-outline"
+							title="Hali kontakt yo'q"
+							message="Qarzni kim bilan yuritishingizni shu yerda qo'shing yoki telefoningizdan import qiling."
+							actionLabel="Yangi kontakt"
+							onAction={() => setCreating(true)}
+						/>
+					) : visible.length === 0 ? (
+						<EmptyState
+							icon="search-outline"
+							title="Topilmadi"
+							message={`"${query}" bo'yicha hech kim yo'q.`}
+						/>
+					) : (
+						<Card flush>
+							{visible.map((contact, index) => (
+								<ContactRow
+									key={contact.id}
+									contact={contact}
+									totals={contactTotals(debts, contact.id)}
+									debtCount={debtsOfContact(debts, contact.id).length}
+									divider={index > 0}
+									onPress={() => setEditing(contact)}
+									onDelete={() => confirmDelete(contact)}
+									onCall={
+										contact.phone
+											? () => Linking.openURL(`tel:${contact.phone}`)
+											: undefined
+									}
+								/>
+							))}
+						</Card>
+					)}
+
+					{contacts.length > 0 && (
+						<Button
+							label="Qarzlarni ko'rish"
+							variant="text"
+							fullWidth
+							endIcon={
+								<Ionicons name="arrow-forward" size={16} color={tc.primary} />
+							}
+							onPress={() => router.back()}
+						/>
+					)}
+				</ScrollView>
+				<ScrollShadow visible={scrolled} />
+			</View>
 
 			<ContactSheet
 				key={creating ? "create-open" : "create-closed"}

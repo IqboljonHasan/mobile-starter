@@ -9,10 +9,12 @@ import RemindersSheet from "@/components/RemindersSheet";
 import SearchBar from "@/components/SearchBar";
 import { Button, Chip, EmptyState, HeaderMenu, PillTabs } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
+import ScrollShadow from "@/components/ScrollShadow";
 import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
+import { useScrolled } from "@/hooks/useScrolled";
 import { todayISO } from "@/lib/date";
 import {
 	contactById,
@@ -69,6 +71,7 @@ export default function DebtsScreen() {
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
 	const [remindersOpen, setRemindersOpen] = useState(false);
+	const { scrolled, scrollProps } = useScrolled();
 	const folded = foldForSearch(query);
 	const today = todayISO();
 
@@ -220,64 +223,68 @@ export default function DebtsScreen() {
 				))}
 			</ScrollView>
 
-			<SectionList
-				sections={sections}
-				keyExtractor={(item) => item.id}
-				stickySectionHeadersEnabled
-				showsVerticalScrollIndicator={false}
-				contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: BOTTOM_BAR_SPACE + 16 }}
-				renderSectionHeader={({ section }) => {
-					const color = section.key === "overdue" ? tc.danger : tc.mutedForeground;
-					return (
-						<View
-							className="flex-row items-center justify-between bg-background"
-							style={{ height: 40, marginTop: section.key === sections[0]?.key ? 0 : 8 }}
-						>
-							<Text
-								accessibilityRole="header"
-								className="font-bold"
-								style={{ fontSize: tf.sm - 0.5, color }}
+			<View className="flex-1">
+				<SectionList
+					{...scrollProps}
+					sections={sections}
+					keyExtractor={(item) => item.id}
+					stickySectionHeadersEnabled
+					showsVerticalScrollIndicator={false}
+					contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: BOTTOM_BAR_SPACE + 16 }}
+					renderSectionHeader={({ section }) => {
+						const color = section.key === "overdue" ? tc.danger : tc.mutedForeground;
+						return (
+							<View
+								className="flex-row items-center justify-between bg-background"
+								style={{ height: 40, marginTop: section.key === sections[0]?.key ? 0 : 8 }}
 							>
-								{section.title}
-							</Text>
-							<Text className="font-bold" style={{ fontSize: tf.sm - 0.5, color }}>
-								{section.key === "settled"
-									? `${section.data.length} ta`
-									: section.totals
-											.map((t) =>
-												formatAmount(t.amount, t.unit, {
-													showUnit: t.unit !== defaultUnit,
-													signed: true,
-												}),
-											)
-											.join("  ·  ")}
-							</Text>
-						</View>
-					);
-				}}
-				renderItem={({ item, index }) => (
-					<DebtRow
-						debt={item}
-						contact={contactById(contacts, item.contactId)}
-						today={today}
-						divider={index > 0}
-						onPress={() => router.push(`/debt?id=${item.id}`)}
-					/>
-				)}
-				ListEmptyComponent={
-					<EmptyState
-						icon="people-outline"
-						title="Qarz topilmadi"
-						message={
-							debts.length === 0
-								? "Qarz berganingizni yoki olganingizni shu yerda yuriting — har biri hisobingizga ham yoziladi."
-								: folded
-									? `"${query.trim()}" bo'yicha qarz topilmadi`
-									: "Bu filtr bo'yicha qarz yo'q"
-						}
-					/>
-				}
-			/>
+								<Text
+									accessibilityRole="header"
+									className="font-bold"
+									style={{ fontSize: tf.sm - 0.5, color }}
+								>
+									{section.title}
+								</Text>
+								<Text className="font-bold" style={{ fontSize: tf.sm - 0.5, color }}>
+									{section.key === "settled"
+										? `${section.data.length} ta`
+										: section.totals
+												.map((t) =>
+													formatAmount(t.amount, t.unit, {
+														showUnit: t.unit !== defaultUnit,
+														signed: true,
+													}),
+												)
+												.join("  ·  ")}
+								</Text>
+							</View>
+						);
+					}}
+					renderItem={({ item, index }) => (
+						<DebtRow
+							debt={item}
+							contact={contactById(contacts, item.contactId)}
+							today={today}
+							divider={index > 0}
+							onPress={() => router.push(`/debt?id=${item.id}`)}
+						/>
+					)}
+					ListEmptyComponent={
+						<EmptyState
+							icon="people-outline"
+							title="Qarz topilmadi"
+							message={
+								debts.length === 0
+									? "Qarz berganingizni yoki olganingizni shu yerda yuriting — har biri hisobingizga ham yoziladi."
+									: folded
+										? `"${query.trim()}" bo'yicha qarz topilmadi`
+										: "Bu filtr bo'yicha qarz yo'q"
+							}
+						/>
+					}
+				/>
+					<ScrollShadow visible={scrolled} />
+			</View>
 
 			{/* Both directions are one tap away: which way a debt runs is the first
 			    thing the user knows about it, so it shouldn't be a field they have

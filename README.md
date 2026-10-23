@@ -79,6 +79,7 @@ components/
   SplashOverlay.tsx      the splash, redrawn in React for as long as it loads
   AmountCard.tsx         a form's amount, pay method and unit
   BottomBar.tsx          actions pinned to the bottom of a sheet
+  ScrollShadow.tsx       the shade a list shows once it scrolls under a fixed top
   TransactionRow.tsx     one line of the ledger
   DebtRow.tsx            one debt
   ContactPicker.tsx      the person a debt is with: search, tags, add, import
@@ -217,6 +218,10 @@ The design system, in short:
 - **Green and red are for money moving** — income and expense, owed to you and
   owed by you — and otherwise colour belongs to the **wallets** (`WalletIcon`).
   Categories and people are drawn neutral in the lists.
+- A list that scrolls under something fixed — a header, a filter bar — shows
+  `ScrollShadow` along its top edge once it has scrolled (`useScrolled`). It is
+  drawn inside the scrolling area, never as a native shadow on the fixed
+  element, which would fall above it as well as below.
 - Buttons are pills; fields are 52px grey panels with 16px corners and a focus
   ring (`tc.focus`); labels over them are `FieldLabel`.
 

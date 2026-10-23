@@ -1,7 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import Animated, {
+	Extrapolation,
+	interpolate,
+	useAnimatedStyle,
+	useSharedValue,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeSky from "@/components/HomeSky";
 import LedgerSheet, { type LedgerSheetHandle } from "@/components/LedgerSheet";
@@ -61,6 +66,14 @@ export default function HomeScreen() {
 	const restingTop = screenHeight - panelHeight;
 	const contentStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: screenHeight ? Math.min(sheetTop.get() - restingTop, 0) : 0 }],
+	}));
+	// Up at the top, the ledger sits on the same navy as every other sheet, so
+	// the sky darkens behind it on the way.
+	const openTop = insets.top + 8;
+	const backdropStyle = useAnimatedStyle(() => ({
+		opacity: screenHeight
+			? interpolate(sheetTop.get(), [restingTop, openTop], [0, 1], Extrapolation.CLAMP)
+			: 0,
 	}));
 
 	// The balance is deliberately independent of the month in the panel: what
@@ -353,6 +366,11 @@ export default function HomeScreen() {
 					<Ionicons name="chevron-forward" size={18} color={sky.glassMuted} />
 				</Pressable>
 			</Animated.View>
+
+			<Animated.View
+				pointerEvents="none"
+				style={[StyleSheet.absoluteFill, { backgroundColor: tc.backdrop }, backdropStyle]}
+			/>
 
 			{/* The month, and pulled up, its whole ledger --------------------- */}
 			<LedgerSheet

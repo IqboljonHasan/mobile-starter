@@ -22,6 +22,7 @@ import {
 	Toggle,
 } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
+import ScrollShadow from "@/components/ScrollShadow";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
@@ -29,6 +30,7 @@ import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
+import { useScrolled } from "@/hooks/useScrolled";
 import { addDaysISO, addMonthsISO, formatDate, formatDayLabel, todayISO } from "@/lib/date";
 import {
 	contactName,
@@ -154,6 +156,7 @@ function DebtForm({
 	const [editingPayment, setEditingPayment] = useState<DebtPayment | null>(null);
 	const [padOpen, setPadOpen] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
+	const { scrolled, scrollProps } = useScrolled();
 
 	const today = todayISO();
 	const meta = DIRECTION_META[direction];
@@ -349,6 +352,7 @@ function DebtForm({
 				}}
 			/>
 			<ScrollView
+				{...scrollProps}
 				className="flex-1"
 				style={{ marginBottom: keyboardLift }}
 				contentContainerStyle={{
@@ -613,6 +617,7 @@ function DebtForm({
 					</Card>
 				)}
 			</ScrollView>
+			<ScrollShadow visible={scrolled} />
 
 			{padOpen ? (
 				<NumberPad

@@ -7,12 +7,14 @@ import BarChart from "@/components/BarChart";
 import BreakdownStats from "@/components/BreakdownStats";
 import MonthSwitcher from "@/components/MonthSwitcher";
 import PeriodSummary from "@/components/PeriodSummary";
+import ScrollShadow from "@/components/ScrollShadow";
 import WalletBalanceStats from "@/components/WalletBalanceStats";
 import YearSwitcher from "@/components/YearSwitcher";
 import { Card, PillTabs } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
+import { useScrolled } from "@/hooks/useScrolled";
 import { useTheme } from "@/hooks/useTheme";
 import { currentMonthKey, currentYearKey, yearKeyOf } from "@/lib/date";
 import { excludeDebts, inUnit, ofType, sum, unitsUsed } from "@/lib/ledger";
@@ -50,7 +52,7 @@ export default function StatsScreen() {
 	const [month, setMonth] = useState(() => initialMonth(params.month));
 	const [year, setYear] = useState(() => yearKeyOf(initialMonth(params.month)));
 	const [trendFocus, setTrendFocus] = useState<TxType | null>(null);
-	const [scrolled, setScrolled] = useState(false);
+	const { scrolled, scrollProps } = useScrolled();
 
 	// Every unit ever used, not just this month's — the whole point of this
 	// screen is the view a single month is too narrow for.
@@ -121,21 +123,7 @@ export default function StatsScreen() {
 			<Stack.Screen options={{ title: "Statistika" }} />
 			<View className="flex-1 bg-background">
 				{/* Period: scopes everything above the divider ------------------- */}
-				<View
-					className="bg-background px-4 pb-3 gap-3"
-					style={
-						scrolled
-							? {
-									shadowColor: "#000",
-									shadowOffset: { width: 0, height: 2 },
-									shadowOpacity: 0.08,
-									shadowRadius: 6,
-									elevation: 8,
-									zIndex: 10,
-								}
-							: undefined
-					}
-				>
+				<View className="bg-background px-4 pb-3 gap-3">
 					<View className="flex-row items-center gap-3">
 						<PillTabs
 							variant="inverse"
@@ -165,80 +153,84 @@ export default function StatsScreen() {
 					)}
 				</View>
 
-				<ScrollView
-					className="flex-1"
-					contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 14, paddingBottom: 40 }}
-					showsVerticalScrollIndicator={false}
-					scrollEventThrottle={16}
-					onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 4)}
-				>
-					<PeriodSummary summary={summary} unit={unit} span={span} hideIncome={hideIncome} />
-
-					<Card
-						title="Kirim va chiqim"
-						subtitle={`${
-							span === "month" ? `So'nggi ${TREND_MONTHS} oy` : `${year}-yil oylari`
-						} · oyni ochish uchun ustunni bosing`}
+				{/* The shade under the period bar is drawn inside the scroll area,
+				    so it falls only below the bar, over the rows passing under. */}
+				<View className="flex-1">
+					<ScrollView
+						className="flex-1"
+						contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, gap: 14, paddingBottom: 40 }}
+						showsVerticalScrollIndicator={false}
+						{...scrollProps}
 					>
-						<BarChart
-							periods={trendPeriods}
+						<PeriodSummary summary={summary} unit={unit} span={span} hideIncome={hideIncome} />
+
+						<Card
+							title="Kirim va chiqim"
+							subtitle={`${
+								span === "month" ? `So'nggi ${TREND_MONTHS} oy` : `${year}-yil oylari`
+							} · oyni ochish uchun ustunni bosing`}
+						>
+							<BarChart
+								periods={trendPeriods}
+								unit={unit}
+								hideIncome={hideIncome}
+								focus={trendFocus}
+								onFocusChange={setTrendFocus}
+								selected={span === "month" ? month : null}
+								onSelect={openMonth}
+							/>
+						</Card>
+
+						<BreakdownStats
+							transactions={relevant}
+							categories={categories}
 							unit={unit}
 							hideIncome={hideIncome}
-							focus={trendFocus}
-							onFocusChange={setTrendFocus}
-							selected={span === "month" ? month : null}
-							onSelect={openMonth}
+							span={span}
+							month={month}
+							year={year}
 						/>
-					</Card>
 
-					<BreakdownStats
-						transactions={relevant}
-						categories={categories}
-						unit={unit}
-						hideIncome={hideIncome}
-						span={span}
-						month={month}
-						year={year}
-					/>
-
-					{/* All time: the period above doesn't reach these --------------- */}
-					<View className="flex-row items-center gap-3 mt-4">
-						<Text className="font-semibold text-muted-foreground" style={{ fontSize: tf.sm }}>
-							{"Butun tarix bo'yicha"}
-						</Text>
-						<View className="flex-1 h-px bg-border" />
-					</View>
-
-					<Card title="Umumiy">
-						<View className="flex-row">
-							<Summary
-								label="Kirim"
-								amount={allTimeIncome}
-								unit={unit}
-								hide={hideIncome}
-								color={tc.success}
-							/>
-							<View className="w-px bg-border" />
-							<Summary
-								label="Chiqim"
-								amount={allTimeExpense}
-								unit={unit}
-								hide={false}
-								color={tc.danger}
-							/>
-							<View className="w-px bg-border" />
-							<Summary
-								label="Foyda"
-								amount={allTimeNet}
-								unit={unit}
-								hide={hideIncome}
-								color={allTimeNet >= 0 ? tc.success : tc.danger}
-							/>
+						{/* All time: the period above doesn't reach these --------------- */}
+						<View className="flex-row items-center gap-3 mt-4">
+							<Text className="font-semibold text-muted-foreground" style={{ fontSize: tf.sm }}>
+								{"Butun tarix bo'yicha"}
+							</Text>
+							<View className="flex-1 h-px bg-border" />
 						</View>
-					</Card>
 
-					<WalletBalanceStats balances={balances} unit={unit} hide={hideIncome} />
-				</ScrollView>
+						<Card title="Umumiy">
+							<View className="flex-row">
+								<Summary
+									label="Kirim"
+									amount={allTimeIncome}
+									unit={unit}
+									hide={hideIncome}
+									color={tc.success}
+								/>
+								<View className="w-px bg-border" />
+								<Summary
+									label="Chiqim"
+									amount={allTimeExpense}
+									unit={unit}
+									hide={false}
+									color={tc.danger}
+								/>
+								<View className="w-px bg-border" />
+								<Summary
+									label="Foyda"
+									amount={allTimeNet}
+									unit={unit}
+									hide={hideIncome}
+									color={allTimeNet >= 0 ? tc.success : tc.danger}
+								/>
+							</View>
+						</Card>
+
+						<WalletBalanceStats balances={balances} unit={unit} hide={hideIncome} />
+					</ScrollView>
+					<ScrollShadow visible={scrolled} />
+				</View>
 			</View>
 		</>
 	);

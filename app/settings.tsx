@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
 import { Text } from "@/components/ui/Text";
 import { Card, ListRow, SegmentedControl, Select, Toggle } from "@/components/ui";
+import ScrollShadow from "@/components/ScrollShadow";
 import {
 	FONT_SCALE_LABELS,
 	FONT_SCALE_VALUES,
@@ -18,6 +19,7 @@ import { THEME_MODE_LABELS, type ThemeMode } from "@/contexts/ThemeContext";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
+import { useScrolled } from "@/hooks/useScrolled";
 import { prepareRestore, type WalletRestoreMode } from "@/lib/backup";
 import { loadBackup, saveBackup } from "@/lib/backupFile";
 import { UNITS, unitByCode } from "@/lib/money";
@@ -69,6 +71,7 @@ export default function SettingsScreen() {
 	// as long as the user browses. Tracking which one is in flight keeps a second
 	// picker from being opened on top of the first.
 	const [busy, setBusy] = useState<"save" | "load" | null>(null);
+	const { scrolled, scrollProps } = useScrolled();
 
 	const appVersion = Constants.expoConfig?.version ?? "0.1.0";
 
@@ -174,207 +177,211 @@ export default function SettingsScreen() {
 	return (
 		<>
 			<Stack.Screen options={{ title: "Sozlamalar" }} />
-			<ScrollView
-				className="flex-1 bg-background"
-				contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 40 }}
-				showsVerticalScrollIndicator={false}
-			>
-				{/* Look ---------------------------------------------------------- */}
-				<Section title="Ko'rinish" first>
-					<View className="gap-3" style={{ padding: 12, paddingLeft: 14 }}>
-						<RowHeading
-							icon="sunny-outline"
-							title="Mavzu"
-							subtitle={
-								mode === "system"
-									? `Tizimga mos — hozir ${THEME_MODE_LABELS[isDark ? "dark" : "light"].toLowerCase()}`
-									: undefined
+			<View className="flex-1 bg-background">
+				<ScrollView
+					{...scrollProps}
+					className="flex-1 bg-background"
+					contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 40 }}
+					showsVerticalScrollIndicator={false}
+				>
+					{/* Look ---------------------------------------------------------- */}
+					<Section title="Ko'rinish" first>
+						<View className="gap-3" style={{ padding: 12, paddingLeft: 14 }}>
+							<RowHeading
+								icon="sunny-outline"
+								title="Mavzu"
+								subtitle={
+									mode === "system"
+										? `Tizimga mos — hozir ${THEME_MODE_LABELS[isDark ? "dark" : "light"].toLowerCase()}`
+										: undefined
+								}
+							/>
+							<SegmentedControl
+								items={THEME_ITEMS}
+								value={mode}
+								onChange={setMode}
+								className="bg-background"
+							/>
+						</View>
+						<View
+							className="gap-3 border-t border-border"
+							style={{ padding: 12, paddingLeft: 14 }}
+						>
+							<RowHeading
+								icon="text-outline"
+								title="Matn o'lchami"
+								subtitle="Barcha ekranlarga qo'llanadi"
+							/>
+							<SegmentedControl
+								items={FONT_SCALES.map((s) => ({ key: s, label: FONT_SCALE_LABELS[s] }))}
+								value={scale}
+								onChange={setScale}
+								className="bg-background"
+							/>
+						</View>
+						<Select
+							label="Standart valyuta"
+							value={defaultUnit}
+							toggleOff={false}
+							onChange={(next) => next && setDefaultUnit(next)}
+							options={UNITS.map((u) => ({ key: u.code, label: `${u.code} — ${u.name}` }))}
+							trigger={({ open }) => (
+								<ListRow
+									title="Valyuta"
+									subtitle="Yangi yozuv shu valyuta bilan boshlanadi"
+									icon="cash-outline"
+									value={`${unit.symbol} (${unit.code})`}
+									divider
+									onPress={open}
+								/>
+							)}
+						/>
+					</Section>
+
+					{/* Distribution --------------------------------------------------- */}
+					<Section title="Taqsimot">
+						<ListRow
+							title="Hamyonlar va ulushlar"
+							icon="wallet-outline"
+							value={`${wallets.length} ta`}
+							onPress={() => router.push("/wallets")}
+						/>
+						<ListRow
+							title="Kirimni avtomatik taqsimlash"
+							subtitle="Ulushlar bo'yicha hamyonlarga. O'chirilsa, kirim qaysi hamyonga tushishini o'zingiz tanlaysiz"
+							icon="pie-chart-outline"
+							divider
+							trailing={
+								<Toggle
+									value={splitIncome}
+									onValueChange={setSplitIncome}
+									accessibilityLabel="Kirimni avtomatik taqsimlash"
+								/>
 							}
 						/>
-						<SegmentedControl
-							items={THEME_ITEMS}
-							value={mode}
-							onChange={setMode}
-							className="bg-background"
+						<ListRow
+							title="Kategoriyalar"
+							subtitle={`${subcategoryCount} ta ichki kategoriya`}
+							icon="pricetags-outline"
+							value={`${categories.length} ta`}
+							divider
+							onPress={() => router.push("/categories")}
 						/>
-					</View>
-					<View
-						className="gap-3 border-t border-border"
-						style={{ padding: 12, paddingLeft: 14 }}
-					>
-						<RowHeading
-							icon="text-outline"
-							title="Matn o'lchami"
-							subtitle="Barcha ekranlarga qo'llanadi"
+						<ListRow
+							title="Kontaktlar"
+							subtitle={contacts.length ? `${debts.length} ta qarz` : "Qarzdorlarni qo'shing yoki import qiling"}
+							icon="people-outline"
+							value={contacts.length ? `${contacts.length} ta` : undefined}
+							divider
+							onPress={() => router.push("/contacts")}
 						/>
-						<SegmentedControl
-							items={FONT_SCALES.map((s) => ({ key: s, label: FONT_SCALE_LABELS[s] }))}
-							value={scale}
-							onChange={setScale}
-							className="bg-background"
+						<ListRow
+							title="Qarzlarni hisobotga qo'shish"
+							subtitle="Qarz olish, berish, qaytarish va undirish ham kirim/chiqim jamiga qo'shiladi"
+							icon="swap-horizontal-outline"
+							divider
+							trailing={
+								<Toggle
+									value={includeDebtsInStats}
+									onValueChange={setIncludeDebtsInStats}
+									accessibilityLabel="Qarzlarni hisobotga qo'shish"
+								/>
+							}
 						/>
-					</View>
-					<Select
-						label="Standart valyuta"
-						value={defaultUnit}
-						toggleOff={false}
-						onChange={(next) => next && setDefaultUnit(next)}
-						options={UNITS.map((u) => ({ key: u.code, label: `${u.code} — ${u.name}` }))}
-						trigger={({ open }) => (
+					</Section>
+
+					{/* Privacy ------------------------------------------------------- */}
+					<Section title="Maxfiylik">
+						<ListRow
+							title="Kirimni yashirish"
+							subtitle="Kirim, balans va hamyon qoldiqlari nuqtalar bilan ko'rsatiladi"
+							icon="eye-off-outline"
+							trailing={
+								<Toggle
+									value={hideIncome}
+									onValueChange={toggleHideIncome}
+									accessibilityLabel="Kirimni yashirish"
+								/>
+							}
+						/>
+					</Section>
+
+					{/* Data ---------------------------------------------------------- */}
+					<Section title="Ma'lumotlar">
+						<ListRow
+							title="Faylga saqlash"
+							subtitle={`${transactions.length} ta yozuv JSON fayliga yoziladi`}
+							icon="download-outline"
+							onPress={runSave}
+							trailing={busy === "save" ? <ActivityIndicator color={tc.foreground} /> : undefined}
+						/>
+						<ListRow
+							title="Fayldan tiklash"
+							subtitle="JSON yoki .db zaxira — hozirgi yozuvlar o'rniga qo'yiladi"
+							icon="folder-open-outline"
+							divider
+							onPress={runLoad}
+							trailing={busy === "load" ? <ActivityIndicator color={tc.foreground} /> : undefined}
+						/>
+						<ListRow
+							title="Zaxira nusxa"
+							subtitle={
+								telegram.configured
+									? describeTelegramStatus(telegram.config, telegram.status) +
+										(telegram.config.auto ? " · har kuni" : "")
+									: "Har kuni Telegram botingizga yuborish"
+							}
+							icon="cloud-upload-outline"
+							divider
+							onPress={() => router.push("/telegram")}
+						/>
+						{telegram.configured && (
 							<ListRow
-								title="Valyuta"
-								subtitle="Yangi yozuv shu valyuta bilan boshlanadi"
-								icon="cash-outline"
-								value={`${unit.symbol} (${unit.code})`}
+								title="Telegramga hozir yuborish"
+								subtitle={`${transactions.length} ta yozuv .db fayl qilib yuboriladi`}
+								icon="paper-plane-outline"
 								divider
-								onPress={open}
+								onPress={runTelegramSend}
+								trailing={
+									telegram.sending ? <ActivityIndicator color={tc.foreground} /> : undefined
+								}
 							/>
 						)}
-					/>
-				</Section>
-
-				{/* Distribution --------------------------------------------------- */}
-				<Section title="Taqsimot">
-					<ListRow
-						title="Hamyonlar va ulushlar"
-						icon="wallet-outline"
-						value={`${wallets.length} ta`}
-						onPress={() => router.push("/wallets")}
-					/>
-					<ListRow
-						title="Kirimni avtomatik taqsimlash"
-						subtitle="Ulushlar bo'yicha hamyonlarga. O'chirilsa, kirim qaysi hamyonga tushishini o'zingiz tanlaysiz"
-						icon="pie-chart-outline"
-						divider
-						trailing={
-							<Toggle
-								value={splitIncome}
-								onValueChange={setSplitIncome}
-								accessibilityLabel="Kirimni avtomatik taqsimlash"
-							/>
-						}
-					/>
-					<ListRow
-						title="Kategoriyalar"
-						subtitle={`${subcategoryCount} ta ichki kategoriya`}
-						icon="pricetags-outline"
-						value={`${categories.length} ta`}
-						divider
-						onPress={() => router.push("/categories")}
-					/>
-					<ListRow
-						title="Kontaktlar"
-						subtitle={contacts.length ? `${debts.length} ta qarz` : "Qarzdorlarni qo'shing yoki import qiling"}
-						icon="people-outline"
-						value={contacts.length ? `${contacts.length} ta` : undefined}
-						divider
-						onPress={() => router.push("/contacts")}
-					/>
-					<ListRow
-						title="Qarzlarni hisobotga qo'shish"
-						subtitle="Qarz olish, berish, qaytarish va undirish ham kirim/chiqim jamiga qo'shiladi"
-						icon="swap-horizontal-outline"
-						divider
-						trailing={
-							<Toggle
-								value={includeDebtsInStats}
-								onValueChange={setIncludeDebtsInStats}
-								accessibilityLabel="Qarzlarni hisobotga qo'shish"
-							/>
-						}
-					/>
-				</Section>
-
-				{/* Privacy ------------------------------------------------------- */}
-				<Section title="Maxfiylik">
-					<ListRow
-						title="Kirimni yashirish"
-						subtitle="Kirim, balans va hamyon qoldiqlari nuqtalar bilan ko'rsatiladi"
-						icon="eye-off-outline"
-						trailing={
-							<Toggle
-								value={hideIncome}
-								onValueChange={toggleHideIncome}
-								accessibilityLabel="Kirimni yashirish"
-							/>
-						}
-					/>
-				</Section>
-
-				{/* Data ---------------------------------------------------------- */}
-				<Section title="Ma'lumotlar">
-					<ListRow
-						title="Faylga saqlash"
-						subtitle={`${transactions.length} ta yozuv JSON fayliga yoziladi`}
-						icon="download-outline"
-						onPress={runSave}
-						trailing={busy === "save" ? <ActivityIndicator color={tc.foreground} /> : undefined}
-					/>
-					<ListRow
-						title="Fayldan tiklash"
-						subtitle="JSON yoki .db zaxira — hozirgi yozuvlar o'rniga qo'yiladi"
-						icon="folder-open-outline"
-						divider
-						onPress={runLoad}
-						trailing={busy === "load" ? <ActivityIndicator color={tc.foreground} /> : undefined}
-					/>
-					<ListRow
-						title="Zaxira nusxa"
-						subtitle={
-							telegram.configured
-								? describeTelegramStatus(telegram.config, telegram.status) +
-									(telegram.config.auto ? " · har kuni" : "")
-								: "Har kuni Telegram botingizga yuborish"
-						}
-						icon="cloud-upload-outline"
-						divider
-						onPress={() => router.push("/telegram")}
-					/>
-					{telegram.configured && (
 						<ListRow
-							title="Telegramga hozir yuborish"
-							subtitle={`${transactions.length} ta yozuv .db fayl qilib yuboriladi`}
-							icon="paper-plane-outline"
+							title="Kiritilgan yozuvlar"
+							icon="receipt-outline"
+							value={`${transactions.length} ta`}
 							divider
-							onPress={runTelegramSend}
-							trailing={
-								telegram.sending ? <ActivityIndicator color={tc.foreground} /> : undefined
-							}
 						/>
-					)}
-					<ListRow
-						title="Kiritilgan yozuvlar"
-						icon="receipt-outline"
-						value={`${transactions.length} ta`}
-						divider
-					/>
-					<ListRow
-						title="Ilova versiyasi"
-						icon="information-circle-outline"
-						value={appVersion}
-						divider
-					/>
-				</Section>
+						<ListRow
+							title="Ilova versiyasi"
+							icon="information-circle-outline"
+							value={appVersion}
+							divider
+						/>
+					</Section>
 
-				<Card flush className="mt-5">
-					<ListRow
-						title="Barcha ma'lumotlarni o'chirish"
-						subtitle="Barcha yozuvlar o'chadi, boshlang'ich kategoriyalar tiklanadi"
-						icon="trash-outline"
-						danger
-						onPress={confirmReset}
-					/>
-				</Card>
+					<Card flush className="mt-5">
+						<ListRow
+							title="Barcha ma'lumotlarni o'chirish"
+							subtitle="Barcha yozuvlar o'chadi, boshlang'ich kategoriyalar tiklanadi"
+							icon="trash-outline"
+							danger
+							onPress={confirmReset}
+						/>
+					</Card>
 
-				<Text
-					className="font-semibold text-muted-foreground text-center px-6 pt-4"
-					style={{ fontSize: tf.xs }}
-				>
-					{telegram.configured
-						? "Hammasi shu qurilmada saqlanadi — nusxasi faqat o'zingizning Telegram chatingizga boradi."
-						: "Hammasi faqat shu qurilmada saqlanadi."}
-				</Text>
-			</ScrollView>
+					<Text
+						className="font-semibold text-muted-foreground text-center px-6 pt-4"
+						style={{ fontSize: tf.xs }}
+					>
+						{telegram.configured
+							? "Hammasi shu qurilmada saqlanadi — nusxasi faqat o'zingizning Telegram chatingizga boradi."
+							: "Hammasi faqat shu qurilmada saqlanadi."}
+					</Text>
+				</ScrollView>
+				<ScrollShadow visible={scrolled} />
+			</View>
 		</>
 	);
 }
