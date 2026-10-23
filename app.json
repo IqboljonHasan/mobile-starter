@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "uz.taqsim.pul",
+      "bundleIdentifier": "uz.rhamyon.taqsim",
       "icon": {
         "light": "./assets/images/icon.png",
         "dark": "./assets/images/icon-dark.png",
@@ -17,7 +17,7 @@
       }
     },
     "android": {
-      "package": "uz.taqsim.pul",
+      "package": "uz.rhamyon.taqsim",
       "predictiveBackGestureEnabled": false,
       "allowBackup": false,
       "adaptiveIcon": {
@@ -25,7 +25,11 @@
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
         "backgroundColor": "#FFFFFF"
       },
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ]
     },
     "web": {
       "output": "static"
@@ -109,8 +113,9 @@
       "reactCompiler": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "ac9facac-e004-4a49-90ae-4b7995407a5c"
+        "projectId": "abc09338-529e-42ee-82f0-ec3585dfcb3a"
       }
     },
     "owner": "iqboljonhasan"
