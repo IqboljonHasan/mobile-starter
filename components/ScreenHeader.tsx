@@ -1,4 +1,5 @@
 import type { NativeStackHeaderProps } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton } from "@/components/ui";
@@ -27,6 +28,10 @@ export default function ScreenHeader({ options, navigation, back, route }: Nativ
 
 	return (
 		<View style={{ backgroundColor: tc.backdrop, paddingTop: insets.top + 8 }}>
+			{/* Light icons on the navy strip. The root already asks for them, but
+			    mounting one per screen re-sends it on every push, so nothing native
+			    that resets the bar can leave dark icons stuck here. */}
+			<StatusBar style="light" />
 			<View
 				style={{
 					backgroundColor: tc.background,

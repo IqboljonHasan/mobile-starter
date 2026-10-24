@@ -1,3 +1,4 @@
+import { NavigationBar } from "expo-navigation-bar";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -24,6 +25,11 @@ import "../global.css";
 // React — is on screen to take over from it. Called at module scope because it
 // has to land before the native splash hides on its own.
 SplashScreen.preventAutoHideAsync();
+// No fade of its own: the copy underneath is identical, so it can just go.
+// Android's splash also puts the status bar icons back as it found them when
+// it's removed — after its default 400ms fade that lands once SplashOverlay
+// has already handed the bar back to light, leaving dark icons on the navy.
+SplashScreen.setOptions({ duration: 0, fade: false });
 
 /** Longest the logo is held for, should reading storage never come back. */
 const SPLASH_TIMEOUT_MS = 8000;
@@ -67,6 +73,10 @@ function AppContent() {
 				    blue sky, or the navy strip above a sheet — so its icons are light
 				    in both themes. */}
 				<StatusBar style="light" />
+				{/* The bottom bar sits on the sheet, so it follows the theme. Android
+				    only picks its colour once, from the system theme at launch, so
+				    switching the app's theme has to tell it again. */}
+				<NavigationBar style={isDark ? "dark" : "light"} />
 				<Stack
 					screenOptions={{
 						// Screens rise into place like a sheet being laid over the one

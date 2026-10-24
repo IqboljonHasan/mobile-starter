@@ -1,3 +1,4 @@
+import { NavigationBar } from "expo-navigation-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -81,8 +82,10 @@ export default function SplashOverlay({ done }: { done: boolean }) {
 			]}
 		>
 			{/* Dark icons on the white backdrop; the app's own light ones return
-			    with the root's StatusBar once this unmounts. */}
+			    with the root's StatusBar once this unmounts. The bottom bar matches
+			    the backdrop too, not the app theme that's still being read. */}
 			<StatusBar style={scheme === "dark" ? "light" : "dark"} />
+			<NavigationBar style={scheme} />
 			<Image
 				source={LOGO[scheme]}
 				onLoad={handOff}
