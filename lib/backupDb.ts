@@ -64,6 +64,7 @@ const TABLES: Table[] = [
 			["allocations", "json"],
 			["walletId", "text"],
 			["debtId", "text"],
+			["memberId", "text"],
 		],
 	},
 	{
@@ -124,6 +125,16 @@ const TABLES: Table[] = [
 			["description", "text"],
 			["walletId", "text"],
 			["split", "bool"],
+			["memberId", "text"],
+			["createdAt", "integer"],
+		],
+	},
+	{
+		name: "members",
+		columns: [
+			["id", "text"],
+			["name", "text"],
+			["color", "text"],
 			["createdAt", "integer"],
 		],
 	},

@@ -103,7 +103,7 @@ export default function LedgerSheet({
 	const insets = useSafeAreaInsets();
 	const { isDark } = useTheme();
 	const { tf } = useFont();
-	const { transactions, categories, wallets, defaultUnit } = useLedger();
+	const { transactions, categories, wallets, members, defaultUnit } = useLedger();
 	const { hideIncome, includeDebtsInStats } = usePreferences();
 
 	const sheet = useRef<BottomSheet>(null);
@@ -200,8 +200,8 @@ export default function LedgerSheet({
 
 	// Everything that narrows the list except the side, which the totals show
 	// both of: the wallet (by share), the category, and the search — which
-	// reads what a row shows: its note, its category and subcategory, and the
-	// amount's digits.
+	// reads what a row shows: its note, its category and subcategory, who it
+	// was spent on, and the amount's digits.
 	const folded = foldForSearch(query);
 	const narrowed = useMemo(
 		() =>
@@ -210,9 +210,16 @@ export default function LedgerSheet({
 				if (shareOf(t, walletFilter) <= 0) return false;
 				if (!folded) return true;
 				const { category, subcategory } = resolveCategory(t, categories);
-				return matchesSearch(folded, [t.description, category?.name, subcategory?.name, String(t.amount)]);
+				const member = t.memberId ? members.find((m) => m.id === t.memberId) : undefined;
+				return matchesSearch(folded, [
+					t.description,
+					category?.name,
+					subcategory?.name,
+					member?.name,
+					String(t.amount),
+				]);
 			}),
-		[monthly, categoryFilter, walletFilter, folded, categories],
+		[monthly, categoryFilter, walletFilter, folded, categories, members],
 	);
 	const visible = useMemo(
 		() => (type === "all" ? narrowed : narrowed.filter((t) => t.type === type)),
@@ -390,6 +397,19 @@ export default function LedgerSheet({
 										label: "Hisobot",
 										icon: "bar-chart-outline",
 										onPress: () => router.push(`/stats?month=${month}`),
+									},
+									{
+										key: "categories",
+										label: "Kategoriyalar",
+										icon: "pricetags-outline",
+										separatorBefore: true,
+										onPress: () => router.push("/categories"),
+									},
+									{
+										key: "members",
+										label: "Oila a'zolari",
+										icon: "people-outline",
+										onPress: () => router.push("/members"),
 									},
 								]}
 							/>

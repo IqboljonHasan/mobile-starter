@@ -60,6 +60,7 @@ export default function SettingsScreen() {
 		contacts,
 		debts,
 		templates,
+		members,
 		defaultUnit,
 		setDefaultUnit,
 		resetLedger,
@@ -87,6 +88,7 @@ export default function SettingsScreen() {
 				contacts,
 				debts,
 				templates,
+				members,
 				defaultUnit,
 			});
 			// A cancelled picker is a decision, not a failure — say nothing.
@@ -172,7 +174,6 @@ export default function SettingsScreen() {
 	};
 
 	const unit = unitByCode(defaultUnit);
-	const subcategoryCount = categories.reduce((n, c) => n + c.subcategories.length, 0);
 
 	return (
 		<>
@@ -258,14 +259,6 @@ export default function SettingsScreen() {
 									accessibilityLabel="Kirimni avtomatik taqsimlash"
 								/>
 							}
-						/>
-						<ListRow
-							title="Kategoriyalar"
-							subtitle={`${subcategoryCount} ta ichki kategoriya`}
-							icon="pricetags-outline"
-							value={`${categories.length} ta`}
-							divider
-							onPress={() => router.push("/categories")}
 						/>
 						<ListRow
 							title="Kontaktlar"

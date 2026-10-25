@@ -240,6 +240,7 @@ function TransactionForm({
 		templates,
 		addTemplate,
 		deleteTemplate,
+		members,
 	} = useLedger();
 	const { hideIncome, splitIncome } = usePreferences();
 
@@ -263,6 +264,8 @@ function TransactionForm({
 	const [incomeWalletId, setIncomeWalletId] = useState<string | null>(
 		type === "income" ? (existing?.walletId ?? null) : null,
 	);
+	// Expense side: who in the family it was spent on. Null is everybody.
+	const [memberId, setMemberId] = useState<string | null>(existing?.memberId ?? null);
 	const [coverOpen, setCoverOpen] = useState(false);
 	const [padOpen, setPadOpen] = useState(false);
 	const [templateOpen, setTemplateOpen] = useState(false);
@@ -376,6 +379,9 @@ function TransactionForm({
 			const mapped = templateCategory?.walletIds ?? [];
 			setWalletId(template.walletId ?? (mapped.length === 1 ? mapped[0] : null));
 			setWalletTouched(!!template.walletId);
+			setMemberId(
+				members.some((m) => m.id === template.memberId) ? (template.memberId ?? null) : null,
+			);
 		} else {
 			setSplitThis(template.split);
 			setIncomeWalletId(template.split ? null : template.walletId);
@@ -417,6 +423,7 @@ function TransactionForm({
 			description: description.trim(),
 			walletId: type === "expense" ? walletId : dividing ? null : incomeWalletId,
 			split: type === "income" && dividing,
+			memberId: type === "expense" ? memberId : null,
 		});
 		setTemplateId(template.id);
 	};
@@ -434,6 +441,7 @@ function TransactionForm({
 		setWalletTouched(false);
 		setSplitThis(true);
 		setIncomeWalletId(null);
+		setMemberId(null);
 		setTemplateId(null);
 		setSubmitted(false);
 	};
@@ -480,6 +488,9 @@ function TransactionForm({
 			// it isn't being divided, in which case it names the wallet that
 			// receives it whole (or none, and touches no wallet).
 			walletId: type === "expense" ? walletId : dividing ? null : incomeWalletId,
+			// Money in isn't spent on anybody, so an entry turned into income
+			// drops whoever it named.
+			memberId: type === "expense" ? memberId : null,
 		};
 
 		if (existing) updateTransaction(existing.id, input);
@@ -898,6 +909,41 @@ function TransactionForm({
 						)}
 					</View>
 				) : null}
+
+				{/* Who it was spent on — once there is a family to choose from --- */}
+				{type === "expense" && members.length > 0 && (
+					<View>
+						<FieldLabel>Kimga sarflandi</FieldLabel>
+						<ScrollView
+							horizontal
+							accessibilityRole="radiogroup"
+							accessibilityLabel="Kimga sarflandi"
+							showsHorizontalScrollIndicator={false}
+							keyboardShouldPersistTaps="handled"
+							style={{ marginHorizontal: -18 }}
+							contentContainerStyle={{ gap: 6, paddingHorizontal: 18 }}
+						>
+							<Chip
+								role="radio"
+								label="Umumiy"
+								leadingIcon="people-outline"
+								active={memberId === null}
+								accessibilityLabel="Umumiy — butun oila uchun"
+								onPress={() => setMemberId(null)}
+							/>
+							{members.map((m) => (
+								<Chip
+									key={m.id}
+									role="radio"
+									label={m.name}
+									dot={categoryColorValue(m.color, isDark)}
+									active={memberId === m.id}
+									onPress={() => setMemberId(m.id)}
+								/>
+							))}
+						</ScrollView>
+					</View>
+				)}
 
 				{/* Note and date ------------------------------------------------- */}
 				<Textarea

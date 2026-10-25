@@ -22,6 +22,7 @@ export const KEY_TRANSFERS = "transfers";
 export const KEY_CONTACTS = "contacts";
 export const KEY_DEBTS = "debts";
 export const KEY_TEMPLATES = "templates";
+export const KEY_MEMBERS = "members";
 export const KEY_UNIT = "default_unit";
 
 export async function getSetting(key: string, fallback: string): Promise<string> {

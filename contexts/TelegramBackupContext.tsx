@@ -60,9 +60,9 @@ export function TelegramBackupProvider({ children }: { children: ReactNode }) {
 		contacts,
 		debts,
 		templates,
+		members,
 		defaultUnit,
-	} =
-		useLedger();
+	} = useLedger();
 	const [loaded, setLoaded] = useState(false);
 	const [config, setConfig] = useState(EMPTY_TELEGRAM_CONFIG);
 	const [status, setStatus] = useState(EMPTY_TELEGRAM_STATUS);
@@ -82,9 +82,10 @@ export function TelegramBackupProvider({ children }: { children: ReactNode }) {
 			contacts,
 			debts,
 			templates,
+			members,
 			defaultUnit,
 		};
-	}, [categories, transactions, wallets, transfers, contacts, debts, templates, defaultUnit]);
+	}, [categories, transactions, wallets, transfers, contacts, debts, templates, members, defaultUnit]);
 
 	useEffect(() => {
 		Promise.all([loadTelegramConfig(), loadTelegramStatus()]).then(

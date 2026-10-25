@@ -104,7 +104,27 @@ export type Transaction = {
 	 *  debt — it is edited and deleted from there, never on its own, so the two
 	 *  can't drift apart. See lib/debts.ts. */
 	debtId?: string | null;
+	/** Expense: the family member the money was spent on. Null or absent means
+	 *  the household as a whole — and is all an income ever carries. */
+	memberId?: string | null;
 };
+
+/**
+ * Somebody in the household an expense can be spent on — "Ali", "Onam" — so
+ * the ledger answers who the money went to as well as what it was for. Managed
+ * from the ledger's ⋮ menu. An expense names at most one; none means it was
+ * for everybody.
+ */
+export type FamilyMember = {
+	id: string;
+	name: string;
+	/** Palette key, as a category's — see lib/categoryColors.ts. */
+	color: CategoryColor;
+	createdAt: number;
+};
+
+/** What the member editor collects. */
+export type MemberDraft = Pick<FamilyMember, "name" | "color">;
 
 /**
  * Somebody money is owed to or by. Kept as the app's own record rather than a
@@ -251,6 +271,8 @@ export type TransactionTemplate = {
 	walletId: string | null;
 	/** Income: whether it's divided across the wallets. */
 	split: boolean;
+	/** Expense: the family member it is spent on, when the template names one. */
+	memberId?: string | null;
 	createdAt: number;
 };
 

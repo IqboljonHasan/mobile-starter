@@ -93,6 +93,7 @@ function AppContent() {
 					<Stack.Screen name="debts" options={{ title: "Qarzlar" }} />
 					<Stack.Screen name="transaction" options={{ title: "Yozuv" }} />
 					<Stack.Screen name="categories" options={{ title: "Kategoriyalar" }} />
+					<Stack.Screen name="members" options={{ title: "Oila a'zolari" }} />
 					<Stack.Screen name="wallets" options={{ title: "Hamyonlar" }} />
 					<Stack.Screen name="stats" options={{ title: "Statistika" }} />
 					<Stack.Screen name="debt" options={{ title: "Qarz" }} />

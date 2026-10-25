@@ -11,6 +11,7 @@ import {
 	type Debt,
 	type DebtDirection,
 	type DebtPayment,
+	type FamilyMember,
 	type IconName,
 	type Subcategory,
 	type Transaction,
@@ -56,8 +57,11 @@ export const BACKUP_FORMAT = "taqsim.backup";
  *
  * 4 added a contact's tag, a debt's reminder switch, and entry templates.
  * Older files import with untagged contacts, no reminders, and no templates.
+ *
+ * 5 added family members, and the one an expense (or a template) was spent on.
+ * Older files import with none, every expense reading as for everybody.
  */
-export const BACKUP_VERSION = 4;
+export const BACKUP_VERSION = 5;
 
 /** The part of the ledger worth carrying between devices. */
 export type BackupPayload = {
@@ -68,6 +72,7 @@ export type BackupPayload = {
 	contacts: Contact[];
 	debts: Debt[];
 	templates: TransactionTemplate[];
+	members: FamilyMember[];
 	defaultUnit: string;
 };
 
@@ -280,6 +285,25 @@ function parseTransaction(raw: unknown): Transaction | null {
 		// Absent on everything written before the Debts tab, and on every entry
 		// the user typed in by hand — which is exactly what a null means here.
 		debtId: nonEmptyString(raw.debtId) ? raw.debtId : null,
+		// Absent below version 5. Only an expense is spent on somebody.
+		memberId: raw.type === "expense" && nonEmptyString(raw.memberId) ? raw.memberId : null,
+	};
+}
+
+function parseMember(raw: unknown): FamilyMember | null {
+	if (!isRecord(raw)) return null;
+	if (!nonEmptyString(raw.id) || !nonEmptyString(raw.name)) return null;
+
+	return {
+		id: raw.id,
+		name: raw.name,
+		// A colour is only how the member is drawn, so a bad one costs the hue,
+		// not the person.
+		color: typeof raw.color === "string" && isCategoryColor(raw.color) ? raw.color : "blue",
+		createdAt:
+			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
+				? raw.createdAt
+				: Date.now(),
 	};
 }
 
@@ -393,6 +417,7 @@ function parseTemplate(raw: unknown): TransactionTemplate | null {
 		description: typeof raw.description === "string" ? raw.description : "",
 		walletId: nonEmptyString(raw.walletId) ? raw.walletId : null,
 		split: raw.split !== false,
+		memberId: raw.type === "expense" && nonEmptyString(raw.memberId) ? raw.memberId : null,
 		createdAt:
 			typeof raw.createdAt === "number" && Number.isFinite(raw.createdAt)
 				? raw.createdAt
@@ -482,6 +507,16 @@ export function parseBackupData(raw: unknown): ParseResult {
 	const templates = rawTemplates
 		.map(parseTemplate)
 		.filter((t): t is TransactionTemplate => t !== null);
+	// Absent below version 5.
+	const rawMembers = Array.isArray(raw.members) ? raw.members : [];
+	const members = rawMembers
+		.map(parseMember)
+		.filter((m): m is FamilyMember => m !== null);
+	// An entry naming somebody the file doesn't carry would point at nobody;
+	// it reads as for everybody instead.
+	const memberIds = new Set(members.map((m) => m.id));
+	const knownMember = <T extends { memberId?: string | null }>(record: T): T =>
+		record.memberId && !memberIds.has(record.memberId) ? { ...record, memberId: null } : record;
 
 	const skipped =
 		raw.categories.length -
@@ -490,7 +525,8 @@ export function parseBackupData(raw: unknown): ParseResult {
 		(rawWallets.length - parsedWallets.length) +
 		(rawContacts.length - contacts.length) +
 		(rawDebts.length - debts.length) +
-		(rawTemplates.length - templates.length);
+		(rawTemplates.length - templates.length) +
+		(rawMembers.length - members.length);
 
 	if (categories.length === 0 && transactions.length === 0) {
 		return { ok: false, error: "Faylda tiklash uchun ma'lumot yo'q." };
@@ -502,12 +538,13 @@ export function parseBackupData(raw: unknown): ParseResult {
 		hasWallets: parsedWallets.length > 0,
 		payload: {
 			categories,
-			transactions,
+			transactions: transactions.map(knownMember),
 			wallets,
 			transfers,
 			contacts,
 			debts,
-			templates,
+			templates: templates.map(knownMember),
+			members,
 			// An unknown code would leave every new entry in a currency that
 			// doesn't exist; `unitByCode` falls back to the default.
 			defaultUnit:

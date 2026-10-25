@@ -45,7 +45,7 @@ export default function TransactionRow({
 	const { tf } = useFont();
 	const { tc, isDark } = useTheme();
 	const { hideIncome } = usePreferences();
-	const { wallets, defaultUnit } = useLedger();
+	const { wallets, members, defaultUnit } = useLedger();
 	const handlePress = useGuardedPress(onPress);
 	const { category, subcategory } = resolveCategory(transaction, categories);
 	const income = transaction.type === "income";
@@ -65,6 +65,11 @@ export default function TransactionRow({
 			: walletById(wallets, singleWalletId);
 
 	const title = subcategory?.name ?? category?.name ?? "Kategoriyasiz";
+	const member = transaction.memberId
+		? members.find((m) => m.id === transaction.memberId)
+		: undefined;
+	// Who it was for leads the line under the title, ahead of the note.
+	const detail = [member?.name, transaction.description].filter(Boolean).join(" · ");
 	const amountText = `${income ? "+" : "−"}${
 		hidden
 			? maskAmount(transaction.unit)
@@ -86,6 +91,7 @@ export default function TransactionRow({
 			accessibilityLabel={[
 				title,
 				subcategory && category ? category.name : null,
+				member ? `${member.name} uchun` : null,
 				transaction.description || null,
 				`${income ? "kirim" : "chiqim"} ${hidden ? "yashirilgan" : formatAmount(amount, transaction.unit)}`,
 				walletText || null,
@@ -115,13 +121,13 @@ export default function TransactionRow({
 							<Text className="font-semibold text-muted-foreground">{` / ${category.name}`}</Text>
 						) : null}
 					</Text>
-					{!!transaction.description && (
+					{!!detail && (
 						<Text
 							className="font-semibold text-muted-foreground"
 							style={{ fontSize: tf.sm - 0.5 }}
 							numberOfLines={1}
 						>
-							{transaction.description}
+							{detail}
 						</Text>
 					)}
 				</View>

@@ -23,6 +23,7 @@ export default function ContactAvatar({
 	id,
 	size = 40,
 	mono = false,
+	color: pickedColor,
 }: {
 	name: string;
 	/** Chooses the hue. Same id, same colour, everywhere. */
@@ -31,10 +32,12 @@ export default function ContactAvatar({
 	/** Ink initials on the muted tone — how a person is drawn in the debts
 	 *  list, where colour is left to the amounts. */
 	mono?: boolean;
+	/** A hue the user picked, for a family member, in place of the id's. */
+	color?: string;
 }) {
 	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
-	const color = CATEGORY_COLORS[contactColorIndex(id) % CATEGORY_COLORS.length];
+	const color = pickedColor ?? CATEGORY_COLORS[contactColorIndex(id) % CATEGORY_COLORS.length];
 	const hex = categoryColorValue(color, isDark);
 
 	return (
