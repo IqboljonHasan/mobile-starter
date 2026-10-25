@@ -4,7 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-na
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useTheme } from "@/hooks/useTheme";
 
-const HEIGHT = 12;
+const HEIGHT = 6;
 
 /**
  * The shade along the top edge of a scrolling area, shown once its content

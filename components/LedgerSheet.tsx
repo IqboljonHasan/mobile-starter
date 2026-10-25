@@ -29,7 +29,7 @@ import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
-import { useScrolled } from "@/hooks/useScrolled";
+import { useStickyHeaderShadow } from "@/hooks/useStickyHeaderShadow";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";
 import { currentMonthKey, formatSectionDay, monthName, shiftMonth } from "@/lib/date";
@@ -52,6 +52,9 @@ const HANDLE_HEIGHT = 19;
 const TITLE_HEIGHT = 56;
 /** The Kirim / Chiqim buttons pinned to the sheet's bottom edge. */
 const FOOTER_HEIGHT = 82;
+/** A day's header in the list — the same for every day, so the shade can sit
+ *  right under whichever one is stuck at the top. */
+const SECTION_HEADER_HEIGHT = 40;
 
 /**
  * What one wallet got out of an entry: an income's share of the split (or all
@@ -115,8 +118,9 @@ export default function LedgerSheet({
 	const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
-	// Whether the list has scrolled under the fixed filters above it.
-	const { scrolled, scrollProps } = useScrolled();
+	// What the list is scrolling under: the stuck day header, or the filters
+	// above it while the next day pushes that header out.
+	const { edge, listProps } = useStickyHeaderShadow(SECTION_HEADER_HEIGHT);
 
 	const collapsedHeight = HANDLE_HEIGHT + blockHeight + FOOTER_HEIGHT;
 	const snapPoints = useMemo(() => [collapsedHeight, "100%"], [collapsedHeight]);
@@ -476,7 +480,7 @@ export default function LedgerSheet({
 								stickySectionHeadersEnabled
 								showsVerticalScrollIndicator={false}
 								keyboardShouldPersistTaps="handled"
-								{...scrollProps}
+								{...listProps}
 								contentContainerStyle={{
 									paddingHorizontal: 18,
 									// Clear of the pinned buttons, and of the title row the
@@ -488,7 +492,7 @@ export default function LedgerSheet({
 									return (
 										<View
 											className="flex-row items-center justify-between bg-background"
-											style={{ height: 40, marginTop: section.title === sections[0]?.title ? 0 : 8 }}
+											style={{ height: SECTION_HEADER_HEIGHT }}
 										>
 											<Text
 												accessibilityRole="header"
@@ -505,6 +509,10 @@ export default function LedgerSheet({
 										</View>
 									);
 								}}
+								// The gap between days goes after each day rather than as a
+								// margin on the next header: a stuck header would carry the
+								// margin with it, a see-through strip rows show through.
+								renderSectionFooter={() => <View style={{ height: 8 }} />}
 								renderItem={({ item, index }) => (
 									<TransactionRow
 										transaction={item}
@@ -528,7 +536,8 @@ export default function LedgerSheet({
 									/>
 								}
 							/>
-							<ScrollShadow visible={scrolled} />
+							<ScrollShadow visible={edge === "header"} top={SECTION_HEADER_HEIGHT} />
+							<ScrollShadow visible={edge === "top"} />
 						</View>
 					</GestureDetector>
 				</Animated.View>

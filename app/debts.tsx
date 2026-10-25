@@ -14,7 +14,7 @@ import { useLedger } from "@/contexts/LedgerContext";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
-import { useScrolled } from "@/hooks/useScrolled";
+import { useStickyHeaderShadow } from "@/hooks/useStickyHeaderShadow";
 import { todayISO } from "@/lib/date";
 import {
 	contactById,
@@ -46,6 +46,10 @@ const GROUPS: { key: DebtStatus; label: string }[] = [
 	{ key: "settled", label: "Yopilgan" },
 ];
 
+/** A group's header — the same for every group, so the shade can sit right
+ *  under whichever one is stuck at the top. */
+const SECTION_HEADER_HEIGHT = 40;
+
 /**
  * Who owes what, and to whom.
  *
@@ -71,7 +75,7 @@ export default function DebtsScreen() {
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
 	const [remindersOpen, setRemindersOpen] = useState(false);
-	const { scrolled, scrollProps } = useScrolled();
+	const { edge, listProps } = useStickyHeaderShadow(SECTION_HEADER_HEIGHT);
 	const folded = foldForSearch(query);
 	const today = todayISO();
 
@@ -225,7 +229,7 @@ export default function DebtsScreen() {
 
 			<View className="flex-1">
 				<SectionList
-					{...scrollProps}
+					{...listProps}
 					sections={sections}
 					keyExtractor={(item) => item.id}
 					stickySectionHeadersEnabled
@@ -236,7 +240,7 @@ export default function DebtsScreen() {
 						return (
 							<View
 								className="flex-row items-center justify-between bg-background"
-								style={{ height: 40, marginTop: section.key === sections[0]?.key ? 0 : 8 }}
+								style={{ height: SECTION_HEADER_HEIGHT }}
 							>
 								<Text
 									accessibilityRole="header"
@@ -260,6 +264,10 @@ export default function DebtsScreen() {
 							</View>
 						);
 					}}
+					// The gap between groups goes after each group rather than as a
+					// margin on the next header: a stuck header would carry the margin
+					// with it, a see-through strip rows show through.
+					renderSectionFooter={() => <View style={{ height: 8 }} />}
 					renderItem={({ item, index }) => (
 						<DebtRow
 							debt={item}
@@ -283,7 +291,10 @@ export default function DebtsScreen() {
 						/>
 					}
 				/>
-					<ScrollShadow visible={scrolled} />
+				{/* Under the stuck group header, or the filters while the next
+				    group pushes that header out. */}
+				<ScrollShadow visible={edge === "header"} top={SECTION_HEADER_HEIGHT} />
+				<ScrollShadow visible={edge === "top"} />
 			</View>
 
 			{/* Both directions are one tap away: which way a debt runs is the first
