@@ -46,8 +46,11 @@ There is one home screen; everything else is a sheet pushed over it.
 - **Qarzlar** — what is owed either way, grouped into overdue, open and
   settled, filterable by direction and state. The ⋮ menu searches by person or
   note and opens **Eslatmalar**: local notifications before a due date.
-- **Hisobot** (Stats) — one month or year at a time: the summary, a 12-month
-  chart, and a breakdown by category or subcategory.
+- **Tahlil** (Stats) — one month, one year or the whole ledger: income,
+  expense and profit; their run month by month (or year by year); where one
+  side went by category, subcategory or wallet — opening a category into its
+  subcategories and a wallet into its categories — set against the period
+  before; what stands out; and the biggest entries.
 - **Entry and debt forms** — amount with pay method and unit, category and
   subcategory, quick picks (saved templates and pinned subcategories), the
   wallet (or the income's split), note and date; a debt adds the person —
@@ -66,7 +69,7 @@ app/
   debts.tsx              Qarzlar
   transaction.tsx        create / edit / delete one entry
   debt.tsx               create / edit / settle one debt
-  stats.tsx              Hisobot
+  stats.tsx              Tahlil
   wallets.tsx            wallets, their shares, transfers
   categories.tsx         category + subcategory manager
   contacts.tsx           the people debts are with
@@ -81,6 +84,7 @@ components/
   BottomBar.tsx          actions pinned to the bottom of a sheet
   ScrollShadow.tsx       the shade a list shows once it scrolls under a fixed top
   TransactionRow.tsx     one line of the ledger
+  TrendChart.tsx         Tahlil's line / bar chart over time, with its axis
   DebtRow.tsx            one debt
   ContactPicker.tsx      the person a debt is with: search, tags, add, import
   RemindersSheet.tsx     debt reminder settings and what's lined up
@@ -104,6 +108,7 @@ hooks/
 lib/
   types.ts               Category, Transaction, Wallet, Debt, …
   ledger.ts              pure selectors — totals, breakdowns, grouping
+  stats.ts               Tahlil: periods, comparisons, columns, breakdowns
   wallets.ts             splits, balances, redistribution
   debts.ts               debt status, totals, ledger entries, share text
   debtReminders.ts       scheduling debt reminders (expo-notifications)

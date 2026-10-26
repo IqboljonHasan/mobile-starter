@@ -384,10 +384,10 @@ export default function HomeScreen() {
 						</View>
 						<View className="flex-1 gap-px">
 							<Text className="font-extrabold text-foreground" style={{ fontSize: tf.base }}>
-								Hisobot
+								Tahlil
 							</Text>
 							<Text className="font-semibold" style={{ fontSize: tf.sm - 1, color: sky.glassMuted }}>
-								Kirim va chiqimlar tahlili
+								Kirim, chiqim va foyda
 							</Text>
 						</View>
 						<Ionicons name="chevron-forward" size={18} color={sky.glassMuted} />

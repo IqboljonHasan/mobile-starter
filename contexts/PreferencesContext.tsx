@@ -6,13 +6,14 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import type { BreakdownLevel, ChartKind } from "@/lib/stats";
+import type { ChartKind, Dimension } from "@/lib/stats";
 import { getSetting, setSetting } from "@/lib/storage";
 
 const KEY_HIDE_INCOME = "hide_income";
 const KEY_INCLUDE_DEBTS = "include_debts_in_stats";
 const KEY_SPLIT_INCOME = "split_income";
 const KEY_STATS_CHART = "stats_chart";
+const KEY_STATS_FLOW_CHART = "stats_flow_chart";
 const KEY_STATS_LEVEL = "stats_level";
 const KEY_REMINDERS = "debt_reminders";
 
@@ -51,15 +52,22 @@ function asReminderSettings(value: string): ReminderSettings {
 	}
 }
 
-const DEFAULT_STATS_CHART: ChartKind = "pie";
-const DEFAULT_STATS_LEVEL: BreakdownLevel = "category";
+const DEFAULT_STATS_CHART: ChartKind = "bar";
+const DEFAULT_STATS_FLOW_CHART: ChartKind = "line";
+const DEFAULT_STATS_DIMENSION: Dimension = "category";
 
-function asChartKind(value: string): ChartKind {
-	return value === "trend" || value === "bar" || value === "pie" ? value : DEFAULT_STATS_CHART;
+/** Also reads the kinds an older version stored: its stacked "trend" is the
+ *  line chart now, and the pie it offered is gone. */
+function asChartKind(value: string, fallback: ChartKind): ChartKind {
+	if (value === "line" || value === "trend") return "line";
+	if (value === "bar" || value === "pie") return "bar";
+	return fallback;
 }
 
-function asBreakdownLevel(value: string): BreakdownLevel {
-	return value === "category" || value === "subcategory" ? value : DEFAULT_STATS_LEVEL;
+function asDimension(value: string): Dimension {
+	return value === "category" || value === "subcategory" || value === "wallet"
+		? value
+		: DEFAULT_STATS_DIMENSION;
 }
 
 type PreferencesContextType = {
@@ -78,13 +86,15 @@ type PreferencesContextType = {
 	 *  off, name a wallet to receive the whole amount). */
 	splitIncome: boolean;
 	setSplitIncome: (value: boolean) => void;
-	/** How the Stats breakdown draws itself, and whether it groups by
-	 *  category or subcategory — whichever the user last picked, remembered
-	 *  across restarts. */
+	/** How the Tahlil screen draws its two charts — the composition and the
+	 *  income-vs-expense run — and what the composition groups by. Whichever
+	 *  the user last picked, remembered across restarts. */
 	statsChart: ChartKind;
 	setStatsChart: (kind: ChartKind) => void;
-	statsLevel: BreakdownLevel;
-	setStatsLevel: (level: BreakdownLevel) => void;
+	statsFlowChart: ChartKind;
+	setStatsFlowChart: (kind: ChartKind) => void;
+	statsDimension: Dimension;
+	setStatsDimension: (dimension: Dimension) => void;
 	/** When debt reminders are sent. See lib/debtReminders.ts. */
 	reminders: ReminderSettings;
 	setReminders: (next: ReminderSettings) => void;
@@ -99,8 +109,10 @@ const PreferencesContext = createContext<PreferencesContextType>({
 	setSplitIncome: () => {},
 	statsChart: DEFAULT_STATS_CHART,
 	setStatsChart: () => {},
-	statsLevel: DEFAULT_STATS_LEVEL,
-	setStatsLevel: () => {},
+	statsFlowChart: DEFAULT_STATS_FLOW_CHART,
+	setStatsFlowChart: () => {},
+	statsDimension: DEFAULT_STATS_DIMENSION,
+	setStatsDimension: () => {},
 	reminders: DEFAULT_REMINDERS,
 	setReminders: () => {},
 });
@@ -110,7 +122,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 	const [includeDebtsInStats, setIncludeDebtsInStatsState] = useState(false);
 	const [splitIncome, setSplitIncomeState] = useState(true);
 	const [statsChart, setStatsChartState] = useState(DEFAULT_STATS_CHART);
-	const [statsLevel, setStatsLevelState] = useState(DEFAULT_STATS_LEVEL);
+	const [statsFlowChart, setStatsFlowChartState] = useState(DEFAULT_STATS_FLOW_CHART);
+	const [statsDimension, setStatsDimensionState] = useState(DEFAULT_STATS_DIMENSION);
 	const [reminders, setRemindersState] = useState(DEFAULT_REMINDERS);
 
 	useEffect(() => {
@@ -120,10 +133,13 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 		);
 		getSetting(KEY_SPLIT_INCOME, "1").then((value) => setSplitIncomeState(value !== "0"));
 		getSetting(KEY_STATS_CHART, DEFAULT_STATS_CHART).then((value) =>
-			setStatsChartState(asChartKind(value)),
+			setStatsChartState(asChartKind(value, DEFAULT_STATS_CHART)),
 		);
-		getSetting(KEY_STATS_LEVEL, DEFAULT_STATS_LEVEL).then((value) =>
-			setStatsLevelState(asBreakdownLevel(value)),
+		getSetting(KEY_STATS_FLOW_CHART, DEFAULT_STATS_FLOW_CHART).then((value) =>
+			setStatsFlowChartState(asChartKind(value, DEFAULT_STATS_FLOW_CHART)),
+		);
+		getSetting(KEY_STATS_LEVEL, DEFAULT_STATS_DIMENSION).then((value) =>
+			setStatsDimensionState(asDimension(value)),
 		);
 		getSetting(KEY_REMINDERS, JSON.stringify(DEFAULT_REMINDERS)).then((value) =>
 			setRemindersState(asReminderSettings(value)),
@@ -153,9 +169,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 		setSetting(KEY_STATS_CHART, kind);
 	}, []);
 
-	const setStatsLevel = useCallback((level: BreakdownLevel) => {
-		setStatsLevelState(level);
-		setSetting(KEY_STATS_LEVEL, level);
+	const setStatsFlowChart = useCallback((kind: ChartKind) => {
+		setStatsFlowChartState(kind);
+		setSetting(KEY_STATS_FLOW_CHART, kind);
+	}, []);
+
+	const setStatsDimension = useCallback((dimension: Dimension) => {
+		setStatsDimensionState(dimension);
+		setSetting(KEY_STATS_LEVEL, dimension);
 	}, []);
 
 	const setReminders = useCallback((next: ReminderSettings) => {
@@ -174,8 +195,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 				setSplitIncome,
 				statsChart,
 				setStatsChart,
-				statsLevel,
-				setStatsLevel,
+				statsFlowChart,
+				setStatsFlowChart,
+				statsDimension,
+				setStatsDimension,
 				reminders,
 				setReminders,
 			}}

@@ -440,3 +440,17 @@ export function walletUnitsUsed(
 	for (const transfer of transfers) units.add(transfer.unit);
 	return [...units];
 }
+
+/**
+ * What one wallet got out of an entry: an income's share of the split (or all
+ * of it, when it landed whole in that wallet), or an expense's full amount
+ * when that wallet paid it. Zero means the entry never touched the wallet;
+ * a null wallet means no narrowing, so the whole amount counts.
+ */
+export function walletShare(t: Transaction, walletId: string | null): number {
+	if (!walletId) return t.amount;
+	if (t.type === "expense") return t.walletId === walletId ? t.amount : 0;
+	const allocation = t.allocations.find((a) => a.walletId === walletId);
+	if (allocation) return allocation.amount;
+	return t.allocations.length === 0 && t.walletId === walletId ? t.amount : 0;
+}

@@ -38,6 +38,7 @@ import { formatAmount, maskAmount } from "@/lib/money";
 import { foldForSearch, matchesSearch } from "@/lib/search";
 import { homePalette, RADIUS } from "@/lib/theme";
 import type { Transaction, TxType } from "@/lib/types";
+import { walletShare } from "@/lib/wallets";
 
 type TypeFilter = "all" | TxType;
 
@@ -55,19 +56,6 @@ const FOOTER_HEIGHT = 82;
 /** A day's header in the list — the same for every day, so the shade can sit
  *  right under whichever one is stuck at the top. */
 const SECTION_HEADER_HEIGHT = 40;
-
-/**
- * What one wallet got out of an entry: an income's share of the split (or all
- * of it, when it landed whole in that wallet), or an expense's full amount
- * when that wallet paid it. Zero means the entry never touched the wallet.
- */
-function shareOf(t: Transaction, walletId: string | null): number {
-	if (!walletId) return t.amount;
-	if (t.type === "expense") return t.walletId === walletId ? t.amount : 0;
-	const allocation = t.allocations.find((a) => a.walletId === walletId);
-	if (allocation) return allocation.amount;
-	return t.allocations.length === 0 && t.walletId === walletId ? t.amount : 0;
-}
 
 /**
  * Home's month panel and the month's whole ledger, as one sheet.
@@ -207,7 +195,7 @@ export default function LedgerSheet({
 		() =>
 			monthly.filter((t) => {
 				if (categoryFilter && t.categoryId !== categoryFilter) return false;
-				if (shareOf(t, walletFilter) <= 0) return false;
+				if (walletShare(t, walletFilter) <= 0) return false;
 				if (!folded) return true;
 				const { category, subcategory } = resolveCategory(t, categories);
 				const member = t.memberId ? members.find((m) => m.id === t.memberId) : undefined;
@@ -245,8 +233,8 @@ export default function LedgerSheet({
 		let expense = 0;
 		for (const t of counted) {
 			if (t.unit !== unit) continue;
-			if (t.type === "income") income += shareOf(t, walletFilter);
-			else expense += shareOf(t, walletFilter);
+			if (t.type === "income") income += walletShare(t, walletFilter);
+			else expense += walletShare(t, walletFilter);
 		}
 		return { income, expense };
 	}, [narrowed, categoryFilter, includeDebtsInStats, unit, walletFilter]);
@@ -265,7 +253,7 @@ export default function LedgerSheet({
 				let hasIncome = false;
 				for (const t of items) {
 					if (t.type === "income") hasIncome = true;
-					const signed = (t.type === "income" ? 1 : -1) * shareOf(t, walletFilter);
+					const signed = (t.type === "income" ? 1 : -1) * walletShare(t, walletFilter);
 					byUnit.set(t.unit, (byUnit.get(t.unit) ?? 0) + signed);
 				}
 				return {
@@ -550,7 +538,7 @@ export default function LedgerSheet({
 										transaction={item}
 										categories={categories}
 										divider={index > 0}
-										amountOverride={walletFilter ? shareOf(item, walletFilter) : undefined}
+										amountOverride={walletFilter ? walletShare(item, walletFilter) : undefined}
 										onPress={() => router.push(`/transaction?id=${item.id}`)}
 									/>
 								)}
