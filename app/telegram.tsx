@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Card, InputField, ListRow, PasswordField, Toggle } from "@/components/ui";
 import ScrollShadow from "@/components/ScrollShadow";
 import { useTelegramBackup } from "@/contexts/TelegramBackupContext";
+import { useBackupShare } from "@/hooks/useBackupShare";
 import { useFont } from "@/hooks/useFont";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useTheme } from "@/hooks/useTheme";
@@ -15,9 +16,9 @@ import "../global.css";
 
 /**
  * Connecting the Telegram backup: the bot token and chat it sends to, whether
- * it goes daily, and a button to send one now. Saving sends a backup straight
- * away, so a wrong token or chat shows up here rather than as a silent miss
- * tomorrow.
+ * it goes daily, and a button to send one now — through the share sheet while
+ * no bot is connected. Saving sends a backup straight away, so a wrong token or
+ * chat shows up here rather than as a silent miss tomorrow.
  */
 export default function TelegramScreen() {
 	const { tc } = useTheme();
@@ -50,6 +51,7 @@ function TelegramForm() {
 	const insets = useSafeAreaInsets();
 	const keyboardInset = useKeyboardInset();
 	const { config, status, configured, sending, saveConfig, sendNow } = useTelegramBackup();
+	const backup = useBackupShare();
 
 	const [token, setToken] = useState(config.token);
 	const { scrolled, scrollProps } = useScrolled();
@@ -93,6 +95,11 @@ function TelegramForm() {
 			result.ok ? "Zaxira nusxa Telegramga yuborildi." : result.error,
 		);
 	};
+
+	// Without a bot, "send now" still sends — through the share sheet, where
+	// Telegram itself is one of the choices.
+	const sendNowPress = configured ? (!dirty && !sending ? runSend : undefined) : backup.share;
+	const sendNowBusy = configured ? sending && !testing : backup.sharing;
 
 	const confirmDisconnect = () => {
 		Alert.alert(
@@ -196,14 +203,12 @@ function TelegramForm() {
 						subtitle={
 							configured
 								? describeTelegramStatus(config, status)
-								: "Avval botni ulang"
+								: "Bot ulanmagan — .db fayl ulashish orqali yuboriladi"
 						}
-						icon="paper-plane-outline"
+						icon={configured ? "paper-plane-outline" : "share-outline"}
 						divider
-						onPress={configured && !dirty && !sending ? runSend : undefined}
-						trailing={
-							sending && !testing ? <ActivityIndicator color={tc.foreground} /> : undefined
-						}
+						onPress={sendNowPress}
+						trailing={sendNowBusy ? <ActivityIndicator color={tc.foreground} /> : undefined}
 					/>
 				</Card>
 

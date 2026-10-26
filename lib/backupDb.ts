@@ -2,14 +2,15 @@ import * as SQLite from "expo-sqlite";
 import { BACKUP_FORMAT, BACKUP_VERSION, type BackupPayload } from "@/lib/backup";
 
 /**
- * The ledger as an SQLite database — the form the Telegram backup travels in.
+ * The ledger as an SQLite database — the one form a backup takes, whether it
+ * is shared from Settings or sent to Telegram.
  *
  * One table per list in the backup and one column per field, so the file opens
  * in any SQLite browser and reads like the ledger it came from. The nested
  * lists — a category's subcategories, an income's allocations, a debt's
  * payments — stay JSON inside their parent's row: they mean nothing apart from
  * it, and keeping them there lets a restore hand the rows straight to
- * `parseBackupData`, the same validation a JSON file goes through.
+ * `parseBackupData` in the shape it validates.
  *
  * The database is built in memory and serialized to bytes, never opened on
  * disk: the app's own data stays in AsyncStorage, and nothing here outlives
@@ -245,8 +246,7 @@ export function serializeBackupDb(
 }
 
 /**
- * Decodes a .db backup into the shape a JSON backup parses to, for
- * `parseBackupData` to judge. Nothing is validated here: a table or column the
+ * Decodes a .db backup into plain records, for `parseBackupData` to judge. Nothing is validated here: a table or column the
  * file lacks simply comes back absent. Throws when the bytes aren't a readable
  * database at all.
  */

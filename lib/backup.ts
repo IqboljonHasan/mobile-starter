@@ -22,16 +22,16 @@ import {
 } from "@/lib/types";
 
 /**
- * The backup file format: turning the ledger into text, and validating text
- * back into a ledger. Reading and writing actual files lives next door in
- * lib/backupFile.ts, which keeps everything here pure and testable.
+ * The backup format: what a backup carries, and validating a decoded backup
+ * back into a ledger. The file itself is an SQLite database built and read by
+ * lib/backupDb.ts; getting it out of the app and back in lives in
+ * lib/backupFile.ts and lib/telegramBackup.ts, which keeps everything here
+ * pure and testable.
  *
  * Everything lives on the device and nothing is synced, so a backup file is the
- * only way a ledger survives a lost phone or moves to a new one. The file is
- * plain indented JSON on purpose — a backup nobody can open is a backup nobody
- * can trust, and it stays repairable by hand. The Telegram backup carries the
- * same payload as an SQLite database instead (lib/backupDb.ts), and a restore
- * takes either.
+ * only way a ledger survives a lost phone or moves to a new one. It is a plain
+ * .db on purpose — a backup nobody can open is a backup nobody can trust, and
+ * any SQLite browser opens this one.
  *
  * An imported file is treated as hostile: it may have been hand-edited, cut
  * short by a failed copy, or not be ours at all. Every record is checked before
@@ -43,7 +43,7 @@ import {
 export const BACKUP_FORMAT = "taqsim.backup";
 
 /**
- * Bump when the shape changes; `parseBackup` refuses anything newer.
+ * Bump when the shape changes; `parseBackupData` refuses anything newer.
  *
  * 2 added wallets, transfers, and the allocation each income carries. A
  * version 1 file still imports: it simply has no wallets of its own, so the
@@ -76,12 +76,6 @@ export type BackupPayload = {
 	defaultUnit: string;
 };
 
-type BackupFile = BackupPayload & {
-	format: typeof BACKUP_FORMAT;
-	version: number;
-	exportedAt: string;
-};
-
 export type ParseResult =
 	| {
 			ok: true;
@@ -102,31 +96,10 @@ function pad(value: number): string {
 	return `${value}`.padStart(2, "0");
 }
 
-/**
- * Carries the clock as well as the day, so two exports never collide. JSON is
- * what the file export writes; "db" is the SQLite form the Telegram backup
- * sends (lib/backupDb.ts).
- */
-export function backupFileName(
-	now: Date = new Date(),
-	extension: "json" | "db" = "json",
-): string {
+/** Carries the clock as well as the day, so two exports never collide. */
+export function backupFileName(now: Date = new Date()): string {
 	const stamp = `${toISODate(now)}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-	return `taqsim-zaxira-${stamp}.${extension}`;
-}
-
-export function serializeBackup(
-	payload: BackupPayload,
-	now: Date = new Date(),
-): string {
-	const file: BackupFile = {
-		format: BACKUP_FORMAT,
-		version: BACKUP_VERSION,
-		exportedAt: now.toISOString(),
-		...payload,
-	};
-	// Indented so the file stays readable, and diffable, outside the app.
-	return JSON.stringify(file, null, 2);
+	return `taqsim-zaxira-${stamp}.db`;
 }
 
 /* Reading ------------------------------------------------------------------ */
@@ -431,9 +404,9 @@ function parseTemplate(raw: unknown): TransactionTemplate | null {
 const SQLITE_HEADER = "SQLite format 3\u0000";
 
 /**
- * Whether a picked file is an SQLite database rather than JSON text. Read off
- * the content, not the name: a file's extension is the first thing lost when
- * it's forwarded or saved from a chat.
+ * Whether a picked file is an SQLite database at all. Read off the content,
+ * not the name: a file's extension is the first thing lost when it's forwarded
+ * or saved from a chat.
  */
 export function isSqliteFile(bytes: Uint8Array): boolean {
 	if (bytes.length < SQLITE_HEADER.length) return false;
@@ -443,23 +416,11 @@ export function isSqliteFile(bytes: Uint8Array): boolean {
 	return true;
 }
 
-/** Validates a JSON backup file's text. See `parseBackupData`. */
-export function parseBackup(text: string): ParseResult {
-	let raw: unknown;
-	try {
-		raw = JSON.parse(text);
-	} catch {
-		return { ok: false, error: "Fayl JSON formatida emas." };
-	}
-	return parseBackupData(raw);
-}
-
 /**
- * Validates a backup that has already been decoded — from JSON text by
- * `parseBackup`, or from the tables of a .db backup by lib/backupDb.ts — so
- * both formats are trusted exactly as little. Individual records that don't
- * survive are counted in `skipped` rather than failing the whole import:
- * recovering most of a damaged ledger beats recovering none of it.
+ * Validates a backup that lib/backupDb.ts has decoded from the tables of a
+ * .db file. Individual records that don't survive are counted in `skipped`
+ * rather than failing the whole import: recovering most of a damaged ledger
+ * beats recovering none of it.
  */
 export function parseBackupData(raw: unknown): ParseResult {
 	if (!isRecord(raw)) return { ok: false, error: "Fayl mazmuni noto'g'ri." };
@@ -644,9 +605,4 @@ export function prepareRestore(
 		})),
 		templates: payload.templates.map((t) => ({ ...t, walletId: null })),
 	};
-}
-
-/** Shared with lib/backupFile.ts, which recognises a cancelled picker. */
-export function isErrorWithCode(value: unknown, code: string): boolean {
-	return isRecord(value) && value.code === code;
 }

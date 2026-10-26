@@ -55,14 +55,14 @@
 <body>
 <main>
   <h1>Maxfiylik siyosati</h1>
-  <p class="meta">Taqsim ilovasi · Kuchga kirgan sana: 23-oktabr, 2026</p>
+  <p class="meta">Taqsim ilovasi · Kuchga kirgan sana: 26-oktabr, 2026</p>
 
   <div class="summary">
     <strong>Qisqacha</strong>
     <ul>
       <li>Taqsimda hisob (akkaunt) yo'q va bizning serverimiz yo'q. Barcha ma'lumotlaringiz faqat telefoningizda saqlanadi.</li>
       <li>Biz hech qanday ma'lumot to'plamaymiz, ko'rmaymiz va hech kimga sotmaymiz. Ilovada reklama, analitika yoki kuzatuv vositalari yo'q.</li>
-      <li>Ma'lumot telefondan faqat siz o'zingiz yoqqan holatlarda chiqadi: zaxira faylini saqlaganingizda yoki Telegram orqali zaxira yuborishni sozlaganingizda.</li>
+      <li>Ma'lumot telefondan faqat siz o'zingiz yoqqan holatlarda chiqadi: zaxira faylini ulashganingizda yoki Telegram orqali zaxira yuborishni sozlaganingizda.</li>
     </ul>
   </div>
 
@@ -80,6 +80,7 @@
     <li>kategoriyalar, hamyonlar, ularning ulushlari va hamyonlar orasidagi o'tkazmalar;</li>
     <li>qarzlar va ularga qilingan to'lovlar, qaytarish muddatlari, eslatma sozlamalari;</li>
     <li>siz qo'shgan yoki telefon kontaktlaridan import qilgan kishilar: ism, telefon raqami, izoh va teg («Do'st», «Qarindosh»);</li>
+    <li>oila a'zolari (ism va rang) hamda chiqim qaysi a'zo uchun qilingani;</li>
     <li>yozuv shablonlari;</li>
     <li>ilova sozlamalari (mavzu, matn o'lchami, valyuta va boshqalar);</li>
     <li>Telegram zaxirasini sozlagan bo'lsangiz — bot tokeni va chat ID.</li>
@@ -124,16 +125,22 @@
 
   <h2>4. Ma'lumot telefondan qachon chiqadi</h2>
 
-  <h3>Faylga zaxira</h3>
+  <h3>Zaxira faylini ulashish</h3>
   <p>
-    Sozlamalardagi «Faylga saqlash» barcha ma'lumotlaringizni JSON faylga yozadi va uni siz tanlagan joyga
-    saqlaydi. Fayl shifrlanmagan. U qayerga saqlansa yoki kimga yuborilsa, uning xavfsizligi o'sha joyga bog'liq —
+    Sozlamalardagi «Zaxira nusxani ulashish» barcha ma'lumotlaringizni <code>.db</code> faylga yozadi va uni
+    telefonning «Ulashish» oynasiga beradi. Fayl faqat siz tanlagan ilova yoki joyga (masalan, Telegram, Google Drive
+    yoki telefon xotirasi) va faqat siz tasdiqlaganingizda yuboriladi. Telegram bot ulanmagan bo'lsa, «Telegram zaxira»
+    sahifasidagi «Hozir yuborish» ham xuddi shu oynani ochadi. Ulashish uchun fayl vaqtincha ilovaning kesh xotirasida
+    yaratiladi va keyingi ulashishda o'chiriladi.
+  </p>
+  <p>
+    Fayl shifrlanmagan. U qayerga saqlansa yoki kimga yuborilsa, uning xavfsizligi o'sha joyga bog'liq —
     zaxira faylini ishonchli joyda saqlang.
   </p>
 
   <h3>Telegram orqali zaxira (ixtiyoriy)</h3>
   <p>
-    Agar siz «Telegram orqali» zaxirani sozlasangiz, ilova barcha ma'lumotlaringizni <code>.db</code> fayl qilib
+    Agar siz «Telegram zaxira» sahifasida botingizni ulasangiz, ilova barcha ma'lumotlaringizni <code>.db</code> fayl qilib
     Telegram Bot API (<code>api.telegram.org</code>) orqali <strong>o'zingiz yaratgan bot va o'zingiz ko'rsatgan chatga</strong>
     yuboradi — qo'lda yoki kuniga bir marta avtomatik. Bunda ma'lumotlar Telegram serverlari orqali o'tadi va o'sha chatda
     saqlanadi; ular Telegramning o'z maxfiylik siyosatiga bo'ysunadi:
@@ -159,7 +166,8 @@
   <h2>6. Ma'lumotlaringizni boshqarish</h2>
   <ul>
     <li><strong>Ko'rish va tahrirlash</strong> — barcha yozuvlar ilovaning o'zida ko'rinadi va tahrirlanadi.</li>
-    <li><strong>Eksport</strong> — «Faylga saqlash» orqali ma'lumotlaringizning to'liq nusxasini olasiz.</li>
+    <li><strong>Eksport</strong> — «Zaxira nusxani ulashish» orqali ma'lumotlaringizning to'liq nusxasini <code>.db</code> fayl
+      sifatida olasiz va uni «Fayldan tiklash» orqali qayta tiklaysiz.</li>
     <li><strong>O'chirish</strong> — Sozlamalar → «Barcha ma'lumotlarni o'chirish» yoki ilovani o'chirib tashlash.
       Telegram chatga yuborilgan zaxiralarni o'sha chatdan o'zingiz o'chirasiz.</li>
     <li><strong>Ruxsatlarni bekor qilish</strong> — telefon sozlamalarida kontaktlar va bildirishnomalar ruxsatini istalgan vaqtda olib qo'yish mumkin.</li>

@@ -196,7 +196,7 @@ async function upload(
 ): Promise<SendResult> {
 	// Telegram names the document after the uploaded file, so the stamp in
 	// the name is what tells a week of backups apart in the chat.
-	const file = new File(Paths.cache, backupFileName(now, "db"));
+	const file = new File(Paths.cache, backupFileName(now));
 	try {
 		try {
 			file.create({ overwrite: true });

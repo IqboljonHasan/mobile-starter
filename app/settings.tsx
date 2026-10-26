@@ -16,12 +16,13 @@ import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useTelegramBackup } from "@/contexts/TelegramBackupContext";
 import { THEME_MODE_LABELS, type ThemeMode } from "@/contexts/ThemeContext";
+import { useBackupShare } from "@/hooks/useBackupShare";
 import { useFont } from "@/hooks/useFont";
 import { useSafeRouter as useRouter } from "@/hooks/useSafeRouter";
 import { useTheme } from "@/hooks/useTheme";
 import { useScrolled } from "@/hooks/useScrolled";
 import { prepareRestore, type WalletRestoreMode } from "@/lib/backup";
-import { loadBackup, saveBackup } from "@/lib/backupFile";
+import { loadBackup } from "@/lib/backupFile";
 import { UNITS, unitByCode } from "@/lib/money";
 import { describeTelegramStatus } from "@/lib/telegramBackup";
 import "../global.css";
@@ -56,59 +57,32 @@ export default function SettingsScreen() {
 		categories,
 		transactions,
 		wallets,
-		transfers,
 		contacts,
 		debts,
-		templates,
-		members,
 		defaultUnit,
 		setDefaultUnit,
 		resetLedger,
 		replaceLedger,
 	} = useLedger();
 	const telegram = useTelegramBackup();
+	const backup = useBackupShare();
 
-	// Both rows open a system picker, which leaves the app in the background for
-	// as long as the user browses. Tracking which one is in flight keeps a second
-	// picker from being opened on top of the first.
-	const [busy, setBusy] = useState<"save" | "load" | null>(null);
+	// Sharing and restoring each open a system sheet, which leaves the app in
+	// the background for as long as the user browses. Checking both keeps a
+	// second sheet from being opened on top of the first.
+	const [loading, setLoading] = useState(false);
 	const { scrolled, scrollProps } = useScrolled();
 
 	const appVersion = Constants.expoConfig?.version ?? "0.1.0";
 
-	const runSave = async () => {
-		if (busy) return;
-		setBusy("save");
-		try {
-			const result = await saveBackup({
-				categories,
-				transactions,
-				wallets,
-				transfers,
-				contacts,
-				debts,
-				templates,
-				members,
-				defaultUnit,
-			});
-			// A cancelled picker is a decision, not a failure — say nothing.
-			if (result.status === "saved") {
-				Alert.alert("Saqlandi", `Zaxira nusxa "${result.fileName}" fayliga yozildi.`);
-			}
-		} catch (e) {
-			console.warn("[backup] failed to save", e);
-			Alert.alert(
-				"Saqlanmadi",
-				"Zaxira nusxani yozib bo'lmadi. Boshqa papkani tanlab ko'ring.",
-			);
-		} finally {
-			setBusy(null);
-		}
+	const runShare = () => {
+		if (loading) return;
+		backup.share();
 	};
 
 	const runLoad = async () => {
-		if (busy) return;
-		setBusy("load");
+		if (loading || backup.sharing) return;
+		setLoading(true);
 		try {
 			const result = await loadBackup();
 			if (result.status === "canceled") return;
@@ -149,7 +123,7 @@ export default function SettingsScreen() {
 			console.warn("[backup] failed to load", e);
 			Alert.alert("Tiklanmadi", "Faylni o'qib bo'lmadi.");
 		} finally {
-			setBusy(null);
+			setLoading(false);
 		}
 	};
 
@@ -302,22 +276,22 @@ export default function SettingsScreen() {
 					{/* Data ---------------------------------------------------------- */}
 					<Section title="Ma'lumotlar">
 						<ListRow
-							title="Faylga saqlash"
-							subtitle={`${transactions.length} ta yozuv JSON fayliga yoziladi`}
-							icon="download-outline"
-							onPress={runSave}
-							trailing={busy === "save" ? <ActivityIndicator color={tc.foreground} /> : undefined}
+							title="Zaxira nusxani ulashish"
+							subtitle={`${transactions.length} ta yozuv .db fayl qilib ulashiladi`}
+							icon="share-outline"
+							onPress={runShare}
+							trailing={backup.sharing ? <ActivityIndicator color={tc.foreground} /> : undefined}
 						/>
 						<ListRow
 							title="Fayldan tiklash"
-							subtitle="JSON yoki .db zaxira — hozirgi yozuvlar o'rniga qo'yiladi"
+							subtitle=".db zaxira — hozirgi yozuvlar o'rniga qo'yiladi"
 							icon="folder-open-outline"
 							divider
 							onPress={runLoad}
-							trailing={busy === "load" ? <ActivityIndicator color={tc.foreground} /> : undefined}
+							trailing={loading ? <ActivityIndicator color={tc.foreground} /> : undefined}
 						/>
 						<ListRow
-							title="Zaxira nusxa"
+							title="Telegram zaxira"
 							subtitle={
 								telegram.configured
 									? describeTelegramStatus(telegram.config, telegram.status) +

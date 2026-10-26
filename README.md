@@ -100,6 +100,7 @@ hooks/
   useTheme.ts            isDark, tc (runtime colors), mode, setMode
   useFont.ts             tf — font sizes scaled by the user's setting
   useDebtReminders.ts    keeps scheduled reminders in step with the debts
+  useBackupShare.ts      shares the ledger as a .db through the share sheet
 lib/
   types.ts               Category, Transaction, Wallet, Debt, …
   ledger.ts              pure selectors — totals, breakdowns, grouping
@@ -113,8 +114,8 @@ lib/
   seed.ts                the categories a fresh install starts with
   theme.ts               runtime color values mirroring global.css
   storage.ts             AsyncStorage wrapper (preferences + JSON)
-  backup.ts              backup format: JSON writer, validation, restore
-  backupFile.ts          save / pick a backup file (JSON or .db)
+  backup.ts              backup format: validation, restore
+  backupFile.ts          share / pick a .db backup file
   backupDb.ts            the ledger as an SQLite .db, and back
   telegramBackup.ts      Telegram settings, sending, the daily rule
   backupTask.ts          background task that sends the daily backup
@@ -159,12 +160,15 @@ parent category in place.
 
 ## Telegram backup
 
-Settings → **Telegram orqali** takes a bot token (from @BotFather) and a chat
-ID, then sends the ledger to that chat as an SQLite `.db` file: once a day on
-its own, and on demand from the same screen or the Settings row. Saving the
-settings sends a backup straight away, so a wrong token or chat shows up
-immediately. **Fayldan tiklash** restores a `.db` the same way it restores a
-JSON file, and runs it through the same validation.
+A backup is always an SQLite `.db` file. Settings → **Zaxira nusxani
+ulashish** hands one to the system share sheet (Telegram, Drive, "Save to
+Files", …), and **Fayldan tiklash** restores one; there is no JSON format.
+
+Settings → **Telegram zaxira** takes a bot token (from @BotFather) and a chat
+ID, then sends the `.db` to that chat: once a day on its own, and on demand
+from the same screen or the Settings row. Saving the settings sends a backup
+straight away, so a wrong token or chat shows up immediately. While no bot is
+connected, that screen's **Hozir yuborish** opens the share sheet instead.
 
 "Daily" means once per local calendar day, and it's enforced from two places
 because neither is reliable alone:
