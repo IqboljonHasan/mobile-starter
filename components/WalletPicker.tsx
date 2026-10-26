@@ -31,6 +31,7 @@ export default function WalletPicker({
 	noneLabel = "Hamyonsiz",
 	includeUnallocated = false,
 	hideAmounts = false,
+	readOnly = false,
 	error,
 }: {
 	label: string;
@@ -48,6 +49,9 @@ export default function WalletPicker({
 	/** Offers the unallocated pool as a source. */
 	includeUnallocated?: boolean;
 	hideAmounts?: boolean;
+	/** Shows the wallet without offering a choice — for when something else,
+	 * like an expense's category, already decides it. */
+	readOnly?: boolean;
 	error?: string;
 }) {
 	const { tc } = useTheme();
@@ -86,88 +90,96 @@ export default function WalletPicker({
 
 	const selectedRow = rows.find((row) => row.key === value) ?? null;
 
+	// The closed field. Without `open` it is the whole control: a read-out.
+	const field = (open?: () => void) => (
+		<PickerField
+			accessibilityLabel={`${label}: ${selectedRow?.name ?? noneLabel}`}
+			text={selectedRow?.name ?? null}
+			placeholder={noneLabel}
+			onPress={open ?? (() => {})}
+			readOnly={!open}
+			error={!!error}
+			leading={
+				selectedRow ? (
+					<WalletIcon
+						icon={selectedRow.key === UNALLOCATED_ID ? null : selectedRow.icon}
+						color={selectedRow.color}
+						size={32}
+					/>
+				) : (
+					<View
+						className="items-center justify-center bg-background"
+						style={{ width: 32, height: 32, borderRadius: 10 }}
+					>
+						<Ionicons name="wallet-outline" size={17} color={tc.mutedForeground} />
+					</View>
+				)
+			}
+			detail={
+				selectedRow
+					? { text: balanceText(selectedRow.key), danger: balanceOf(selectedRow.key) < 0 }
+					: null
+			}
+		/>
+	);
+
 	return (
 		<View>
 			<FieldLabel>{label}</FieldLabel>
-			<Select
-				label={label}
-				value={value ?? (allowNone ? NONE_KEY : null)}
-				toggleOff={false}
-				onChange={(next) => onChange(!next || next === NONE_KEY ? null : next)}
-				options={options}
-				emptyMessage="Hali hamyon yo'q — avval qo'shing."
-				renderOption={(option, selected) => {
-					const none = option.key === NONE_KEY;
-					const row = rows.find((r) => r.key === option.key);
-					return (
-						<View className="flex-row items-center gap-3 py-2.5">
-							{none ? (
-								<View
-									className="items-center justify-center bg-muted"
-									style={{ width: 34, height: 34, borderRadius: 11 }}
-								>
-									<Ionicons name="remove" size={18} color={tc.mutedForeground} />
-								</View>
-							) : (
-								<WalletIcon
-									icon={option.key === UNALLOCATED_ID ? null : (row?.icon ?? "wallet-outline")}
-									color={row?.color ?? "blue"}
-									size={34}
-								/>
-							)}
-							<View className="flex-1">
-								<Text
-									className={`text-foreground ${selected ? "font-extrabold" : "font-semibold"}`}
-									style={{ fontSize: tf.base }}
-									numberOfLines={1}
-								>
-									{option.label}
-								</Text>
-								{!none && (
+			{readOnly ? (
+				field()
+			) : (
+				<Select
+					label={label}
+					value={value ?? (allowNone ? NONE_KEY : null)}
+					toggleOff={false}
+					onChange={(next) => onChange(!next || next === NONE_KEY ? null : next)}
+					options={options}
+					emptyMessage="Hali hamyon yo'q — avval qo'shing."
+					renderOption={(option, selected) => {
+						const none = option.key === NONE_KEY;
+						const row = rows.find((r) => r.key === option.key);
+						return (
+							<View className="flex-row items-center gap-3 py-2.5">
+								{none ? (
+									<View
+										className="items-center justify-center bg-muted"
+										style={{ width: 34, height: 34, borderRadius: 11 }}
+									>
+										<Ionicons name="remove" size={18} color={tc.mutedForeground} />
+									</View>
+								) : (
+									<WalletIcon
+										icon={option.key === UNALLOCATED_ID ? null : (row?.icon ?? "wallet-outline")}
+										color={row?.color ?? "blue"}
+										size={34}
+									/>
+								)}
+								<View className="flex-1">
 									<Text
-										className={`font-semibold ${balanceOf(option.key) < 0 ? "text-danger" : "text-muted-foreground"}`}
-										style={{ fontSize: tf.sm }}
+										className={`text-foreground ${selected ? "font-extrabold" : "font-semibold"}`}
+										style={{ fontSize: tf.base }}
 										numberOfLines={1}
 									>
-										{balanceText(option.key)}
+										{option.label}
 									</Text>
-								)}
-							</View>
-							{selected && <Ionicons name="checkmark-circle" size={22} color={tc.foreground} />}
-						</View>
-					);
-				}}
-				trigger={({ open }) => (
-					<PickerField
-						accessibilityLabel={`${label}: ${selectedRow?.name ?? noneLabel}`}
-						text={selectedRow?.name ?? null}
-						placeholder={noneLabel}
-						onPress={open}
-						error={!!error}
-						leading={
-							selectedRow ? (
-								<WalletIcon
-									icon={selectedRow.key === UNALLOCATED_ID ? null : selectedRow.icon}
-									color={selectedRow.color}
-									size={32}
-								/>
-							) : (
-								<View
-									className="items-center justify-center bg-background"
-									style={{ width: 32, height: 32, borderRadius: 10 }}
-								>
-									<Ionicons name="wallet-outline" size={17} color={tc.mutedForeground} />
+									{!none && (
+										<Text
+											className={`font-semibold ${balanceOf(option.key) < 0 ? "text-danger" : "text-muted-foreground"}`}
+											style={{ fontSize: tf.sm }}
+											numberOfLines={1}
+										>
+											{balanceText(option.key)}
+										</Text>
+									)}
 								</View>
-							)
-						}
-						detail={
-							selectedRow
-								? { text: balanceText(selectedRow.key), danger: balanceOf(selectedRow.key) < 0 }
-								: null
-						}
-					/>
-				)}
-			/>
+								{selected && <Ionicons name="checkmark-circle" size={22} color={tc.foreground} />}
+							</View>
+						);
+					}}
+					trigger={({ open }) => field(open)}
+				/>
+			)}
 			{!!error && (
 				<Text className="font-semibold text-danger mt-1.5 ml-1" style={{ fontSize: tf.sm }}>
 					{error}

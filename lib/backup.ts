@@ -183,9 +183,11 @@ function parseCategory(raw: unknown): Category | null {
 		// Absent in version 1 files. An unassigned category simply spends from no
 		// wallet, so a miss here costs the mapping, never the category. A file
 		// written before the mapping went many-to-many carries the old singular
-		// `walletId` instead — read as a one-item set rather than dropped.
+		// `walletId` instead — read as a one-item set rather than dropped. One
+		// from while it was many-to-many keeps its first wallet, as a category
+		// now pays from one.
 		walletIds: Array.isArray(raw.walletIds)
-			? raw.walletIds.filter(nonEmptyString)
+			? raw.walletIds.filter(nonEmptyString).slice(0, 1)
 			: nonEmptyString(raw.walletId)
 				? [raw.walletId]
 				: [],

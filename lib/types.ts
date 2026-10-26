@@ -28,11 +28,11 @@ export type Category = {
 	color: CategoryColor;
 	icon: IconName;
 	subcategories: Subcategory[];
-	/** Expense side: the wallets this category's spending can be charged to.
-	 *  Many-to-many on purpose — Ta'lim can belong to both Shaxsiy rivojlanish
-	 *  and Oilaga, say — a single expense still picks exactly one of them.
-	 *  Empty or absent means unassigned: those expenses touch no wallet and are
-	 *  never blocked. */
+	/** Expense side: the wallet this category's spending is charged to — at
+	 *  most one, and an expense can't pick another. Still a list so files and
+	 *  ledgers from when a category could hold several read as they are; the
+	 *  first one wins (see `oneWallet`). Empty or absent means unassigned:
+	 *  those expenses touch no wallet and are never blocked. */
 	walletIds?: string[];
 	/** Income side: whether this category's money is split across the wallets.
 	 *  Absent reads as true; debt categories are never split regardless. */

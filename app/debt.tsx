@@ -448,6 +448,7 @@ function DebtForm({
 				{/* Amount, how it moved, and in what ----------------------------- */}
 				<AmountCard
 					value={amountText}
+					autoFocus={!existing}
 					onFocus={() => setPadOpen(true)}
 					onBlur={() => setPadOpen(false)}
 					method={method}

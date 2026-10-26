@@ -95,7 +95,7 @@ export const SEED_CATEGORY_WALLETS: Record<string, string[]> = {
 	cat_shopping: ["wal_family"],
 	cat_health: ["wal_family"],
 	cat_kids: ["wal_family"],
-	cat_education: ["wal_growth", "wal_family"],
+	cat_education: ["wal_growth"],
 	cat_sport: ["wal_growth"],
 	cat_fun: ["wal_family"],
 	cat_travel: ["wal_family"],
@@ -239,6 +239,17 @@ export function allocationFor(
 	const category = categories.find((c) => c.id === transaction.categoryId) ?? null;
 	if (!splitsIncome(category, splitByDefault)) return [];
 	return splitAmount(transaction.amount, transaction.unit, wallets);
+}
+
+/**
+ * A category as it's held now: paying from one wallet at most. One saved when
+ * a category could hold several keeps the first, which is also the wallet the
+ * expense form used to pre-fill for it.
+ */
+export function oneWallet(category: Category): Category {
+	return category.walletIds && category.walletIds.length > 1
+		? { ...category, walletIds: category.walletIds.slice(0, 1) }
+		: category;
 }
 
 /**

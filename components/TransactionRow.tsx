@@ -15,7 +15,7 @@ import { UNALLOCATED_ID, walletById, walletColor, walletName } from "@/lib/walle
 import type { Category, Transaction } from "@/lib/types";
 
 /**
- * One line of the ledger: what it was (subcategory, then its category, dimmed),
+ * One line of the ledger: what it was (category, then its subcategory, dimmed),
  * the note under it, and the amount on the right — green with a "+" for money
  * in, ink with a "−" for money out.
  *
@@ -64,7 +64,7 @@ export default function TransactionRow({
 			? { icon: null, color: "blue" }
 			: walletById(wallets, singleWalletId);
 
-	const title = subcategory?.name ?? category?.name ?? "Kategoriyasiz";
+	const title = category?.name ?? subcategory?.name ?? "Kategoriyasiz";
 	const member = transaction.memberId
 		? members.find((m) => m.id === transaction.memberId)
 		: undefined;
@@ -90,7 +90,7 @@ export default function TransactionRow({
 			accessibilityRole="button"
 			accessibilityLabel={[
 				title,
-				subcategory && category ? category.name : null,
+				subcategory && category ? subcategory.name : null,
 				member ? `${member.name} uchun` : null,
 				transaction.description || null,
 				`${income ? "kirim" : "chiqim"} ${hidden ? "yashirilgan" : formatAmount(amount, transaction.unit)}`,
@@ -118,7 +118,7 @@ export default function TransactionRow({
 					>
 						{title}
 						{subcategory && category ? (
-							<Text className="font-semibold text-muted-foreground">{` / ${category.name}`}</Text>
+							<Text className="font-semibold text-muted-foreground">{` / ${subcategory.name}`}</Text>
 						) : null}
 					</Text>
 					{!!detail && (

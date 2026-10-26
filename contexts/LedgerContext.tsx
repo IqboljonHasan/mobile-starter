@@ -32,6 +32,7 @@ import { applyOrder, orderById } from "@/lib/reorder";
 import { SEED_CATEGORIES } from "@/lib/seed";
 import {
 	allocationFor,
+	oneWallet,
 	redistribute,
 	SEED_CATEGORY_WALLETS,
 	SEED_WALLETS,
@@ -209,7 +210,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 			const nextCategories = (storedCategories ?? SEED_CATEGORIES).map((c) =>
 				firstRun && c.type === "expense" && c.walletIds === undefined
 					? { ...c, walletIds: SEED_CATEGORY_WALLETS[c.id] ?? [] }
-					: c,
+					: oneWallet(c),
 			);
 
 			// Entries written before payment method existed carry none. Filling it

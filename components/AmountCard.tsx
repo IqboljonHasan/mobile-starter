@@ -27,6 +27,7 @@ export default function AmountCard({
 	unitLocked = false,
 	error,
 	label = "Summa",
+	autoFocus = false,
 }: {
 	/** The amount text as stored in the form — plain digits, no grouping. */
 	value: string;
@@ -40,6 +41,9 @@ export default function AmountCard({
 	unitLocked?: boolean;
 	error?: string;
 	label?: string;
+	/** Focuses the figure on mount, which opens the form's pad — for a new
+	 * entry, where the amount is the first thing to fill in. */
+	autoFocus?: boolean;
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
@@ -106,6 +110,7 @@ export default function AmountCard({
 						value={groupAmountText(value)}
 						placeholder="0"
 						placeholderTextColor={tc.placeholder}
+						autoFocus={autoFocus}
 						onFocus={onFocus}
 						onBlur={onBlur}
 						// Typed on the in-app pad: the field never raises the keyboard,

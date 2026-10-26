@@ -35,6 +35,7 @@ import { categoryColorValue } from "@/lib/categoryColors";
 import { currentMonthKey, formatDayLabel, monthName, todayISO } from "@/lib/date";
 import { contactName, DIRECTION_META, remainingAmount } from "@/lib/debts";
 import { DEFAULT_METHOD, formatAmount, maskAmount, parseAmount, unitByCode } from "@/lib/money";
+import { DEBT_CATEGORY_IDS } from "@/lib/seed";
 import {
 	splitAmount,
 	splitsIncome,
@@ -254,10 +255,6 @@ function TransactionForm({
 	);
 	const [description, setDescription] = useState(existing?.description ?? "");
 	const [date, setDate] = useState(existing?.date ?? todayISO());
-	const [walletId, setWalletId] = useState<string | null>(existing?.walletId ?? null);
-	// Once the wallet has been set by hand, changing the category stops moving
-	// it: the override was a deliberate "this one comes from somewhere else".
-	const [walletTouched, setWalletTouched] = useState(!!existing?.walletId);
 	// Income side: whether this entry is divided across the wallets. An income
 	// that names a wallet is the opt-out — the whole amount goes there instead.
 	const [splitThis, setSplitThis] = useState(!existing?.walletId);
@@ -283,6 +280,17 @@ function TransactionForm({
 	);
 	const category = typeCategories.find((c) => c.id === categoryId) ?? null;
 	const subcategory = category?.subcategories.find((s) => s.id === subcategoryId) ?? null;
+
+	// An expense is paid by the wallet its category is mapped to — the category
+	// decides, not the entry. The debt categories ship unmapped and name their
+	// wallet themselves, so an entry on one keeps the wallet it already had.
+	const walletId = useMemo(() => {
+		if (income || !categoryId) return null;
+		if (DEBT_CATEGORY_IDS.has(categoryId)) {
+			return existing?.categoryId === categoryId ? (existing?.walletId ?? null) : null;
+		}
+		return wallets.find((w) => category?.walletIds?.includes(w.id))?.id ?? null;
+	}, [income, categoryId, category, existing, wallets]);
 
 	const amount = parseAmount(amountText);
 	const amountError = !amountText.trim()
@@ -333,14 +341,6 @@ function TransactionForm({
 		return splitAmount(amount, unit, wallets);
 	}, [dividing, splitUnchanged, existing, amount, unit, wallets]);
 
-	// Only surfaced as quick-pick chips once there's an actual choice to make —
-	// a category mapped to none or one wallet is already handled by the
-	// WalletPicker's own default.
-	const mappedWallets = useMemo(
-		() => wallets.filter((w) => category?.walletIds?.includes(w.id)),
-		[wallets, category],
-	);
-
 	// Starred subcategories of this side of the ledger, across every category.
 	const pinnedShortcuts = useMemo(
 		() =>
@@ -374,11 +374,6 @@ function TransactionForm({
 		);
 		setDescription(template.description);
 		if (template.type === "expense") {
-			// A wallet the template named wins; otherwise the category decides,
-			// exactly as picking it by hand would.
-			const mapped = templateCategory?.walletIds ?? [];
-			setWalletId(template.walletId ?? (mapped.length === 1 ? mapped[0] : null));
-			setWalletTouched(!!template.walletId);
 			setMemberId(
 				members.some((m) => m.id === template.memberId) ? (template.memberId ?? null) : null,
 			);
@@ -437,8 +432,6 @@ function TransactionForm({
 		setSubcategoryId(null);
 		setDescription("");
 		setDate(todayISO());
-		setWalletId(null);
-		setWalletTouched(false);
 		setSplitThis(true);
 		setIncomeWalletId(null);
 		setMemberId(null);
@@ -453,8 +446,6 @@ function TransactionForm({
 		// survive the switch.
 		setCategoryId(null);
 		setSubcategoryId(null);
-		setWalletId(null);
-		setWalletTouched(false);
 		setIncomeWalletId(null);
 		setSplitThis(true);
 		setTemplateId(null);
@@ -465,11 +456,6 @@ function TransactionForm({
 		setSubcategoryId(null);
 		// Picked by hand, the form is no longer the template it started from.
 		setTemplateId(null);
-		if (walletTouched) return;
-		const mappedIds = categories.find((c) => c.id === next)?.walletIds ?? [];
-		// Auto-fill only when the category leaves no doubt about which wallet
-		// pays; with more than one candidate the quick-pick chips below decide.
-		setWalletId(mappedIds.length === 1 ? mappedIds[0] : null);
 	};
 
 	const commit = () => {
@@ -615,6 +601,7 @@ function TransactionForm({
 				{/* Amount, how it was paid, and in what -------------------------- */}
 				<AmountCard
 					value={amountText}
+					autoFocus={!existing}
 					onFocus={() => setPadOpen(true)}
 					onBlur={() => setPadOpen(false)}
 					method={method}
@@ -768,35 +755,16 @@ function TransactionForm({
 				{/* Which wallet pays, or how the income divides ------------------ */}
 				{type === "expense" ? (
 					<View>
-						{mappedWallets.length > 1 && (
-							<View className="flex-row flex-wrap mb-2" style={{ gap: 6 }}>
-								{mappedWallets.map((w) => (
-									<Chip
-										key={w.id}
-										size="sm"
-										label={w.name}
-										dot={categoryColorValue(w.color, isDark)}
-										active={walletId === w.id}
-										onPress={() => {
-											setWalletId(w.id);
-											setWalletTouched(true);
-										}}
-									/>
-								))}
-							</View>
-						)}
 						<WalletPicker
+							readOnly
 							label="Qaysi hamyondan"
 							value={walletId}
-							onChange={(next) => {
-								setWalletId(next);
-								setWalletTouched(true);
-							}}
+							onChange={() => {}}
 							wallets={wallets}
 							balances={balances}
 							unit={unit}
-							allowNone
 							includeUnallocated
+							noneLabel={category ? "Hamyonsiz" : "Kategoriyaga qarab"}
 							hideAmounts={hideIncome}
 						/>
 						{shortfall > 0 ? (

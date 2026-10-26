@@ -129,12 +129,12 @@ export default function WalletsScreen() {
 	const money = (amount: number) =>
 		hideIncome ? maskAmount(unit) : formatAmount(amount, unit);
 
-	const toggleCategoryWallet = (category: Category, walletId: string) => {
-		const current = category.walletIds ?? [];
-		const next = current.includes(walletId)
-			? current.filter((id) => id !== walletId)
-			: [...current, walletId];
-		updateCategory(category.id, { walletIds: next });
+	// A category pays from one wallet. Picking another moves it there; picking
+	// the one it already has leaves it unmapped, spending from no wallet.
+	const pickCategoryWallet = (category: Category, walletId: string) => {
+		const current = category.walletIds?.[0];
+		updateCategory(category.id, { walletIds: current === walletId ? [] : [walletId] });
+		setWalletMapCategoryId(null);
 	};
 
 	const openNewWallet = () => {
@@ -510,7 +510,7 @@ export default function WalletsScreen() {
 					{/* Expense mapping ------------------------------------------------ */}
 					<Card
 						title="Chiqim kategoriyalari"
-						subtitle="Har bir kategoriya bitta yoki bir nechta hamyondan to'lanishi mumkin"
+						subtitle="Har bir kategoriya bitta hamyondan to'lanadi"
 					>
 						<View className="gap-2">
 							{expenseCategories.map((category) => {
@@ -590,7 +590,7 @@ export default function WalletsScreen() {
 							style={{ fontSize: tf.xs }}
 						>
 							{
-								"Bir nechta hamyon tanlansa, har bir yozuvda qaysi birisi to'laganini o'zingiz belgilaysiz. Hamyonsiz kategoriyalarning chiqimi hech qaysi hamyondan yechilmaydi va qoldiq yetmasa ham to'silmaydi."
+								"Chiqim yozilganda hamyon kategoriyadan olinadi va o'zgartirilmaydi. Hamyonsiz kategoriyalarning chiqimi hech qaysi hamyondan yechilmaydi va qoldiq yetmasa ham to'silmaydi."
 							}
 						</Text>
 					</Card>
@@ -704,7 +704,7 @@ export default function WalletsScreen() {
 							style={{ fontSize: tf.sm }}
 						>
 							{
-								"Bu kategoriya qaysi hamyon(lar)dan to'lanishi mumkinligini tanlang."
+								"Bu kategoriya qaysi hamyondan to'lanishini tanlang."
 							}
 						</Text>
 						<ScrollView
@@ -720,15 +720,14 @@ export default function WalletsScreen() {
 								</Text>
 							) : (
 								wallets.map((wallet, i) => {
-									const checked =
-										walletMapCategory.walletIds?.includes(wallet.id) ?? false;
+									const checked = walletMapCategory.walletIds?.[0] === wallet.id;
 									return (
 										<Pressable
 											key={wallet.id}
-											accessibilityRole="checkbox"
+											accessibilityRole="radio"
 											accessibilityState={{ checked }}
 											onPress={() =>
-												toggleCategoryWallet(walletMapCategory, wallet.id)
+												pickCategoryWallet(walletMapCategory, wallet.id)
 											}
 											className={`flex-row items-center gap-3 py-3 active:opacity-60 ${
 												i > 0 ? "border-t border-border" : ""
@@ -747,7 +746,7 @@ export default function WalletsScreen() {
 												{wallet.name}
 											</Text>
 											<Ionicons
-												name={checked ? "checkbox" : "square-outline"}
+												name={checked ? "radio-button-on" : "radio-button-off"}
 												size={22}
 												color={checked ? tc.primary : tc.mutedForeground}
 											/>

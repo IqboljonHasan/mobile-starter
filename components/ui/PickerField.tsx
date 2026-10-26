@@ -20,6 +20,7 @@ export function PickerField({
 	detail,
 	trailing,
 	disabled = false,
+	readOnly = false,
 	error = false,
 	accessibilityLabel,
 }: {
@@ -34,6 +35,9 @@ export function PickerField({
 	/** Replaces the chevron. */
 	trailing?: ReactNode;
 	disabled?: boolean;
+	/** Shows a value that is decided elsewhere: not pressable, but not dimmed
+	 * like `disabled` either — a lock stands in for the chevron. */
+	readOnly?: boolean;
 	error?: boolean;
 	accessibilityLabel?: string;
 }) {
@@ -42,12 +46,12 @@ export function PickerField({
 
 	return (
 		<Pressable
-			accessibilityRole="button"
+			accessibilityRole={readOnly ? "text" : "button"}
 			accessibilityLabel={accessibilityLabel ?? text ?? placeholder}
 			accessibilityState={{ disabled }}
-			disabled={disabled}
+			disabled={disabled || readOnly}
 			onPress={onPress}
-			className={`flex-row items-center gap-2.5 active:opacity-70 ${disabled ? "opacity-50" : ""}`}
+			className={`flex-row items-center gap-2.5 ${readOnly ? "" : "active:opacity-70"} ${disabled ? "opacity-50" : ""}`}
 			style={{
 				minHeight: 52,
 				borderRadius: 16,
@@ -75,7 +79,13 @@ export function PickerField({
 					{detail.text}
 				</Text>
 			)}
-			{trailing ?? <Ionicons name="chevron-down" size={18} color={tc.mutedForeground} />}
+			{trailing ?? (
+				<Ionicons
+					name={readOnly ? "lock-closed-outline" : "chevron-down"}
+					size={readOnly ? 16 : 18}
+					color={tc.mutedForeground}
+				/>
+			)}
 		</Pressable>
 	);
 }
