@@ -101,7 +101,7 @@ export default function LedgerSheet({
 	const router = useRouter();
 	const navigation = useNavigation();
 	const insets = useSafeAreaInsets();
-	const { isDark } = useTheme();
+	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
 	const { transactions, categories, wallets, members, defaultUnit } = useLedger();
 	const { hideIncome, includeDebtsInStats } = usePreferences();
@@ -313,6 +313,14 @@ export default function LedgerSheet({
 		opacity: interpolate(animatedIndex.get(), [0, 0.3], [0, 1], Extrapolation.CLAMP),
 	}));
 
+	// A day's header is opaque so rows slide under it, but the sheet behind it
+	// is already whitening on the way up — a header fading in alongside would
+	// add its own white on top and get there first. It takes over only once the
+	// sheet is all but solid.
+	const headerBackdropStyle = useAnimatedStyle(() => ({
+		opacity: interpolate(animatedIndex.get(), [0.9, 1], [0, 1], Extrapolation.CLAMP),
+	}));
+
 	const renderFooter = useCallback(
 		(props: BottomSheetFooterProps) => (
 			<BottomSheetFooter {...props} bottomInset={0}>
@@ -511,9 +519,13 @@ export default function LedgerSheet({
 									const masked = hideIncome && section.hasIncome;
 									return (
 										<View
-											className="flex-row items-center justify-between bg-background"
+											className="flex-row items-center justify-between"
 											style={{ height: SECTION_HEADER_HEIGHT }}
 										>
+											<Animated.View
+												pointerEvents="none"
+												style={[StyleSheet.absoluteFill, { backgroundColor: tc.background }, headerBackdropStyle]}
+											/>
 											<Text
 												accessibilityRole="header"
 												className="font-bold text-muted-foreground"
