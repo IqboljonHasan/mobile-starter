@@ -1,7 +1,7 @@
 {
   "name": "taqsim",
   "main": "index.ts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "start": "expo start",
@@ -10,7 +10,13 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "prebuild": "expo prebuild",
-    "release": "node scripts/release.js"
+    "release": "node scripts/release.js",
+    "build:android": "npx --yes eas-cli@latest build --platform android --profile preview",
+    "build:ios": "npx --yes eas-cli@latest build --platform ios --profile preview",
+    "build:preview": "npx --yes eas-cli@latest build --platform all --profile preview",
+    "build:android:prod": "npx --yes eas-cli@latest build --platform android --profile production",
+    "build:ios:prod": "npx --yes eas-cli@latest build --platform ios --profile production",
+    "build:prod": "npx --yes eas-cli@latest build --platform all --profile production"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
