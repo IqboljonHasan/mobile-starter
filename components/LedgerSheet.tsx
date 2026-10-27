@@ -7,7 +7,7 @@ import BottomSheet, {
 } from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
-import { type Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { type ReactNode, type Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { BackHandler, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -19,9 +19,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import CategoryAvatar from "@/components/CategoryAvatar";
 import MonthSwitcher from "@/components/MonthSwitcher";
 import SearchBar from "@/components/SearchBar";
 import TransactionRow from "@/components/TransactionRow";
+import WalletIcon from "@/components/WalletIcon";
 import ScrollShadow from "@/components/ScrollShadow";
 import { Button, Chip, EmptyState, HeaderMenu, PillTabs, Select } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
@@ -38,7 +40,7 @@ import { formatAmount, maskAmount } from "@/lib/money";
 import { foldForSearch, matchesSearch } from "@/lib/search";
 import { homePalette, RADIUS } from "@/lib/theme";
 import type { Transaction, TxType } from "@/lib/types";
-import { walletShare } from "@/lib/wallets";
+import { UNALLOCATED_ID, UNALLOCATED_NAME, walletShare } from "@/lib/wallets";
 
 type TypeFilter = "all" | TxType;
 
@@ -102,6 +104,7 @@ export default function LedgerSheet({
 	const [type, setType] = useState<TypeFilter>("all");
 	const [walletFilter, setWalletFilter] = useState<string | null>(null);
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+	const [subcategoryFilter, setSubcategoryFilter] = useState<string | null>(null);
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
 	const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 	const [searching, setSearching] = useState(false);
@@ -153,7 +156,11 @@ export default function LedgerSheet({
 	// it narrows the list to that side and back.
 	const pickSide = (side: TxType) => {
 		if (expanded) {
-			setType((t) => (t === side ? "all" : side));
+			const next = type === side ? "all" : side;
+			setType(next);
+			// A category from the other side would leave the list empty.
+			const picked = categories.find((c) => c.id === categoryFilter);
+			if (picked && next !== "all" && picked.type !== next) pickCategory(null);
 			return;
 		}
 		setType(side);
@@ -178,6 +185,7 @@ export default function LedgerSheet({
 		setType("all");
 		setWalletFilter(null);
 		setCategoryFilter(null);
+		setSubcategoryFilter(null);
 		setSearching(false);
 		setQuery("");
 	};
@@ -195,6 +203,7 @@ export default function LedgerSheet({
 		() =>
 			monthly.filter((t) => {
 				if (categoryFilter && t.categoryId !== categoryFilter) return false;
+				if (subcategoryFilter && t.subcategoryId !== subcategoryFilter) return false;
 				if (walletShare(t, walletFilter) <= 0) return false;
 				if (!folded) return true;
 				const { category, subcategory } = resolveCategory(t, categories);
@@ -207,7 +216,7 @@ export default function LedgerSheet({
 					String(t.amount),
 				]);
 			}),
-		[monthly, categoryFilter, walletFilter, folded, categories, members],
+		[monthly, categoryFilter, subcategoryFilter, walletFilter, folded, categories, members],
 	);
 	const visible = useMemo(
 		() => (type === "all" ? narrowed : narrowed.filter((t) => t.type === type)),
@@ -228,7 +237,8 @@ export default function LedgerSheet({
 	// A stat, so debt categories stay out unless the user asked for them — or
 	// has filtered down to one category, which says exactly what to total.
 	const totals = useMemo(() => {
-		const counted = categoryFilter || includeDebtsInStats ? narrowed : excludeDebts(narrowed);
+		const counted =
+			categoryFilter || subcategoryFilter || includeDebtsInStats ? narrowed : excludeDebts(narrowed);
 		let income = 0;
 		let expense = 0;
 		for (const t of counted) {
@@ -237,7 +247,7 @@ export default function LedgerSheet({
 			else expense += walletShare(t, walletFilter);
 		}
 		return { income, expense };
-	}, [narrowed, categoryFilter, includeDebtsInStats, unit, walletFilter]);
+	}, [narrowed, categoryFilter, subcategoryFilter, includeDebtsInStats, unit, walletFilter]);
 
 	const sections = useMemo(() => {
 		const days = new Map<string, Transaction[]>();
@@ -279,6 +289,127 @@ export default function LedgerSheet({
 			.filter((section) => section.options.length > 0);
 	}, [monthly, categories, type]);
 	const pickedCategory = categories.find((c) => c.id === categoryFilter) ?? null;
+
+	// Only subcategories that have entries this month on the side shown, and
+	// inside the picked category when there is one — grouped by category.
+	const subcategorySections = useMemo(() => {
+		const used = new Map<string, Set<string>>();
+		for (const t of monthly) {
+			if (!t.subcategoryId) continue;
+			if (type !== "all" && t.type !== type) continue;
+			if (categoryFilter && t.categoryId !== categoryFilter) continue;
+			const set = used.get(t.categoryId) ?? new Set<string>();
+			set.add(t.subcategoryId);
+			used.set(t.categoryId, set);
+		}
+		return categories
+			.filter((c) => used.has(c.id))
+			.map((c) => ({
+				title: c.name,
+				options: c.subcategories
+					.filter((sub) => used.get(c.id)?.has(sub.id))
+					.map((sub) => ({ key: sub.id, label: sub.name })),
+			}))
+			.filter((section) => section.options.length > 0);
+	}, [monthly, categories, type, categoryFilter]);
+	const pickedSubcategory =
+		pickedCategory?.subcategories.find((sub) => sub.id === subcategoryFilter) ??
+		categories.flatMap((c) => c.subcategories).find((sub) => sub.id === subcategoryFilter) ??
+		null;
+
+	// The pool is offered only once an entry this month has reached it.
+	const walletOptions = useMemo(
+		() => [
+			...wallets.map((w) => ({ key: w.id, label: w.name })),
+			...(monthly.some((t) => walletShare(t, UNALLOCATED_ID) > 0)
+				? [{ key: UNALLOCATED_ID, label: UNALLOCATED_NAME }]
+				: []),
+		],
+		[wallets, monthly],
+	);
+	const pickedWallet = walletOptions.find((w) => w.key === walletFilter) ?? null;
+
+	// A subcategory belongs to one category: another category drops it, and
+	// picking one picks its category too, so the two chips never disagree.
+	function pickCategory(next: string | null) {
+		setCategoryFilter(next);
+		const parent = categories.find((c) => c.subcategories.some((sub) => sub.id === subcategoryFilter));
+		if (!next || parent?.id !== next) setSubcategoryFilter(null);
+	}
+	const pickSubcategory = (next: string | null) => {
+		setSubcategoryFilter(next);
+		const parent = categories.find((c) => c.subcategories.some((sub) => sub.id === next));
+		if (parent) setCategoryFilter(parent.id);
+	};
+	const filtering = walletFilter !== null || categoryFilter !== null || subcategoryFilter !== null;
+
+	// How many of the month's entries (on the side shown) each option would
+	// leave in the list, so a pick says what it's worth before it's made.
+	const counts = useMemo(() => {
+		const wallet = new Map<string, number>();
+		const category = new Map<string, number>();
+		const subcategory = new Map<string, number>();
+		const bump = (map: Map<string, number>, key: string) => map.set(key, (map.get(key) ?? 0) + 1);
+		for (const t of monthly) {
+			if (type !== "all" && t.type !== type) continue;
+			bump(category, t.categoryId);
+			if (t.subcategoryId) bump(subcategory, t.subcategoryId);
+			for (const w of [...wallets.map((x) => x.id), UNALLOCATED_ID]) {
+				if (walletShare(t, w) > 0) bump(wallet, w);
+			}
+		}
+		return { wallet, category, subcategory };
+	}, [monthly, type, wallets]);
+	const countText = (map: Map<string, number>, key: string) => `${map.get(key) ?? 0} ta yozuv`;
+
+	const renderWalletOption = (option: { key: string; label: string }, selected: boolean) => {
+		const wallet = wallets.find((w) => w.id === option.key);
+		return (
+			<OptionRow
+				selected={selected}
+				title={option.label}
+				subtitle={countText(counts.wallet, option.key)}
+				leading={
+					<WalletIcon icon={wallet?.icon ?? null} color={wallet?.color ?? "blue"} size={38} />
+				}
+			/>
+		);
+	};
+	const renderCategoryOption = (option: { key: string; label: string }, selected: boolean) => {
+		const category = categories.find((c) => c.id === option.key);
+		return (
+			<OptionRow
+				selected={selected}
+				title={option.label}
+				subtitle={countText(counts.category, option.key)}
+				leading={
+					<CategoryAvatar
+						icon={category?.icon ?? "help-outline"}
+						color={category?.color ?? "blue"}
+						size={38}
+					/>
+				}
+			/>
+		);
+	};
+	const renderSubcategoryOption = (option: { key: string; label: string }, selected: boolean) => {
+		const parent = categories.find((c) => c.subcategories.some((sub) => sub.id === option.key));
+		const sub = parent?.subcategories.find((x) => x.id === option.key);
+		return (
+			<OptionRow
+				selected={selected}
+				title={option.label}
+				subtitle={`${parent?.name ?? ""} · ${countText(counts.subcategory, option.key)}`}
+				leading={
+					<CategoryAvatar
+						icon={parent?.icon ?? "pricetag-outline"}
+						color={sub?.color ?? parent?.color ?? "blue"}
+						size={38}
+					/>
+				}
+			/>
+		);
+	};
 
 	const money = (amount: number, u: string, signed = false) =>
 		formatAmount(amount, u, { showUnit: u !== defaultUnit, signed });
@@ -455,37 +586,94 @@ export default function LedgerSheet({
 				<Animated.View style={[{ flex: 1 }, ledgerStyle]} pointerEvents={expanded ? "auto" : "none"}>
 					<ScrollView
 						horizontal
-						accessibilityLabel="Hamyon bo'yicha filtr"
+						accessibilityLabel="Filtrlar"
 						showsHorizontalScrollIndicator={false}
 						style={{ flexGrow: 0 }}
 						contentContainerStyle={{ gap: 6, paddingHorizontal: 18, paddingBottom: 8 }}
 					>
-						{pickedCategory && (
-							<Chip
-								label={pickedCategory.name}
-								icon="close"
-								active
-								accessibilityLabel={`Kategoriya: ${pickedCategory.name}. Filtrni olib tashlash`}
-								onPress={() => setCategoryFilter(null)}
-							/>
-						)}
-						<Chip
-							label="Hammasi"
-							active={walletFilter === null && categoryFilter === null}
-							onPress={() => {
-								setWalletFilter(null);
-								setCategoryFilter(null);
-							}}
+						<Select
+							label="Hamyon"
+							value={walletFilter}
+							onChange={setWalletFilter}
+							options={walletOptions}
+							renderOption={renderWalletOption}
+							clearable
+							emptyMessage="Hali hamyon yo'q."
+							trigger={({ open }) => (
+								<Chip
+									label={pickedWallet?.label ?? "Hamyon"}
+									dot={
+										walletFilter && walletFilter !== UNALLOCATED_ID
+											? categoryColorValue(
+													wallets.find((w) => w.id === walletFilter)?.color ?? "blue",
+													isDark,
+												)
+											: undefined
+									}
+									icon="chevron-down"
+									active={walletFilter !== null}
+									accessibilityLabel={`Hamyon: ${pickedWallet?.label ?? "hammasi"}`}
+									onPress={open}
+								/>
+							)}
 						/>
-						{wallets.map((w) => (
-							<Chip
-								key={w.id}
-								label={w.name}
-								dot={categoryColorValue(w.color, isDark)}
-								active={walletFilter === w.id}
-								onPress={() => setWalletFilter((current) => (current === w.id ? null : w.id))}
-							/>
-						))}
+						<Select
+							label="Kategoriya"
+							value={categoryFilter}
+							onChange={pickCategory}
+							sections={categorySections}
+							renderOption={renderCategoryOption}
+							clearable
+							emptyMessage={`${monthName(month)}da hali yozuv yo'q.`}
+							open={categoryPickerOpen}
+							onOpenChange={setCategoryPickerOpen}
+							trigger={({ open }) => (
+								<Chip
+									label={pickedCategory?.name ?? "Kategoriya"}
+									icon="chevron-down"
+									active={categoryFilter !== null}
+									accessibilityLabel={`Kategoriya: ${pickedCategory?.name ?? "hammasi"}`}
+									onPress={open}
+								/>
+							)}
+						/>
+						<Select
+							label="Subkategoriya"
+							value={subcategoryFilter}
+							onChange={pickSubcategory}
+							sections={subcategorySections}
+							renderOption={renderSubcategoryOption}
+							clearable
+							emptyMessage={
+								pickedCategory
+									? `${monthName(month)}da "${pickedCategory.name}" ichida subkategoriyali yozuv yo'q.`
+									: `${monthName(month)}da subkategoriyali yozuv yo'q.`
+							}
+							trigger={({ open }) => (
+								<Chip
+									label={pickedSubcategory?.name ?? "Subkategoriya"}
+									icon="chevron-down"
+									active={subcategoryFilter !== null}
+									accessibilityLabel={`Subkategoriya: ${pickedSubcategory?.name ?? "hammasi"}`}
+									onPress={open}
+								/>
+							)}
+						/>
+						{filtering && (
+							<Pressable
+								accessibilityRole="button"
+								accessibilityLabel="Filtrlarni tozalash"
+								onPress={() => {
+									setWalletFilter(null);
+									setCategoryFilter(null);
+									setSubcategoryFilter(null);
+								}}
+								className="items-center justify-center rounded-full bg-muted active:opacity-70"
+								style={{ width: 40, height: 40 }}
+							>
+								<Ionicons name="close" size={18} color={tc.foreground} />
+							</Pressable>
+						)}
 					</ScrollView>
 
 					<GestureDetector gesture={swipeMonthList}>
@@ -563,18 +751,41 @@ export default function LedgerSheet({
 				</Animated.View>
 			</Animated.View>
 
-			<Select
-				label="Kategoriya bo'yicha"
-				value={categoryFilter}
-				onChange={setCategoryFilter}
-				sections={categorySections}
-				clearable
-				emptyMessage={`${monthName(month)}da hali yozuv yo'q.`}
-				open={categoryPickerOpen}
-				onOpenChange={setCategoryPickerOpen}
-				trigger={() => null}
-			/>
 		</BottomSheet>
+	);
+}
+
+/** One row of a filter sheet: a tile saying what it is, its name, and what picking it leaves. */
+function OptionRow({
+	leading,
+	title,
+	subtitle,
+	selected,
+}: {
+	leading: ReactNode;
+	title: string;
+	subtitle: string;
+	selected: boolean;
+}) {
+	const { tc } = useTheme();
+	const { tf } = useFont();
+	return (
+		<View className="flex-row items-center gap-3 py-2.5">
+			{leading}
+			<View className="flex-1">
+				<Text
+					className={`text-foreground ${selected ? "font-extrabold" : "font-semibold"}`}
+					style={{ fontSize: tf.base }}
+					numberOfLines={1}
+				>
+					{title}
+				</Text>
+				<Text className="font-semibold text-muted-foreground" style={{ fontSize: tf.sm }} numberOfLines={1}>
+					{subtitle}
+				</Text>
+			</View>
+			{selected && <Ionicons name="checkmark-circle" size={22} color={tc.foreground} />}
+		</View>
 	);
 }
 
