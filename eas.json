@@ -13,8 +13,17 @@
     },
     "production": {
       "bun": "1.4.2",
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      }
+    },
+    "production-apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "autoIncrement": false,
+      "android": {
+        "buildType": "apk"
       }
     }
   }
