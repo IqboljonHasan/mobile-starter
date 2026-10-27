@@ -263,6 +263,13 @@ function TransactionForm({
 	);
 	// Expense side: who in the family it was spent on. Null is everybody.
 	const [memberId, setMemberId] = useState<string | null>(existing?.memberId ?? null);
+	// Expense side: a wallet the user picked over the category's own. Tied to the
+	// category it was picked under, so choosing another category starts over from
+	// that category's wallet instead of carrying the pick across.
+	const [pickedWallet, setPickedWallet] = useState<{
+		categoryId: string;
+		walletId: string | null;
+	} | null>(null);
 	const [coverOpen, setCoverOpen] = useState(false);
 	const [padOpen, setPadOpen] = useState(false);
 	const [templateOpen, setTemplateOpen] = useState(false);
@@ -281,16 +288,20 @@ function TransactionForm({
 	const category = typeCategories.find((c) => c.id === categoryId) ?? null;
 	const subcategory = category?.subcategories.find((s) => s.id === subcategoryId) ?? null;
 
-	// An expense is paid by the wallet its category is mapped to — the category
-	// decides, not the entry. The debt categories ship unmapped and name their
-	// wallet themselves, so an entry on one keeps the wallet it already had.
+	// An expense starts out paid by the wallet its category is mapped to, and the
+	// user can pay it from any other — one wallet can cover many categories. The
+	// debt categories ship unmapped and name their wallet themselves, so an entry
+	// on one keeps the wallet it already had. An entry being edited keeps its own.
 	const walletId = useMemo(() => {
 		if (income || !categoryId) return null;
-		if (DEBT_CATEGORY_IDS.has(categoryId)) {
-			return existing?.categoryId === categoryId ? (existing?.walletId ?? null) : null;
+		if (pickedWallet && pickedWallet.categoryId === categoryId) return pickedWallet.walletId;
+		const keeps = existing?.type === "expense" && existing.categoryId === categoryId;
+		if (keeps && existing.walletId && wallets.some((w) => w.id === existing.walletId)) {
+			return existing.walletId;
 		}
+		if (DEBT_CATEGORY_IDS.has(categoryId)) return keeps ? (existing.walletId ?? null) : null;
 		return wallets.find((w) => category?.walletIds?.includes(w.id))?.id ?? null;
-	}, [income, categoryId, category, existing, wallets]);
+	}, [income, categoryId, category, existing, wallets, pickedWallet]);
 
 	const amount = parseAmount(amountText);
 	const amountError = !amountText.trim()
@@ -367,6 +378,7 @@ function TransactionForm({
 		setUnit(template.unit);
 		setMethod(template.method);
 		setCategoryId(template.categoryId);
+		setPickedWallet(null);
 		setSubcategoryId(
 			templateCategory?.subcategories.some((s) => s.id === template.subcategoryId)
 				? template.subcategoryId
@@ -429,6 +441,7 @@ function TransactionForm({
 		setUnit(defaultUnit);
 		setMethod(DEFAULT_METHOD);
 		setCategoryId(null);
+		setPickedWallet(null);
 		setSubcategoryId(null);
 		setDescription("");
 		setDate(todayISO());
@@ -453,6 +466,7 @@ function TransactionForm({
 
 	const changeCategory = (next: string | null) => {
 		setCategoryId(next);
+		setPickedWallet(null);
 		setSubcategoryId(null);
 		// Picked by hand, the form is no longer the template it started from.
 		setTemplateId(null);
@@ -756,15 +770,18 @@ function TransactionForm({
 				{type === "expense" ? (
 					<View>
 						<WalletPicker
-							readOnly
+							readOnly={!category}
 							label="Qaysi hamyondan"
 							value={walletId}
-							onChange={() => {}}
+							onChange={(next) =>
+								categoryId && setPickedWallet({ categoryId, walletId: next })
+							}
+							allowNone
 							wallets={wallets}
 							balances={balances}
 							unit={unit}
 							includeUnallocated
-							noneLabel={category ? "Hamyonsiz" : "Kategoriyaga qarab"}
+							noneLabel={category ? "Hamyonsiz" : "Avval kategoriyani tanlang"}
 							hideAmounts={hideIncome}
 						/>
 						{shortfall > 0 ? (

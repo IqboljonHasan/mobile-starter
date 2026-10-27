@@ -83,6 +83,19 @@ export function withAlpha(hex: string, alpha: number): string {
 }
 
 /**
+ * The hue pulled toward the app's navy ink by `amount` (0–1) — the deep end of
+ * a wallet card's gradient, where white text needs to stay readable even on
+ * the lighter hues like yellow and magenta.
+ */
+export function deepen(hex: string, amount: number): string {
+	const ink = [0x0b, 0x1b, 0x2e];
+	const rgb = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+	return `#${rgb
+		.map((c, i) => Math.round(c * (1 - amount) + ink[i] * amount).toString(16).padStart(2, "0"))
+		.join("")}`;
+}
+
+/**
  * A solid pastel of the hue — the fill of a wallet's icon tile, with the hue
  * itself as the icon. Solid rather than translucent, so the tile reads the
  * same on the frosted home panels as on a plain sheet.

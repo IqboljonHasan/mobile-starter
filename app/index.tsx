@@ -10,9 +10,13 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeSky from "@/components/HomeSky";
 import LedgerSheet, { type LedgerSheetHandle } from "@/components/LedgerSheet";
-import WalletIcon from "@/components/WalletIcon";
 import { IconButton, Select } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
+import WalletCard, {
+	WALLET_CARD_H,
+	WALLET_CARD_RADIUS,
+	WALLET_CARD_W,
+} from "@/components/WalletCard";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
 import { useDoubleBackToExit } from "@/hooks/useDoubleBackToExit";
@@ -23,13 +27,12 @@ import { categoryColorValue, softTint } from "@/lib/categoryColors";
 import { currentMonthKey } from "@/lib/date";
 import { outstandingByUnit } from "@/lib/debts";
 import { excludeDebts, inMonth, inUnit, ofType, sum } from "@/lib/ledger";
-import { formatAmount, formatCompact, maskAmount, unitByCode } from "@/lib/money";
+import { floorAmount, formatAmount, maskAmount, unitByCode } from "@/lib/money";
 import { homePalette } from "@/lib/theme";
 import { walletBalances, walletUnitsUsed } from "@/lib/wallets";
 import "../global.css";
 
-const TILE_W = 116;
-const TILE_GAP = 4;
+const TILE_GAP = 8;
 // The room between the balance and the wallets: this much when the screen has
 // it to spare, squeezed to the minimum when it doesn't.
 const WALLETS_GAP = 56;
@@ -268,55 +271,60 @@ export default function HomeScreen() {
 						horizontal
 						accessibilityLabel="Hamyonlar"
 						showsHorizontalScrollIndicator={false}
-						snapToInterval={TILE_W + TILE_GAP}
+						snapToInterval={WALLET_CARD_W + TILE_GAP}
 						decelerationRate="fast"
 						style={{ marginHorizontal: -18 }}
-						contentContainerStyle={{ gap: TILE_GAP }}
+						contentContainerStyle={{ gap: TILE_GAP, paddingHorizontal: 18 }}
 					>
 						{/* Read-only: the balances are shown here, and the last tile is
 						    the way to the wallets themselves. */}
 						{balances.map((b) => (
-							<View
+							<WalletCard
 								key={b.walletId}
-								accessible
-								accessibilityLabel={`${b.name}, ${hideIncome ? "yashirilgan" : formatAmount(b.balance, walletUnit)}`}
-								className="items-center justify-center"
-								style={[glass, { width: TILE_W, height: 104, borderRadius: 22, gap: 12 }]}
-							>
-								<WalletIcon icon={b.icon} color={b.color} size={48} />
-								<Text
-									className="font-extrabold"
-									style={{
-										fontSize: tf.sm + 1,
-										color: !hideIncome && b.balance < 0 ? tc.danger : tc.foreground,
-									}}
-									numberOfLines={1}
-								>
-									{hideIncome ? "••••" : formatCompact(b.balance, walletUnit)}
-								</Text>
-							</View>
+								id={b.walletId}
+								name={b.name}
+								icon={b.icon}
+								color={b.color}
+								amount={
+									hideIncome
+										? "••••"
+										: formatAmount(floorAmount(b.balance, walletUnit), walletUnit, {
+												showUnit: false,
+											})
+								}
+								negative={!hideIncome && b.balance < 0}
+								accessibilityLabel={`${b.name} hamyoni, ${hideIncome ? "yashirilgan" : formatAmount(b.balance, walletUnit)}`}
+							/>
 						))}
 						{/* The way to the jars themselves — their shares, transfers and
-						    history — which no single tile opens. */}
+						    history — which no single card opens. */}
 						<Pressable
 							accessibilityRole="button"
 							accessibilityLabel={wallets.length ? "Hamyonlarni boshqarish" : "Hamyon qo'shish"}
 							onPress={() => router.push("/wallets")}
 							className="items-center justify-center active:opacity-70"
-							style={[glass, { width: TILE_W, height: 104, borderRadius: 22, gap: 12 }]}
+							style={[
+								glass,
+								{
+									width: WALLET_CARD_W,
+									height: WALLET_CARD_H,
+									borderRadius: WALLET_CARD_RADIUS,
+									gap: 8,
+								},
+							]}
 						>
 							<View
 								className="items-center justify-center"
 								style={{
-									width: 48,
-									height: 48,
-									borderRadius: 16,
+									width: 36,
+									height: 36,
+									borderRadius: 18,
 									backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(11,27,46,0.06)",
 								}}
 							>
 								<Ionicons
 									name={wallets.length ? "options-outline" : "add"}
-									size={24}
+									size={20}
 									color={tc.foreground}
 								/>
 							</View>

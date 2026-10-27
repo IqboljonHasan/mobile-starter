@@ -149,6 +149,18 @@ export function roundAmount(amount: number, unitCode: string): number {
 }
 
 /**
+ * Cuts a value down to the unit's own precision without rounding up — for a
+ * figure on a small tile, where "9 320 000" must never read as more than the
+ * wallet holds. Rounds first at a finer scale so float dust (1.1 * 3) doesn't
+ * floor a whole number to one less.
+ */
+export function floorAmount(amount: number, unitCode: string): number {
+	if (!Number.isFinite(amount)) return 0;
+	const factor = 10 ** unitByCode(unitCode).decimals;
+	return Math.floor(Math.round(amount * factor * 1e6) / 1e6) / factor;
+}
+
+/**
  * Parses what a user can actually type: a comma decimal separator, grouping
  * spaces, a stray currency symbol. Returns NaN for anything that isn't a
  * positive number, which is what the form validates on.
