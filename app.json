@@ -106,6 +106,15 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#1556C9"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
       ]
     ],
     "experiments": {
