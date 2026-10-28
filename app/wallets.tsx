@@ -31,10 +31,13 @@ import { formatAmount, maskAmount } from "@/lib/money";
 import { DEBT_CATEGORY_IDS } from "@/lib/seed";
 import {
 	UNALLOCATED_NAME,
+	UNASSIGNED_NAME,
 	unallocatedPercent,
+	unassignedBalance,
 	walletBalances,
 	walletUnitsUsed,
 } from "@/lib/wallets";
+import { unitsUsed } from "@/lib/ledger";
 import type { Category, IconName, Wallet } from "@/lib/types";
 import "../global.css";
 
@@ -83,8 +86,10 @@ export default function WalletsScreen() {
 
 	// Balances are all-time and per unit, so the screen reports one unit at a
 	// time exactly as the dashboard does.
+	// Every unit an entry was made in, not only the wallets' — money in a unit
+	// no wallet touched still shows, under Hamyonsiz.
 	const units = useMemo(() => {
-		const used = walletUnitsUsed(transactions, transfers);
+		const used = [...new Set([...walletUnitsUsed(transactions, transfers), ...unitsUsed(transactions)])];
 		return used.length > 0 ? used : [defaultUnit];
 	}, [transactions, transfers, defaultUnit]);
 	const unit =
@@ -104,12 +109,22 @@ export default function WalletsScreen() {
 		[transactions, transfers, wallets, unit],
 	);
 
+	// Listed only once something has gone through it, like the pool.
+	const unassigned = useMemo(() => {
+		const flow = unassignedBalance(transactions, unit);
+		return flow.incoming !== 0 || flow.outgoing !== 0 ? flow : null;
+	}, [transactions, unit]);
+
 	const remainder = unallocatedPercent(wallets);
 	const claimed = 100 - remainder;
 
 	// Bars are read against the largest jar, so the tallest is always full and
 	// the rest stay honestly proportional to it.
-	const peak = Math.max(...balances.map((b) => Math.abs(b.balance)), 1);
+	const peak = Math.max(
+		...balances.map((b) => Math.abs(b.balance)),
+		Math.abs(unassigned?.balance ?? 0),
+		1,
+	);
 
 	const expenseCategories = useMemo(
 		() => categories.filter((c) => c.type === "expense"),
@@ -269,7 +284,7 @@ export default function WalletsScreen() {
 							</View>
 						)}
 
-						{balances.length === 0 ? (
+						{balances.length === 0 && !unassigned ? (
 							<Text
 								className="text-muted-foreground text-center py-4"
 								style={{ fontSize: tf.base }}
@@ -325,6 +340,56 @@ export default function WalletsScreen() {
 										</View>
 									);
 								})}
+								{unassigned && (
+									<View
+										className={balances.length > 0 ? "pt-3" : undefined}
+										style={
+											balances.length > 0
+												? { borderTopWidth: 1, borderTopColor: tc.border }
+												: undefined
+										}
+									>
+										<View className="flex-row items-center gap-2">
+											<Ionicons name="help-circle-outline" size={14} color={tc.mutedForeground} />
+											<Text
+												className="flex-1 font-medium text-foreground"
+												style={{ fontSize: tf.base }}
+												numberOfLines={1}
+											>
+												{UNASSIGNED_NAME}
+											</Text>
+											<Text
+												className={`font-semibold ${
+													unassigned.balance < 0 ? "text-danger" : "text-foreground"
+												}`}
+												style={{ fontSize: tf.base }}
+												numberOfLines={1}
+											>
+												{money(unassigned.balance)}
+											</Text>
+										</View>
+										<View
+											className="rounded-full bg-muted overflow-hidden mt-1.5"
+											style={{ height: 8 }}
+										>
+											<View
+												style={{
+													width: `${Math.max((Math.abs(unassigned.balance) / peak) * 100, 2)}%`,
+													height: 8,
+													borderRadius: 4,
+													backgroundColor:
+														unassigned.balance < 0 ? tc.danger : tc.mutedForeground,
+												}}
+											/>
+										</View>
+										<Text
+											className="text-muted-foreground mt-1.5"
+											style={{ fontSize: tf.xs }}
+										>
+											{"Hech bir hamyonga tushmagan kirim va hamyonsiz chiqimlar"}
+										</Text>
+									</View>
+								)}
 							</View>
 						)}
 

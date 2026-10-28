@@ -1,5 +1,6 @@
-import type { Category, Transaction, TxType } from "@/lib/types";
+import type { Category, Debt, Transaction, TxType } from "@/lib/types";
 import { monthKeyOf, yearKeyOf } from "@/lib/date";
+import { LEND_CATEGORY_ID, remainingAmount } from "@/lib/debts";
 import { DEBT_CATEGORY_IDS } from "@/lib/seed";
 
 /**
@@ -29,6 +30,36 @@ export function ofType(transactions: Transaction[], type: TxType): Transaction[]
  *  lib/seed.ts. Used to keep debt movement out of income/expense stats. */
 export function excludeDebts(transactions: Transaction[]): Transaction[] {
 	return transactions.filter((t) => !DEBT_CATEGORY_IDS.has(t.categoryId));
+}
+
+/**
+ * The entries the income/expense totals count. With debts included that is all
+ * of them. Without, debt movement stays out — except money lent and not yet
+ * collected, which is gone from the user's pocket: the loan's own entry stays,
+ * in the month it was lent, at what is still outstanding, shrinking as
+ * collections come in and dropping out once the loan is settled. A lending
+ * entry with no debt behind it has no collections to subtract, so it stays out
+ * like the rest.
+ */
+export function countedForStats(
+	transactions: Transaction[],
+	debts: Debt[],
+	{ includeDebts, uncollectedLoans }: { includeDebts: boolean; uncollectedLoans: boolean },
+): Transaction[] {
+	if (includeDebts) return transactions;
+	if (!uncollectedLoans) return excludeDebts(transactions);
+	const outstanding = new Map<string, number>();
+	for (const debt of debts) {
+		if (debt.direction === "lent" && debt.transactionId) {
+			outstanding.set(debt.transactionId, remainingAmount(debt));
+		}
+	}
+	return transactions.flatMap((t) => {
+		if (!DEBT_CATEGORY_IDS.has(t.categoryId)) return [t];
+		if (t.categoryId !== LEND_CATEGORY_ID) return [];
+		const left = outstanding.get(t.id) ?? 0;
+		return left > 0 ? [{ ...t, amount: Math.min(left, t.amount) }] : [];
+	});
 }
 
 export function inUnit(transactions: Transaction[], unit: string | null): Transaction[] {

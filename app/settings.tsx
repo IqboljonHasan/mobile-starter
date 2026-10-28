@@ -50,6 +50,8 @@ export default function SettingsScreen() {
 		toggleHideIncome,
 		includeDebtsInStats,
 		setIncludeDebtsInStats,
+		uncollectedLoansAsExpense,
+		setUncollectedLoansAsExpense,
 		splitIncome,
 		setSplitIncome,
 	} = usePreferences();
@@ -252,6 +254,24 @@ export default function SettingsScreen() {
 									value={includeDebtsInStats}
 									onValueChange={setIncludeDebtsInStats}
 									accessibilityLabel="Qarzlarni hisobotga qo'shish"
+								/>
+							}
+						/>
+						<ListRow
+							title="Qaytmagan qarzlar chiqimda"
+							subtitle={
+								includeDebtsInStats
+									? "Qarzlar hisobotda to'liq hisoblanyapti"
+									: "Bergan qarzning hali qaytmagan qismi berilgan oyning chiqimiga qo'shiladi"
+							}
+							icon="arrow-up-circle-outline"
+							divider
+							trailing={
+								<Toggle
+									value={uncollectedLoansAsExpense}
+									onValueChange={setUncollectedLoansAsExpense}
+									disabled={includeDebtsInStats}
+									accessibilityLabel="Qaytmagan qarzlar chiqimda"
 								/>
 							}
 						/>

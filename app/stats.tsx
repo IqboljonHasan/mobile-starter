@@ -27,7 +27,7 @@ import {
 	shiftMonth,
 	yearKeyOf,
 } from "@/lib/date";
-import { excludeDebts, inUnit, ofType, unitsUsed } from "@/lib/ledger";
+import { countedForStats, inUnit, ofType, unitsUsed } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
 import {
 	change,
@@ -129,10 +129,11 @@ export default function StatsScreen() {
 	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
 	const params = useLocalSearchParams<{ month?: string }>();
-	const { ready, transactions, categories, wallets, defaultUnit } = useLedger();
+	const { ready, transactions, categories, wallets, debts, defaultUnit } = useLedger();
 	const {
 		hideIncome,
 		includeDebtsInStats,
+		uncollectedLoansAsExpense,
 		statsChart,
 		setStatsChart,
 		statsFlowChart,
@@ -173,8 +174,11 @@ export default function StatsScreen() {
 
 	const relevant = useMemo(() => {
 		const scoped = inUnit(transactions, unit);
-		return includeDebtsInStats ? scoped : excludeDebts(scoped);
-	}, [transactions, unit, includeDebtsInStats]);
+		return countedForStats(scoped, debts, {
+			includeDebts: includeDebtsInStats,
+			uncollectedLoans: uncollectedLoansAsExpense,
+		});
+	}, [transactions, debts, unit, includeDebtsInStats, uncollectedLoansAsExpense]);
 
 	// The period stays inside what the ledger reaches, however the unit or the
 	// debts switch has moved its ends since it was picked.

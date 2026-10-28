@@ -11,6 +11,7 @@ import { getSetting, setSetting } from "@/lib/storage";
 
 const KEY_HIDE_INCOME = "hide_income";
 const KEY_INCLUDE_DEBTS = "include_debts_in_stats";
+const KEY_UNCOLLECTED_LOANS = "uncollected_loans_as_expense";
 const KEY_SPLIT_INCOME = "split_income";
 const KEY_STATS_CHART = "stats_chart";
 const KEY_STATS_FLOW_CHART = "stats_flow_chart";
@@ -81,6 +82,11 @@ type PreferencesContextType = {
 	 *  DEBT_CATEGORY_IDS in lib/seed.ts for which categories these are. */
 	includeDebtsInStats: boolean;
 	setIncludeDebtsInStats: (value: boolean) => void;
+	/** Whether money lent and not yet collected counts as spending while the
+	 *  rest of the debts stay out of the stats. On by default — see
+	 *  `countedForStats` in lib/ledger.ts. */
+	uncollectedLoansAsExpense: boolean;
+	setUncollectedLoansAsExpense: (value: boolean) => void;
 	/** Whether income is divided across the wallets by default. On unless the
 	 *  user turns it off; an individual entry can still opt out (or, with it
 	 *  off, name a wallet to receive the whole amount). */
@@ -105,6 +111,8 @@ const PreferencesContext = createContext<PreferencesContextType>({
 	toggleHideIncome: () => {},
 	includeDebtsInStats: false,
 	setIncludeDebtsInStats: () => {},
+	uncollectedLoansAsExpense: true,
+	setUncollectedLoansAsExpense: () => {},
 	splitIncome: true,
 	setSplitIncome: () => {},
 	statsChart: DEFAULT_STATS_CHART,
@@ -120,6 +128,7 @@ const PreferencesContext = createContext<PreferencesContextType>({
 export function PreferencesProvider({ children }: { children: ReactNode }) {
 	const [hideIncome, setHideIncomeState] = useState(false);
 	const [includeDebtsInStats, setIncludeDebtsInStatsState] = useState(false);
+	const [uncollectedLoansAsExpense, setUncollectedLoansAsExpenseState] = useState(true);
 	const [splitIncome, setSplitIncomeState] = useState(true);
 	const [statsChart, setStatsChartState] = useState(DEFAULT_STATS_CHART);
 	const [statsFlowChart, setStatsFlowChartState] = useState(DEFAULT_STATS_FLOW_CHART);
@@ -130,6 +139,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 		getSetting(KEY_HIDE_INCOME, "0").then((value) => setHideIncomeState(value === "1"));
 		getSetting(KEY_INCLUDE_DEBTS, "0").then((value) =>
 			setIncludeDebtsInStatsState(value === "1"),
+		);
+		getSetting(KEY_UNCOLLECTED_LOANS, "1").then((value) =>
+			setUncollectedLoansAsExpenseState(value !== "0"),
 		);
 		getSetting(KEY_SPLIT_INCOME, "1").then((value) => setSplitIncomeState(value !== "0"));
 		getSetting(KEY_STATS_CHART, DEFAULT_STATS_CHART).then((value) =>
@@ -157,6 +169,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 	const setIncludeDebtsInStats = useCallback((value: boolean) => {
 		setIncludeDebtsInStatsState(value);
 		setSetting(KEY_INCLUDE_DEBTS, value ? "1" : "0");
+	}, []);
+
+	const setUncollectedLoansAsExpense = useCallback((value: boolean) => {
+		setUncollectedLoansAsExpenseState(value);
+		setSetting(KEY_UNCOLLECTED_LOANS, value ? "1" : "0");
 	}, []);
 
 	const setSplitIncome = useCallback((value: boolean) => {
@@ -191,6 +208,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 				toggleHideIncome,
 				includeDebtsInStats,
 				setIncludeDebtsInStats,
+				uncollectedLoansAsExpense,
+				setUncollectedLoansAsExpense,
 				splitIncome,
 				setSplitIncome,
 				statsChart,

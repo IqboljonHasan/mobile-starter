@@ -10,7 +10,7 @@ import {
 	todayISO,
 	yearKeyOf,
 } from "@/lib/date";
-import { UNALLOCATED_ID, UNALLOCATED_NAME, walletShare } from "@/lib/wallets";
+import { UNALLOCATED_ID, UNALLOCATED_NAME, UNASSIGNED_NAME, walletShare } from "@/lib/wallets";
 
 /**
  * Pure aggregation for the Tahlil screen. Nothing here touches storage or
@@ -434,7 +434,7 @@ function describe(key: string, lens: Lens, byId: Map<string, Category>, wallets:
 		}
 		return {
 			key,
-			name: key === UNALLOCATED_ID ? UNALLOCATED_NAME : key === NONE ? "Hamyonsiz" : "Noma'lum hamyon",
+			name: key === UNALLOCATED_ID ? UNALLOCATED_NAME : key === NONE ? UNASSIGNED_NAME : "Noma'lum hamyon",
 			context: null,
 			kind: "wallet",
 			color: null,

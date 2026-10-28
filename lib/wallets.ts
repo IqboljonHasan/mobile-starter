@@ -35,6 +35,8 @@ import type {
 export const UNALLOCATED_ID = "__unallocated__";
 
 export const UNALLOCATED_NAME = "Taqsimlanmagan";
+/** Money no wallet touched at all — see `unassignedBalance`. */
+export const UNASSIGNED_NAME = "Hamyonsiz";
 
 /**
  * The starter set. The five jars and their shares are the ones most people
@@ -405,6 +407,30 @@ export function walletBalances(
 	}
 
 	return rows;
+}
+
+/**
+ * What no wallet holds, in one unit and over the whole ledger like the jars:
+ * income that landed in none (nothing split it and none was named) less
+ * spending charged to none — an unmapped category's, or a debt given without a
+ * wallet. Kept apart from `walletBalances`, whose rows the pickers offer to pay
+ * from; this is money the wallets never saw, not a jar.
+ */
+export function unassignedBalance(
+	transactions: Transaction[],
+	unit: string,
+): { incoming: number; outgoing: number; balance: number } {
+	let incoming = 0;
+	let outgoing = 0;
+	for (const t of transactions) {
+		if (t.unit !== unit) continue;
+		if (t.type === "income") {
+			if (t.allocations.length === 0) incoming += t.amount;
+		} else if (!t.walletId) {
+			outgoing += t.amount;
+		}
+	}
+	return { incoming, outgoing, balance: incoming - outgoing };
 }
 
 /** One wallet's balance in one unit. */

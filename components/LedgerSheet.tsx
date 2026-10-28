@@ -36,7 +36,7 @@ import { useStickyHeaderShadow } from "@/hooks/useStickyHeaderShadow";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";
 import { currentMonthKey, formatSectionDay, monthName, shiftMonth } from "@/lib/date";
-import { excludeDebts, inMonth, resolveCategory, unitsUsed } from "@/lib/ledger";
+import { countedForStats, inMonth, resolveCategory, unitsUsed } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
 import { foldForSearch, matchesSearch } from "@/lib/search";
 import { homePalette, RADIUS } from "@/lib/theme";
@@ -98,8 +98,8 @@ export default function LedgerSheet({
 	const insets = useSafeAreaInsets();
 	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
-	const { transactions, categories, wallets, members, defaultUnit } = useLedger();
-	const { hideIncome, includeDebtsInStats } = usePreferences();
+	const { transactions, categories, wallets, members, debts, defaultUnit } = useLedger();
+	const { hideIncome, includeDebtsInStats, uncollectedLoansAsExpense } = usePreferences();
 
 	const sheet = useRef<BottomSheet>(null);
 	const animatedIndex = useSharedValue(0);
@@ -248,7 +248,12 @@ export default function LedgerSheet({
 	// has filtered down to one category, which says exactly what to total.
 	const totals = useMemo(() => {
 		const counted =
-			categoryFilter || subcategoryFilter || includeDebtsInStats ? narrowed : excludeDebts(narrowed);
+			categoryFilter || subcategoryFilter
+				? narrowed
+				: countedForStats(narrowed, debts, {
+						includeDebts: includeDebtsInStats,
+						uncollectedLoans: uncollectedLoansAsExpense,
+					});
 		let income = 0;
 		let expense = 0;
 		for (const t of counted) {
@@ -257,7 +262,16 @@ export default function LedgerSheet({
 			else expense += walletShare(t, walletFilter);
 		}
 		return { income, expense };
-	}, [narrowed, categoryFilter, subcategoryFilter, includeDebtsInStats, unit, walletFilter]);
+	}, [
+		narrowed,
+		debts,
+		categoryFilter,
+		subcategoryFilter,
+		includeDebtsInStats,
+		uncollectedLoansAsExpense,
+		unit,
+		walletFilter,
+	]);
 
 	const sections = useMemo(() => {
 		const days = new Map<string, Transaction[]>();
