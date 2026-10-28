@@ -20,6 +20,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import ContactAvatar from "@/components/ContactAvatar";
 import MonthSwitcher from "@/components/MonthSwitcher";
 import SearchBar from "@/components/SearchBar";
 import TransactionRow from "@/components/TransactionRow";
@@ -39,10 +40,14 @@ import { excludeDebts, inMonth, resolveCategory, unitsUsed } from "@/lib/ledger"
 import { formatAmount, maskAmount } from "@/lib/money";
 import { foldForSearch, matchesSearch } from "@/lib/search";
 import { homePalette, RADIUS } from "@/lib/theme";
-import type { Transaction, TxType } from "@/lib/types";
+import type { FamilyMember, Transaction, TxType } from "@/lib/types";
 import { UNALLOCATED_ID, UNALLOCATED_NAME, walletShare } from "@/lib/wallets";
 
 type TypeFilter = "all" | TxType;
+
+/** The member filter's key for expenses that aren't for one person: shared,
+ *  or for a member since deleted. Member ids are "mem_…", so this can't clash. */
+const COMMON_MEMBER_ID = "common";
 
 export type LedgerSheetHandle = {
 	/** Pulls the ledger up, narrowed to one side or one wallet when asked. */
@@ -105,6 +110,7 @@ export default function LedgerSheet({
 	const [walletFilter, setWalletFilter] = useState<string | null>(null);
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 	const [subcategoryFilter, setSubcategoryFilter] = useState<string | null>(null);
+	const [memberFilter, setMemberFilter] = useState<string | null>(null);
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
 	const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 	const [searching, setSearching] = useState(false);
@@ -161,6 +167,8 @@ export default function LedgerSheet({
 			// A category from the other side would leave the list empty.
 			const picked = categories.find((c) => c.id === categoryFilter);
 			if (picked && next !== "all" && picked.type !== next) pickCategory(null);
+			// Members are only on expenses, so a member pick can't meet income.
+			if (next === "income") setMemberFilter(null);
 			return;
 		}
 		setType(side);
@@ -186,6 +194,7 @@ export default function LedgerSheet({
 		setWalletFilter(null);
 		setCategoryFilter(null);
 		setSubcategoryFilter(null);
+		setMemberFilter(null);
 		setSearching(false);
 		setQuery("");
 	};
@@ -204,6 +213,7 @@ export default function LedgerSheet({
 			monthly.filter((t) => {
 				if (categoryFilter && t.categoryId !== categoryFilter) return false;
 				if (subcategoryFilter && t.subcategoryId !== subcategoryFilter) return false;
+				if (memberFilter && (t.type !== "expense" || memberKeyOf(t, members) !== memberFilter)) return false;
 				if (walletShare(t, walletFilter) <= 0) return false;
 				if (!folded) return true;
 				const { category, subcategory } = resolveCategory(t, categories);
@@ -216,7 +226,7 @@ export default function LedgerSheet({
 					String(t.amount),
 				]);
 			}),
-		[monthly, categoryFilter, subcategoryFilter, walletFilter, folded, categories, members],
+		[monthly, categoryFilter, subcategoryFilter, memberFilter, walletFilter, folded, categories, members],
 	);
 	const visible = useMemo(
 		() => (type === "all" ? narrowed : narrowed.filter((t) => t.type === type)),
@@ -341,7 +351,8 @@ export default function LedgerSheet({
 		const parent = categories.find((c) => c.subcategories.some((sub) => sub.id === next));
 		if (parent) setCategoryFilter(parent.id);
 	};
-	const filtering = walletFilter !== null || categoryFilter !== null || subcategoryFilter !== null;
+	const filtering =
+		walletFilter !== null || categoryFilter !== null || subcategoryFilter !== null || memberFilter !== null;
 
 	// How many of the month's entries (on the side shown) each option would
 	// leave in the list, so a pick says what it's worth before it's made.
@@ -349,17 +360,28 @@ export default function LedgerSheet({
 		const wallet = new Map<string, number>();
 		const category = new Map<string, number>();
 		const subcategory = new Map<string, number>();
+		const member = new Map<string, number>();
 		const bump = (map: Map<string, number>, key: string) => map.set(key, (map.get(key) ?? 0) + 1);
 		for (const t of monthly) {
 			if (type !== "all" && t.type !== type) continue;
 			bump(category, t.categoryId);
 			if (t.subcategoryId) bump(subcategory, t.subcategoryId);
+			if (t.type === "expense") bump(member, memberKeyOf(t, members));
 			for (const w of [...wallets.map((x) => x.id), UNALLOCATED_ID]) {
 				if (walletShare(t, w) > 0) bump(wallet, w);
 			}
 		}
-		return { wallet, category, subcategory };
-	}, [monthly, type, wallets]);
+		return { wallet, category, subcategory, member };
+	}, [monthly, type, wallets, members]);
+	// Only members with expenses this month are offered, the shared bucket last.
+	const memberOptions = useMemo(
+		() => [
+			...members.filter((m) => counts.member.has(m.id)).map((m) => ({ key: m.id, label: m.name })),
+			...(counts.member.has(COMMON_MEMBER_ID) ? [{ key: COMMON_MEMBER_ID, label: "Umumiy" }] : []),
+		],
+		[members, counts],
+	);
+	const pickedMember = memberOptions.find((m) => m.key === memberFilter) ?? null;
 	const countText = (map: Map<string, number>, key: string) => `${map.get(key) ?? 0} ta yozuv`;
 
 	const renderWalletOption = (option: { key: string; label: string }, selected: boolean) => {
@@ -406,6 +428,24 @@ export default function LedgerSheet({
 						color={sub?.color ?? parent?.color ?? "blue"}
 						size={38}
 					/>
+				}
+			/>
+		);
+	};
+
+	const renderMemberOption = (option: { key: string; label: string }, selected: boolean) => {
+		const member = members.find((m) => m.id === option.key);
+		return (
+			<OptionRow
+				selected={selected}
+				title={option.label}
+				subtitle={countText(counts.member, option.key)}
+				leading={
+					member ? (
+						<ContactAvatar name={member.name} id={member.id} color={member.color} size={38} />
+					) : (
+						<CategoryAvatar icon="people-outline" color="blue" size={38} mono />
+					)
 				}
 			/>
 		);
@@ -659,6 +699,34 @@ export default function LedgerSheet({
 								/>
 							)}
 						/>
+						{members.length > 0 && (
+							<Select
+								label="A'zo"
+								value={memberFilter}
+								onChange={setMemberFilter}
+								options={memberOptions}
+								renderOption={renderMemberOption}
+								clearable
+								emptyMessage={`${monthName(month)}da a'zolarga yozilgan chiqim yo'q.`}
+								trigger={({ open }) => (
+									<Chip
+										label={pickedMember?.label ?? "A'zo"}
+										dot={
+											memberFilter && memberFilter !== COMMON_MEMBER_ID
+												? categoryColorValue(
+														members.find((m) => m.id === memberFilter)?.color ?? "blue",
+														isDark,
+													)
+												: undefined
+										}
+										icon="chevron-down"
+										active={memberFilter !== null}
+										accessibilityLabel={`A'zo: ${pickedMember?.label ?? "hammasi"}`}
+										onPress={open}
+									/>
+								)}
+							/>
+						)}
 						{filtering && (
 							<Pressable
 								accessibilityRole="button"
@@ -667,6 +735,7 @@ export default function LedgerSheet({
 									setWalletFilter(null);
 									setCategoryFilter(null);
 									setSubcategoryFilter(null);
+									setMemberFilter(null);
 								}}
 								className="items-center justify-center rounded-full bg-muted active:opacity-70"
 								style={{ width: 40, height: 40 }}
@@ -753,6 +822,12 @@ export default function LedgerSheet({
 
 		</BottomSheet>
 	);
+}
+
+/** Who an expense is for: its member while that member exists, otherwise the shared bucket —
+ *  a deleted member's expenses read as for everybody, as they do in the form. */
+function memberKeyOf(t: Transaction, members: FamilyMember[]): string {
+	return t.memberId && members.some((m) => m.id === t.memberId) ? t.memberId : COMMON_MEMBER_ID;
 }
 
 /** One row of a filter sheet: a tile saying what it is, its name, and what picking it leaves. */
