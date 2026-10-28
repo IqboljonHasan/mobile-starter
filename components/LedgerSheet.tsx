@@ -60,6 +60,8 @@ const HANDLE_HEIGHT = 19;
 const TITLE_HEIGHT = 56;
 /** The Kirim / Chiqim buttons pinned to the sheet's bottom edge. */
 const FOOTER_HEIGHT = 82;
+/** How far the fade behind those buttons reaches up past them. */
+const FOOTER_FADE = 40;
 /** A day's header in the list — the same for every day, so the shade can sit
  *  right under whichever one is stuck at the top. */
 const SECTION_HEADER_HEIGHT = 40;
@@ -115,6 +117,23 @@ export default function LedgerSheet({
 	const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
+	// What the end of the list needs to clear the buttons and their fade. The
+	// list steps down for the title row and the footer floats over it from
+	// another part of the tree, so it's measured on screen once the sheet is up;
+	// the starting guess is the same sum done by hand.
+	const listBox = useRef<View>(null);
+	const footerBox = useRef<View>(null);
+	const [listEndSpace, setListEndSpace] = useState(TITLE_HEIGHT + FOOTER_HEIGHT + FOOTER_FADE + 12);
+	const measureListEnd = useCallback(() => {
+		if (animatedIndex.get() < 0.99) return;
+		listBox.current?.measureInWindow((_x, listY, _w, listHeight) => {
+			footerBox.current?.measureInWindow((_fx, footerY) => {
+				if (!listHeight) return;
+				const next = Math.max(listY + listHeight - (footerY - FOOTER_FADE), 0) + 12;
+				setListEndSpace((prev) => (Math.abs(prev - next) < 1 ? prev : next));
+			});
+		});
+	}, [animatedIndex]);
 	// What the list is scrolling under: the stuck day header, or the filters
 	// above it while the next day pushes that header out.
 	const { edge, listProps } = useStickyHeaderShadow(SECTION_HEADER_HEIGHT);
@@ -189,7 +208,10 @@ export default function LedgerSheet({
 
 	// Back at rest the sheet is the panel again, which reports the whole month.
 	const settle = (index: number) => {
-		if (index > 0) return;
+		if (index > 0) {
+			measureListEnd();
+			return;
+		}
 		setType("all");
 		setWalletFilter(null);
 		setCategoryFilter(null);
@@ -498,6 +520,7 @@ export default function LedgerSheet({
 		(props: BottomSheetFooterProps) => (
 			<BottomSheetFooter {...props} bottomInset={0}>
 				<SheetFooter
+					boxRef={footerBox}
 					onIncome={() => router.push("/transaction?type=income")}
 					onExpense={() => router.push("/transaction?type=expense")}
 				/>
@@ -760,7 +783,7 @@ export default function LedgerSheet({
 					</ScrollView>
 
 					<GestureDetector gesture={swipeMonthList}>
-						<View style={{ flex: 1 }}>
+						<View ref={listBox} onLayout={measureListEnd} style={{ flex: 1 }}>
 							<BottomSheetSectionList
 								sections={sections}
 								keyExtractor={(item: Transaction) => item.id}
@@ -770,9 +793,9 @@ export default function LedgerSheet({
 								{...listProps}
 								contentContainerStyle={{
 									paddingHorizontal: 18,
-									// Clear of the pinned buttons, and of the title row the
-									// content steps down for.
-									paddingBottom: FOOTER_HEIGHT + TITLE_HEIGHT + 24,
+									// Clear of the pinned buttons and their fade, and of the
+									// title row the content steps down for.
+									paddingBottom: listEndSpace,
 								}}
 								renderSectionHeader={({ section }) => {
 									const masked = hideIncome && section.hasIncome;
@@ -932,7 +955,15 @@ function SheetBackground({ style, animatedIndex }: BottomSheetBackgroundProps) {
 }
 
 /** Kirim / Chiqim, pinned to the bottom; the list fades out behind them once it's up. */
-function SheetFooter({ onIncome, onExpense }: { onIncome: () => void; onExpense: () => void }) {
+function SheetFooter({
+	boxRef,
+	onIncome,
+	onExpense,
+}: {
+	boxRef?: Ref<View>;
+	onIncome: () => void;
+	onExpense: () => void;
+}) {
 	const { tc } = useTheme();
 	const { animatedIndex } = useBottomSheet();
 	const fadeStyle = useAnimatedStyle(() => ({
@@ -940,10 +971,10 @@ function SheetFooter({ onIncome, onExpense }: { onIncome: () => void; onExpense:
 	}));
 
 	return (
-		<View style={{ height: FOOTER_HEIGHT, justifyContent: "flex-end" }}>
+		<View ref={boxRef} style={{ height: FOOTER_HEIGHT, justifyContent: "flex-end" }}>
 			<Animated.View
 				pointerEvents="none"
-				style={[{ position: "absolute", left: 0, right: 0, bottom: 0, height: FOOTER_HEIGHT + 40 }, fadeStyle]}
+				style={[{ position: "absolute", left: 0, right: 0, bottom: 0, height: FOOTER_HEIGHT + FOOTER_FADE }, fadeStyle]}
 			>
 				<Svg width="100%" height="100%">
 					<Defs>

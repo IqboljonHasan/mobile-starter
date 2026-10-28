@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, SectionList, View } from "react-native";
-import BottomBar, { BOTTOM_BAR_SPACE } from "@/components/BottomBar";
+import BottomBar, { BOTTOM_BAR_FADE, BOTTOM_BAR_SPACE } from "@/components/BottomBar";
 import DebtRow from "@/components/DebtRow";
 import FilterTile from "@/components/FilterTile";
 import RemindersSheet from "@/components/RemindersSheet";
@@ -127,6 +127,16 @@ export default function DebtsScreen() {
 
 	const openDebt = (next: DebtDirection) => router.push(`/debt?direction=${next}`);
 
+	// The list's last row has to clear the buttons and their fade. Measured
+	// rather than assumed: both sit in this screen's root, so the list's bottom
+	// edge less the top of the fade is exactly what the end of the list needs.
+	const [listBottom, setListBottom] = useState<number | null>(null);
+	const [fadeTop, setFadeTop] = useState<number | null>(null);
+	const listEndSpace =
+		listBottom !== null && fadeTop !== null
+			? Math.max(listBottom - fadeTop, 0) + 12
+			: BOTTOM_BAR_SPACE + 16;
+
 	if (!ready) {
 		return (
 			<View className="flex-1 bg-background items-center justify-center">
@@ -227,14 +237,17 @@ export default function DebtsScreen() {
 				))}
 			</ScrollView>
 
-			<View className="flex-1">
+			<View
+				className="flex-1"
+				onLayout={(e) => setListBottom(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}
+			>
 				<SectionList
 					{...listProps}
 					sections={sections}
 					keyExtractor={(item) => item.id}
 					stickySectionHeadersEnabled
 					showsVerticalScrollIndicator={false}
-					contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: BOTTOM_BAR_SPACE + 16 }}
+					contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: listEndSpace }}
 					renderSectionHeader={({ section }) => {
 						const color = section.key === "overdue" ? tc.danger : tc.mutedForeground;
 						return (
@@ -300,7 +313,11 @@ export default function DebtsScreen() {
 			{/* Both directions are one tap away: which way a debt runs is the first
 			    thing the user knows about it, so it shouldn't be a field they have
 			    to change after opening the wrong form. */}
-			<BottomBar>
+			<BottomBar
+				onLayout={(e) =>
+					setFadeTop(e.nativeEvent.layout.y + e.nativeEvent.layout.height - BOTTOM_BAR_FADE)
+				}
+			>
 				<View className="flex-1">
 					<Button
 						label="Qarz berdim"
