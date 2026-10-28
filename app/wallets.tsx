@@ -31,6 +31,7 @@ import { formatAmount, maskAmount } from "@/lib/money";
 import { DEBT_CATEGORY_IDS } from "@/lib/seed";
 import {
 	UNALLOCATED_NAME,
+	UNASSIGNED_ID,
 	UNASSIGNED_NAME,
 	unallocatedPercent,
 	unassignedBalance,
@@ -80,6 +81,8 @@ export default function WalletsScreen() {
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
 	const [draft, setDraft] = useState<WalletDraftState | null>(null);
 	const [transferOpen, setTransferOpen] = useState(false);
+	/** Where the transfer sheet starts from — Hamyonsiz when opened from its row. */
+	const [transferFrom, setTransferFrom] = useState<string | null>(null);
 	const { scrolled, scrollProps } = useScrolled();
 	/** Expense category whose wallet set is being edited, by id. */
 	const [walletMapCategoryId, setWalletMapCategoryId] = useState<string | null>(null);
@@ -111,9 +114,29 @@ export default function WalletsScreen() {
 
 	// Listed only once something has gone through it, like the pool.
 	const unassigned = useMemo(() => {
-		const flow = unassignedBalance(transactions, unit);
+		const flow = unassignedBalance(transactions, transfers, unit);
 		return flow.incoming !== 0 || flow.outgoing !== 0 ? flow : null;
-	}, [transactions, unit]);
+	}, [transactions, transfers, unit]);
+
+	// Hamyonsiz money can be moved into a wallet, so it joins the sheet's
+	// balances as a source while there is any left to move.
+	const unassignedMovable = !!unassigned && unassigned.balance > 0 && wallets.length > 0;
+	const transferBalances = useMemo(
+		() =>
+			unassigned && unassignedMovable
+				? [
+						...balances,
+						{
+							walletId: UNASSIGNED_ID,
+							name: UNASSIGNED_NAME,
+							color: "blue",
+							icon: null,
+							...unassigned,
+						},
+					]
+				: balances,
+		[balances, unassigned, unassignedMovable],
+	);
 
 	const remainder = unallocatedPercent(wallets);
 	const claimed = 100 - remainder;
@@ -388,6 +411,20 @@ export default function WalletsScreen() {
 										>
 											{"Hech bir hamyonga tushmagan kirim va hamyonsiz chiqimlar"}
 										</Text>
+										{unassignedMovable && (
+											<View className="mt-3">
+												<Button
+													label="Hamyonga o'tkazish"
+													variant="soft"
+													fullWidth
+													onPress={() => {
+														setTransferFrom(UNASSIGNED_ID);
+														setTransferOpen(true);
+													}}
+													startIcon={<Ionicons name="swap-horizontal" size={18} color={tc.primary} />}
+												/>
+											</View>
+										)}
 									</View>
 								)}
 							</View>
@@ -399,8 +436,11 @@ export default function WalletsScreen() {
 									label="Pul o'tkazish"
 									variant="soft"
 									fullWidth
-									disabled={wallets.length < 2}
-									onPress={() => setTransferOpen(true)}
+									disabled={wallets.length < 2 && !unassignedMovable}
+									onPress={() => {
+										setTransferFrom(null);
+										setTransferOpen(true);
+									}}
 									startIcon={
 										<Ionicons name="swap-horizontal" size={18} color={tc.primary} />
 									}
@@ -733,13 +773,14 @@ export default function WalletsScreen() {
 
 			{/* Transfer -------------------------------------------------------- */}
 			<TransferSheet
-				key={transferOpen ? "transfer-open" : "transfer-closed"}
+				key={transferOpen ? `transfer-open-${transferFrom}` : "transfer-closed"}
 				visible={transferOpen}
 				onClose={() => setTransferOpen(false)}
 				onSubmit={addTransfer}
 				wallets={wallets}
-				balances={balances}
+				balances={transferBalances}
 				unit={unit}
+				initialFromWalletId={transferFrom}
 			/>
 
 			{/* Category → wallet mapping ----------------------------------------- */}

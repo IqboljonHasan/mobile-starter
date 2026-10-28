@@ -6,7 +6,13 @@ import { FieldLabel, PickerField, Select } from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
 import { formatAmount, maskAmount } from "@/lib/money";
-import { UNALLOCATED_ID, UNALLOCATED_NAME, type WalletBalance } from "@/lib/wallets";
+import {
+	UNALLOCATED_ID,
+	UNALLOCATED_NAME,
+	UNASSIGNED_ID,
+	UNASSIGNED_NAME,
+	type WalletBalance,
+} from "@/lib/wallets";
 import type { Wallet } from "@/lib/types";
 
 const NONE_KEY = "__none__";
@@ -30,6 +36,7 @@ export default function WalletPicker({
 	allowNone = false,
 	noneLabel = "Hamyonsiz",
 	includeUnallocated = false,
+	includeUnassigned = false,
 	hideAmounts = false,
 	readOnly = false,
 	error,
@@ -48,6 +55,9 @@ export default function WalletPicker({
 	noneLabel?: string;
 	/** Offers the unallocated pool as a source. */
 	includeUnallocated?: boolean;
+	/** Offers the money no wallet holds (Hamyonsiz) as a source, when `balances`
+	 *  carries a row for it. */
+	includeUnassigned?: boolean;
 	hideAmounts?: boolean;
 	/** Shows the wallet without offering a choice — for when something else,
 	 * like an expense's category, already decides it. */
@@ -70,6 +80,16 @@ export default function WalletPicker({
 					{
 						key: UNALLOCATED_ID,
 						name: UNALLOCATED_NAME,
+						color: "blue",
+						icon: "help-circle-outline" as const,
+					},
+				]
+			: []),
+		...(includeUnassigned && balances.some((b) => b.walletId === UNASSIGNED_ID)
+			? [
+					{
+						key: UNASSIGNED_ID,
+						name: UNASSIGNED_NAME,
 						color: "blue",
 						icon: "help-circle-outline" as const,
 					},

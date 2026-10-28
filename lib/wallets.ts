@@ -37,6 +37,9 @@ export const UNALLOCATED_ID = "__unallocated__";
 export const UNALLOCATED_NAME = "Taqsimlanmagan";
 /** Money no wallet touched at all — see `unassignedBalance`. */
 export const UNASSIGNED_NAME = "Hamyonsiz";
+/** What a transfer names as its source when it moves that money into a wallet.
+ *  Not a wallet: it is never listed with the jars, only drawn down. */
+export const UNASSIGNED_ID = "__unassigned__";
 
 /**
  * The starter set. The five jars and their shares are the ones most people
@@ -113,12 +116,13 @@ export function walletById(wallets: Wallet[], id: string | null): Wallet | null 
 /** Display name for any wallet id, including the unallocated pool. */
 export function walletName(wallets: Wallet[], id: string | null): string {
 	if (id === UNALLOCATED_ID) return UNALLOCATED_NAME;
+	if (id === UNASSIGNED_ID) return UNASSIGNED_NAME;
 	return walletById(wallets, id)?.name ?? "Noma'lum hamyon";
 }
 
 /** Palette key for any wallet id — the pool reads as a neutral blue. */
 export function walletColor(wallets: Wallet[], id: string | null): string {
-	if (id === UNALLOCATED_ID) return "blue";
+	if (id === UNALLOCATED_ID || id === UNASSIGNED_ID) return "blue";
 	return walletById(wallets, id)?.color ?? "blue";
 }
 
@@ -413,11 +417,13 @@ export function walletBalances(
  * What no wallet holds, in one unit and over the whole ledger like the jars:
  * income that landed in none (nothing split it and none was named) less
  * spending charged to none — an unmapped category's, or a debt given without a
- * wallet. Kept apart from `walletBalances`, whose rows the pickers offer to pay
- * from; this is money the wallets never saw, not a jar.
+ * wallet — less what has been transferred out of it into a wallet. Kept apart
+ * from `walletBalances`, whose rows the pickers offer to pay from; this is
+ * money the wallets never saw, not a jar, and a transfer is how it becomes one.
  */
 export function unassignedBalance(
 	transactions: Transaction[],
+	transfers: Transfer[],
 	unit: string,
 ): { incoming: number; outgoing: number; balance: number } {
 	let incoming = 0;
@@ -428,6 +434,11 @@ export function unassignedBalance(
 			if (t.allocations.length === 0) incoming += t.amount;
 		} else if (!t.walletId) {
 			outgoing += t.amount;
+		}
+	}
+	for (const transfer of transfers) {
+		if (transfer.unit === unit && transfer.fromWalletId === UNASSIGNED_ID) {
+			outgoing += transfer.amount;
 		}
 	}
 	return { incoming, outgoing, balance: incoming - outgoing };

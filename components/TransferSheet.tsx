@@ -124,6 +124,7 @@ export default function TransferSheet({
 					unit={unit}
 					excludeWalletId={toWalletId}
 					includeUnallocated
+					includeUnassigned
 					error={submitted ? fromError : undefined}
 				/>
 
