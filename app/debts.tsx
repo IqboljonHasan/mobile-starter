@@ -29,11 +29,12 @@ import { foldForSearch, matchesSearch } from "@/lib/search";
 import type { DebtDirection } from "@/lib/types";
 import "../global.css";
 
-/** Which slice of the list is showing, by state. */
-type Filter = "all" | "open" | "overdue" | "settled";
+/** Which slice of the list is showing, by state. There is no "all": the
+ *  screen is for what is still owed, and settled debts are history kept one
+ *  tap away rather than mixed in. */
+type Filter = "open" | "overdue" | "settled";
 
 const FILTERS: { key: Filter; label: string }[] = [
-	{ key: "all", label: "Hammasi" },
 	{ key: "open", label: "Faol" },
 	{ key: "overdue", label: "Muddati o'tgan" },
 	{ key: "settled", label: "Yopilgan" },
@@ -70,7 +71,7 @@ export default function DebtsScreen() {
 	const { ready, debts, contacts, defaultUnit } = useLedger();
 
 	const [direction, setDirection] = useState<DebtDirection | null>(null);
-	const [filter, setFilter] = useState<Filter>("all");
+	const [filter, setFilter] = useState<Filter>("open");
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -100,7 +101,6 @@ export default function DebtsScreen() {
 				return false;
 			}
 			const status = debtStatus(debt, today);
-			if (filter === "all") return true;
 			if (filter === "open") return status !== "settled";
 			return status === filter;
 		});
@@ -299,7 +299,9 @@ export default function DebtsScreen() {
 									? "Qarz berganingizni yoki olganingizni shu yerda yuriting — har biri hisobingizga ham yoziladi."
 									: folded
 										? `"${query.trim()}" bo'yicha qarz topilmadi`
-										: "Bu filtr bo'yicha qarz yo'q"
+										: filter === "open"
+											? "Faol qarz yo'q — yopilganlari «Yopilgan»da"
+											: "Bu filtr bo'yicha qarz yo'q"
 							}
 						/>
 					}
