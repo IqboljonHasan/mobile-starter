@@ -54,7 +54,7 @@ export type LedgerSheetHandle = {
 	open: (filter?: { type?: TxType; walletId?: string }) => void;
 };
 
-/** The grabber strip above the content. */
+/** The grabber strip at the top of the sheet. */
 const HANDLE_HEIGHT = 19;
 /** The title row that slides in over the top as the sheet opens. */
 const TITLE_HEIGHT = 56;
@@ -547,15 +547,30 @@ export default function LedgerSheet({
 			failOffsetX={[-12, 12]}
 			onAnimate={(_from, to) => setExpanded(to > 0)}
 			onChange={settle}
-			handleComponent={SheetHandle}
+			// The grabber is drawn as the first row of the content instead of as
+			// the sheet's handle. With a handle, the sheet only places itself at
+			// rest once the handle has been measured *and* the snap points change
+			// after that; when the handle's measurement lands last — as it can in
+			// a release build — nothing moves the sheet up and it stays below the
+			// screen. Without one, being placed depends on the container alone.
+			handleComponent={null}
 			backgroundComponent={SheetBackground}
 			footerComponent={renderFooter}
 		>
+			<SheetHandle />
+
 			{/* Title row: only there once the ledger is up ------------------- */}
 			<Animated.View
 				pointerEvents={expanded ? "box-none" : "none"}
 				style={[
-					{ position: "absolute", top: 0, left: 0, right: 0, height: TITLE_HEIGHT, zIndex: 2 },
+					{
+						position: "absolute",
+						top: HANDLE_HEIGHT,
+						left: 0,
+						right: 0,
+						height: TITLE_HEIGHT,
+						zIndex: 2,
+					},
 					titleStyle,
 				]}
 			>

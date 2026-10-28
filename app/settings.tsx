@@ -348,15 +348,20 @@ export default function SettingsScreen() {
 						/>
 					</Section>
 
-					<Card flush className="mt-5">
-						<ListRow
-							title="Barcha ma'lumotlarni o'chirish"
-							subtitle="Barcha yozuvlar o'chadi, boshlang'ich kategoriyalar tiklanadi"
-							icon="trash-outline"
-							danger
-							onPress={confirmReset}
-						/>
-					</Card>
+					{/* A development tool for starting over with the starter data. In a
+					    release build it is one mistaken tap from losing every record
+					    with no undo, so it isn't offered there. */}
+					{__DEV__ && (
+						<Card flush className="mt-5">
+							<ListRow
+								title="Barcha ma'lumotlarni o'chirish"
+								subtitle="Barcha yozuvlar o'chadi, boshlang'ich kategoriyalar tiklanadi"
+								icon="trash-outline"
+								danger
+								onPress={confirmReset}
+							/>
+						</Card>
+					)}
 
 					<Text
 						className="font-semibold text-muted-foreground text-center px-6 pt-4"
