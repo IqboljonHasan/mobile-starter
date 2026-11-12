@@ -1,6 +1,6 @@
-"Field","uz","en-US"
-"Title","Taqsim — kirim, chiqim, qarz","Taqsim: Budget, Wallets, Debts"
-"Short description","Har bir so'mni oldindan rejalang: hamyonlar, kirim-chiqim va qarzlar.","Plan every payday: wallets by your own shares, plus expenses and debts."
+"Field","en-US"
+"Title","Taqsim — kirim, chiqim, qarz"
+"Short description","Har bir so'mni oldindan rejalang: hamyonlar, kirim-chiqim va qarzlar."
 "Full description","Taqsim — pulingizni oldindan rejalashtirishga yordam beradigan shaxsiy moliya ilovasi. Har bir kirim siz belgilagan ulushlar bo'yicha hamyonlarga avtomatik taqsimlanadi: oila, biznes, ota-ona, xayriya, shaxsiy rivojlanish — yoki o'zingiz yaratgan har qanday hamyon.
 
 HAMYONLAR VA ULUSHLAR
@@ -33,7 +33,9 @@ MAXFIYLIK
 • Barcha ma'lumotlar faqat telefoningizda saqlanadi
 • Zaxira nusxani faylga yoki o'zingizning Telegram botingizga saqlang
 
-Yorug' va qorong'i mavzu, o'zbek tilidagi qulay interfeys.","Taqsim is a personal finance app that helps you plan your money before you spend it. Every income is automatically split across your wallets by the shares you set: family, business, parents, charity, self-growth — or any wallet you create.
+Yorug' va qorong'i mavzu, o'zbek tilidagi qulay interfeys.
+
+Taqsim is a personal finance app that helps you plan your money before you spend it. Every income is automatically split across your wallets by the shares you set: family, business, parents, charity, self-growth — or any wallet you create.
 
 WALLETS AND SHARES
 • Give each wallet a percentage — income is divided by those shares
