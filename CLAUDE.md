@@ -83,6 +83,8 @@ The package manager is **bun** (`bun.lock`; EAS builds pin bun 1.4.2).
 - **Kirim va chiqimlar is not a route.** It is Home's bottom panel pulled up: `components/LedgerSheet.tsx`, a `@gorhom/bottom-sheet` with two snap points. Its `animatedPosition` moves Home's content 1:1, and Home has no scroll of its own.
 - Every pushed screen uses `components/ScreenHeader.tsx` as the stack `header`. A screen sets only `title` and `headerRight` through `<Stack.Screen options>`.
 - Secondary actions go in a ⋮ `HeaderMenu` passed as `headerRight`. Primary actions are pinned to the bottom with `components/BottomBar.tsx`.
+- **A tapped record opens its detail screen, not its form.** A ledger row opens `transaction-detail` (the entry, its wallet split, and how it compares with its own category over six months); a person on Qarzlar opens `contact-debts` (the net per unit and one history of every loan and payment, each with the balance it left, from `debtTimeline`); a loan in that history opens `debt-detail` (what is left, terms, its own history, "To'lash"/"Undirish"). The forms `transaction` and `debt` only create and edit; "Nusxa yaratish" opens the transaction form with `?copyOf=`, so a copy passes the same wallet checks as any new entry. Deleting lives on the detail screens, so a form never returns to a screen whose record is gone.
+- A payment always belongs to one debt. "To'lov qo'shish" on a person asks which open debt it is for when there is more than one.
 - Scrolling content under a `BottomBar` must reserve bottom padding past the bar and its fade. `app/debts.tsx` measures this at runtime; reuse that pattern instead of hard-coding a number.
 
 ### State (`contexts/`)

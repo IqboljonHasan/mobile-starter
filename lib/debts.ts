@@ -30,9 +30,8 @@ import type {
  *   qarz berish  lend    → expense  cat_debs-out   money out, I'm now owed it
  *   undirish     collect → income   cat_loans      money in, their debt shrinks
  *
- * All four sit in DEBT_CATEGORY_IDS (lib/seed.ts), so they stay out of the
- * income/expense stats unless the user opts back in from Settings — borrowing
- * money is not earning it.
+ * All four sit in DEBT_CATEGORY_IDS (lib/seed.ts), so the "Qarzsiz" filter on
+ * Tahlil and the ledger can take them out — borrowing money is not earning it.
  */
 
 /** Money taken — an income under "Qarz olish". */
@@ -270,20 +269,250 @@ export function debtsOfContact(debts: Debt[], contactId: string): Debt[] {
  * close outranks one far off, and a debt with no date agreed sorts after those
  * that have one. Settled debts fall to the bottom, newest first.
  */
-export function sortDebts(debts: Debt[], today: string): Debt[] {
-	return [...debts].sort((a, b) => {
-		const settledA = isSettled(a);
-		const settledB = isSettled(b);
-		if (settledA !== settledB) return settledA ? 1 : -1;
-		if (settledA) return b.createdAt - a.createdAt;
+function compareDebts(a: Debt, b: Debt, today: string): number {
+	const settledA = isSettled(a);
+	const settledB = isSettled(b);
+	if (settledA !== settledB) return settledA ? 1 : -1;
+	if (settledA) return b.createdAt - a.createdAt;
 
-		const dueA = daysUntilDue(a, today);
-		const dueB = daysUntilDue(b, today);
-		if (dueA !== null && dueB !== null) return dueA - dueB;
-		if (dueA !== null) return -1;
-		if (dueB !== null) return 1;
-		return b.createdAt - a.createdAt;
+	const dueA = daysUntilDue(a, today);
+	const dueB = daysUntilDue(b, today);
+	if (dueA !== null && dueB !== null) return dueA - dueB;
+	if (dueA !== null) return -1;
+	if (dueB !== null) return 1;
+	return b.createdAt - a.createdAt;
+}
+
+/** The debts in the order of `compareDebts` above. */
+export function sortDebts(debts: Debt[], today: string): Debt[] {
+	return [...debts].sort((a, b) => compareDebts(a, b, today));
+}
+
+/**
+ * Everything with one person, rolled into the single line the Qarzlar list
+ * shows for them.
+ */
+export type ContactDebtGroup = {
+	contactId: string;
+	/** The person's debts, most pressing first (`sortDebts`). */
+	debts: Debt[];
+	/** The most urgent state among them: overdue over open over settled. */
+	status: DebtStatus;
+	/**
+	 * Where things stand per unit, netted: what they still owe the user less
+	 * what the user still owes them. Positive means they owe. Only units with
+	 * something outstanding appear, and never summed across currencies.
+	 */
+	net: { unit: string; amount: number }[];
+	/** The earliest due date among the open debts, if any has one. */
+	nextDue: string | null;
+	/**
+	 * 0–1 of the open debts' principal paid back so far — only when every open
+	 * debt runs the same way and in the same unit. Mixed, "% qaytarildi" would
+	 * not say who returned what.
+	 */
+	paidShare: number | null;
+};
+
+/**
+ * One group per person, ordered by their most pressing debt — so whoever
+ * holds the most overdue loan comes first, as a single debt would.
+ */
+export function groupDebtsByContact(debts: Debt[], today: string): ContactDebtGroup[] {
+	const byContact = new Map<string, Debt[]>();
+	for (const debt of debts) {
+		const list = byContact.get(debt.contactId);
+		if (list) list.push(debt);
+		else byContact.set(debt.contactId, [debt]);
+	}
+
+	const groups = [...byContact.entries()].map(([contactId, list]): ContactDebtGroup => {
+		const sorted = sortDebts(list, today);
+		const net = new Map<string, number>();
+		let status: DebtStatus = "settled";
+		let nextDue: string | null = null;
+		const open = sorted.filter((d) => !isSettled(d));
+		const uniform = open.every((d) => d.direction === open[0]?.direction && d.unit === open[0]?.unit);
+		const principal = open.reduce((acc, d) => acc + d.amount, 0);
+		for (const debt of sorted) {
+			const state = debtStatus(debt, today);
+			if (state === "settled") continue;
+			if (state === "overdue" || status === "settled") status = state;
+			if (debt.dueDate && (nextDue === null || debt.dueDate < nextDue)) nextDue = debt.dueDate;
+			const signed = (debt.direction === "lent" ? 1 : -1) * remainingAmount(debt);
+			net.set(debt.unit, (net.get(debt.unit) ?? 0) + signed);
+		}
+		return {
+			contactId,
+			debts: sorted,
+			status,
+			// In the order the units first appear among the sorted debts: amounts
+			// in different currencies can't be ranked against each other.
+			net: [...net.entries()].map(([unit, amount]) => ({ unit, amount: roundAmount(amount, unit) })),
+			nextDue,
+			paidShare:
+				open.length > 0 && uniform && principal > 0
+					? Math.min(open.reduce((acc, d) => acc + paidAmount(d), 0) / principal, 1)
+					: null,
+		};
 	});
+
+	return groups.sort((a, b) => compareDebts(a.debts[0], b.debts[0], today));
+}
+
+/**
+ * How a net reads in words, from the user's side: "Sizga qarzdor" when the
+ * person owes, "Siz qarzdorsiz" when the user does, "Hisob teng" when the two
+ * directions cancel out.
+ */
+export function netLabel(amount: number): string {
+	return amount > 0 ? "Sizga qarzdor" : amount < 0 ? "Siz qarzdorsiz" : "Hisob teng";
+}
+
+/** "Aziz Karimov" → "Aziz": how a person is called in a sentence about them. */
+export function shortName(name: string): string {
+	return name.trim().split(/\s+/)[0] || name;
+}
+
+/**
+ * A name with the dative "-ga" the way Uzbek attaches it — "Azizga", and after
+ * k and q the assimilated "-ka" and "-qa": "Bekka", "Farruqqa".
+ */
+export function dativeOf(name: string): string {
+	const last = name.trim().slice(-1).toLowerCase();
+	return `${name.trim()}${last === "k" ? "ka" : last === "q" ? "qa" : "ga"}`;
+}
+
+/**
+ * How a due date reads on a chip, and how loudly: red once it has passed,
+ * amber within a week, quiet further out.
+ */
+export function dueInfo(
+	dueDate: string,
+	today: string,
+): { text: string; tone: "danger" | "warning" | "neutral" } {
+	const days = Math.round(
+		(Date.parse(`${dueDate}T00:00:00`) - Date.parse(`${today}T00:00:00`)) / 86_400_000,
+	);
+	const day = formatDayMonth(dueDate);
+	if (days < 0) return { text: `Muddati o'tgan: ${day} · ${-days} kun`, tone: "danger" };
+	if (days === 0) return { text: `Muddat: bugun, ${day}`, tone: "warning" };
+	return { text: `Muddat: ${day} · ${days} kun qoldi`, tone: days <= 7 ? "warning" : "neutral" };
+}
+
+/* History ------------------------------------------------------------------ */
+
+/**
+ * Which way one entry in a debt history moved money, from the user's side:
+ * money lent or borrowed, and money collected back or repaid.
+ */
+export type DebtEventKind = "lent" | "borrowed" | "collected" | "repaid";
+
+export type DebtEvent = {
+	/** The debt's id for its principal, the payment's for a payment. */
+	id: string;
+	kind: DebtEventKind;
+	debt: Debt;
+	/** Null for the principal itself. */
+	payment: DebtPayment | null;
+	amount: number;
+	unit: string;
+	date: string;
+	note: string;
+	createdAt: number;
+	/**
+	 * Where things stood in this unit right after this entry, across the debts
+	 * the history was built from: positive when the other person owes the
+	 * user, negative when the user owes them.
+	 */
+	balanceAfter: number;
+};
+
+/**
+ * Every principal and payment of the given debts as one history, oldest
+ * first, each carrying the running balance it left behind.
+ *
+ * The balance moves by what each entry changes in its debt's *outstanding*
+ * amount, the same clamped figure `remainingAmount` gives — so overpaying a
+ * debt doesn't swing the balance past zero, and the last entry's balance is
+ * exactly what the Qarzlar list nets the person to.
+ */
+export function debtTimeline(debts: Debt[]): DebtEvent[] {
+	const events: Omit<DebtEvent, "balanceAfter">[] = debts.flatMap((debt) => [
+		{
+			id: debt.id,
+			kind: debt.direction,
+			debt,
+			payment: null,
+			amount: debt.amount,
+			unit: debt.unit,
+			date: debt.date,
+			note: debt.description,
+			createdAt: debt.createdAt,
+		},
+		...debt.payments.map((payment) => ({
+			id: payment.id,
+			kind: (debt.direction === "lent" ? "collected" : "repaid") as DebtEventKind,
+			debt,
+			payment,
+			amount: payment.amount,
+			unit: debt.unit,
+			date: payment.date,
+			note: payment.note,
+			createdAt: payment.createdAt,
+		})),
+	]);
+	events.sort((a, b) => (a.date === b.date ? a.createdAt - b.createdAt : a.date < b.date ? -1 : 1));
+
+	// A payment recorded on a day before its own loan counts from the loan on.
+	const opened = new Set<string>();
+	const paid = new Map<string, number>();
+	const balance = new Map<string, number>();
+	const outstanding = (debt: Debt) =>
+		opened.has(debt.id) ? Math.max(debt.amount - (paid.get(debt.id) ?? 0), 0) : 0;
+
+	return events.map((event) => {
+		const before = outstanding(event.debt);
+		if (event.payment) paid.set(event.debt.id, (paid.get(event.debt.id) ?? 0) + event.amount);
+		else opened.add(event.debt.id);
+		const change = outstanding(event.debt) - before;
+		const sign = event.debt.direction === "lent" ? 1 : -1;
+		const next = roundAmount((balance.get(event.unit) ?? 0) + sign * change, event.unit);
+		balance.set(event.unit, next);
+		return { ...event, balanceAfter: next };
+	});
+}
+
+/**
+ * What "Hisobotni ulashish" sends: the whole history with one person, written
+ * to them, ending with where things stand in each unit.
+ */
+export function contactShareMessage(name: string, events: DebtEvent[]): string {
+	const lines = [`Assalomu alaykum${name ? `, ${name}` : ""}!`, "Hisob-kitobimiz:"];
+	for (const e of events) {
+		const amount = formatAmount(e.amount, e.unit);
+		const what =
+			e.kind === "lent"
+				? `sizga ${amount} qarz berdim`
+				: e.kind === "borrowed"
+					? `sizdan ${amount} qarz oldim`
+					: e.kind === "collected"
+						? `${amount} qaytardingiz`
+						: `${amount} qaytardim`;
+		lines.push(`• ${formatDayMonth(e.date)}: ${what}`);
+	}
+	const last = new Map<string, number>();
+	for (const e of events) last.set(e.unit, e.balanceAfter);
+	for (const [unit, net] of last) {
+		lines.push(
+			net > 0
+				? `Qolgan qarzingiz: ${formatAmount(net, unit)}.`
+				: net < 0
+					? `Qolgan qarzim: ${formatAmount(-net, unit)}.`
+					: "Hisob-kitob teng.",
+		);
+	}
+	return lines.join("\n");
 }
 
 /* Ledger entries ----------------------------------------------------------- */

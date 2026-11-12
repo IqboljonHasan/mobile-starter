@@ -3,11 +3,12 @@ import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, SectionList, View } from "react-native";
 import BottomBar, { BOTTOM_BAR_FADE, BOTTOM_BAR_SPACE } from "@/components/BottomBar";
-import DebtRow from "@/components/DebtRow";
+import ContactDebtRow from "@/components/ContactDebtRow";
 import FilterTile from "@/components/FilterTile";
+import HeroAmount from "@/components/HeroAmount";
 import RemindersSheet from "@/components/RemindersSheet";
 import SearchBar from "@/components/SearchBar";
-import { Button, Chip, EmptyState, HeaderMenu, PillTabs } from "@/components/ui";
+import { Badge, Button, Chip, EmptyState, HeaderMenu, PillTabs } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
 import ScrollShadow from "@/components/ScrollShadow";
 import { useLedger } from "@/contexts/LedgerContext";
@@ -20,9 +21,8 @@ import {
 	contactById,
 	type DebtStatus,
 	debtStatus,
+	groupDebtsByContact,
 	outstandingByUnit,
-	remainingAmount,
-	sortDebts,
 } from "@/lib/debts";
 import { formatAmount } from "@/lib/money";
 import { foldForSearch, matchesSearch } from "@/lib/search";
@@ -62,7 +62,9 @@ const SECTION_HEADER_HEIGHT = 40;
  *
  * Debts are listed whole rather than by month: what is owed is an all-time
  * balance, like a wallet's, and a loan given in August is still owed in
- * October. Overdue ones come first, then the open ones, then the history.
+ * October. Each person is one line, their debts netted per unit, and the
+ * debts themselves are on that person's screen. Whoever has something overdue
+ * comes first, then the open ones, then the history.
  */
 export default function DebtsScreen() {
 	const router = useRouter();
@@ -91,6 +93,10 @@ export default function DebtsScreen() {
 				? defaultUnit
 				: (units[0] ?? defaultUnit);
 	const total = totals.find((t) => t.unit === unit) ?? { owedToMe: 0, owedByMe: 0 };
+	// Where everything nets to in this unit — what comes back less what goes
+	// out. Like the tiles, it ignores the filters below: it is the whole picture.
+	const net = total.owedToMe - total.owedByMe;
+	const netLabel = net > 0 ? "Sizga qaytadi" : net < 0 ? "Siz qaytarasiz" : "Hisob teng";
 
 	const sections = useMemo(() => {
 		const matched = debts.filter((debt) => {
@@ -104,17 +110,16 @@ export default function DebtsScreen() {
 			if (filter === "open") return status !== "settled";
 			return status === filter;
 		});
+		// A person sits under the most urgent of the debts the filters leave
+		// them, and their figure covers exactly those debts.
+		const people = groupDebtsByContact(matched, today);
 		return GROUPS.map((group) => {
-			const data = sortDebts(
-				matched.filter((d) => debtStatus(d, today) === group.key),
-				today,
-			);
+			const data = people.filter((p) => p.status === group.key);
 			// What the group nets to per unit: owed to the user counts up, owed
 			// by them down. A settled group is history, so it's only counted.
 			const byUnit = new Map<string, number>();
-			for (const d of data) {
-				const signed = (d.direction === "lent" ? 1 : -1) * remainingAmount(d);
-				byUnit.set(d.unit, (byUnit.get(d.unit) ?? 0) + signed);
+			for (const person of data) {
+				for (const n of person.net) byUnit.set(n.unit, (byUnit.get(n.unit) ?? 0) + n.amount);
 			}
 			return {
 				key: group.key,
@@ -197,6 +202,28 @@ export default function DebtsScreen() {
 						onChange={setPickedUnit}
 					/>
 				)}
+				<View
+					accessible
+					accessibilityLabel={`Ayirma: ${formatAmount(net, unit, { signed: true })}, ${netLabel}`}
+					className="flex-row items-end justify-between"
+					style={{ gap: 12, paddingHorizontal: 4 }}
+				>
+					<View className="flex-1" style={{ gap: 2 }}>
+						<Text className="font-semibold text-muted-foreground" style={{ fontSize: tf.sm - 1.5 }} numberOfLines={1}>
+							Ayirma · berilgan − olingan
+						</Text>
+						<HeroAmount
+							amount={Math.abs(net)}
+							unit={unit}
+							size={tf.xxxl + 4}
+							sign={net > 0 ? "+" : net < 0 ? "−" : ""}
+							color={net > 0 ? tc.success : net < 0 ? tc.danger : tc.foreground}
+						/>
+					</View>
+					<View style={{ marginBottom: 6 }}>
+						<Badge label={netLabel} tone={net > 0 ? "success" : net < 0 ? "danger" : "neutral"} />
+					</View>
+				</View>
 				<View className="flex-row" style={{ gap: 4 }}>
 					<FilterTile
 						label="Berilgan"
@@ -244,7 +271,7 @@ export default function DebtsScreen() {
 				<SectionList
 					{...listProps}
 					sections={sections}
-					keyExtractor={(item) => item.id}
+					keyExtractor={(item) => item.contactId}
 					stickySectionHeadersEnabled
 					showsVerticalScrollIndicator={false}
 					contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: listEndSpace }}
@@ -282,12 +309,11 @@ export default function DebtsScreen() {
 					// with it, a see-through strip rows show through.
 					renderSectionFooter={() => <View style={{ height: 8 }} />}
 					renderItem={({ item, index }) => (
-						<DebtRow
-							debt={item}
+						<ContactDebtRow
+							group={item}
 							contact={contactById(contacts, item.contactId)}
-							today={today}
 							divider={index > 0}
-							onPress={() => router.push(`/debt?id=${item.id}`)}
+							onPress={() => router.push(`/contact-debts?id=${item.contactId}`)}
 						/>
 					)}
 					ListEmptyComponent={

@@ -1,6 +1,7 @@
 import type { Category, Debt, Transaction, TxType } from "@/lib/types";
-import { monthKeyOf, yearKeyOf } from "@/lib/date";
+import { formatFieldDate, monthKeyOf, shiftMonth, yearKeyOf } from "@/lib/date";
 import { LEND_CATEGORY_ID, remainingAmount } from "@/lib/debts";
+import { formatAmount } from "@/lib/money";
 import { DEBT_CATEGORY_IDS } from "@/lib/seed";
 
 /**
@@ -147,4 +148,73 @@ export function countUsage(transactions: Transaction[], categoryId: string): num
 
 export function countSubUsage(transactions: Transaction[], subcategoryId: string): number {
 	return transactions.filter((t) => t.subcategoryId === subcategoryId).length;
+}
+
+/**
+ * What an entry looks like against its own kind — the same side, category and
+ * subcategory (when it has one), in the same unit — for its detail screen.
+ */
+export type EntryContext = {
+	/** Monthly totals of the kind, oldest first; the last is the entry's own month. */
+	months: { monthKey: string; total: number; count: number }[];
+	/** The mean of the months before the entry's, empty months included. */
+	average: number;
+	/** 0–1 of its month's total that this entry is. */
+	share: number;
+	/** The latest entries of the kind recorded before this one, newest first. */
+	previous: Transaction[];
+};
+
+export function entryContext(
+	transactions: Transaction[],
+	entry: Transaction,
+	span = 6,
+	previousCount = 3,
+): EntryContext {
+	const kind = transactions.filter(
+		(t) =>
+			t.type === entry.type &&
+			t.unit === entry.unit &&
+			t.categoryId === entry.categoryId &&
+			(!entry.subcategoryId || t.subcategoryId === entry.subcategoryId),
+	);
+	const last = monthKeyOf(entry.date);
+	const months = Array.from({ length: span }, (_, i) => ({
+		monthKey: shiftMonth(last, i - (span - 1)),
+		total: 0,
+		count: 0,
+	}));
+	const byKey = new Map(months.map((m) => [m.monthKey, m]));
+	for (const t of kind) {
+		const month = byKey.get(monthKeyOf(t.date));
+		if (!month) continue;
+		month.total += t.amount;
+		month.count += 1;
+	}
+	const before = months.slice(0, -1);
+	const current = months[months.length - 1];
+	const earlier = (t: Transaction) =>
+		t.date < entry.date || (t.date === entry.date && t.createdAt < entry.createdAt);
+
+	return {
+		months,
+		average: before.length > 0 ? before.reduce((acc, m) => acc + m.total, 0) / before.length : 0,
+		share: current.total > 0 ? Math.min(entry.amount / current.total, 1) : 1,
+		previous: kind
+			.filter((t) => t.id !== entry.id && earlier(t))
+			.sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1))
+			.slice(0, previousCount),
+	};
+}
+
+/** What "Ulashish" sends for one entry: what it was, how much, and when. */
+export function entryShareMessage(entry: Transaction, title: string): string {
+	return [
+		`${entry.type === "income" ? "Kirim" : "Chiqim"}: ${title}`,
+		formatAmount(entry.amount, entry.unit),
+		formatFieldDate(entry.date),
+		entry.description,
+	]
+		.filter(Boolean)
+		.join("\n");
 }

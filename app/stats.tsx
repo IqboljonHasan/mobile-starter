@@ -853,7 +853,7 @@ export default function StatsScreen() {
 											divider={i > 0}
 											showDate
 											amountOverride={amount !== transaction.amount ? amount : undefined}
-											onPress={() => router.push(`/transaction?id=${transaction.id}`)}
+											onPress={() => router.push(`/transaction-detail?id=${transaction.id}`)}
 										/>
 									))}
 								</View>

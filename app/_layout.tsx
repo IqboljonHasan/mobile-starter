@@ -92,11 +92,14 @@ function AppContent() {
 					<Stack.Screen name="index" options={{ headerShown: false, animation: "none" }} />
 					<Stack.Screen name="debts" options={{ title: "Qarzlar" }} />
 					<Stack.Screen name="transaction" options={{ title: "Yozuv" }} />
+					<Stack.Screen name="transaction-detail" options={{ title: "Yozuv" }} />
 					<Stack.Screen name="categories" options={{ title: "Kategoriyalar" }} />
 					<Stack.Screen name="members" options={{ title: "Oila a'zolari" }} />
 					<Stack.Screen name="wallets" options={{ title: "Hamyonlar" }} />
 					<Stack.Screen name="stats" options={{ title: "Tahlil" }} />
 					<Stack.Screen name="debt" options={{ title: "Qarz" }} />
+					<Stack.Screen name="debt-detail" options={{ title: "Qarz" }} />
+					<Stack.Screen name="contact-debts" options={{ title: "Qarzlar" }} />
 					<Stack.Screen name="contacts" options={{ title: "Kontaktlar" }} />
 					<Stack.Screen name="settings" options={{ title: "Sozlamalar" }} />
 					<Stack.Screen name="telegram" options={{ title: "Telegram zaxira" }} />

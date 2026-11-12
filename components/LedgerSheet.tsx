@@ -847,7 +847,7 @@ export default function LedgerSheet({
 										categories={categories}
 										divider={index > 0}
 										amountOverride={walletFilter ? walletShare(item, walletFilter) : undefined}
-										onPress={() => router.push(`/transaction?id=${item.id}`)}
+										onPress={() => router.push(`/transaction-detail?id=${item.id}`)}
 									/>
 								)}
 								ListEmptyComponent={

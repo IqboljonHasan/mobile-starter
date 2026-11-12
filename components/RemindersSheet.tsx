@@ -163,7 +163,7 @@ export default function RemindersSheet({ visible, onClose }: { visible: boolean;
 										accessibilityRole="button"
 										onPress={() => {
 											onClose();
-											setTimeout(() => router.push(`/debt?id=${debt.id}`), 280);
+											setTimeout(() => router.push(`/debt-detail?id=${debt.id}`), 280);
 										}}
 										className={`flex-row items-center gap-3 active:opacity-70 ${index > 0 ? "border-t border-border" : ""}`}
 										style={{ paddingHorizontal: 14, paddingVertical: 10 }}

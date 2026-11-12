@@ -59,7 +59,10 @@ import "../global.css";
 /**
  * Create or edit one entry. The same screen does both: `?id=` opens an existing
  * transaction, `?type=income|expense` starts a new one on that side of the
- * ledger.
+ * ledger, and `?copyOf=` starts a new one filled in from an existing entry —
+ * "Nusxa yaratish" on the detail screen. A copy goes through the form rather
+ * than being written straight away, so it is dated today, reviewed, and held
+ * to the same wallet checks as any new entry.
  *
  * The form is a separate component below, mounted only once the stored ledger
  * has been read: its fields are initialised from the entry being edited, and on
@@ -69,7 +72,7 @@ import "../global.css";
 export default function TransactionScreen() {
 	const { tc } = useTheme();
 	const { tf } = useFont();
-	const params = useLocalSearchParams<{ id?: string; type?: string }>();
+	const params = useLocalSearchParams<{ id?: string; type?: string; copyOf?: string }>();
 	const { ready, transactions, debts } = useLedger();
 
 	const existing = params.id ? transactions.find((t) => t.id === params.id) : undefined;
@@ -80,6 +83,9 @@ export default function TransactionScreen() {
 	const owningDebt = existing?.debtId
 		? (debts.find((d) => d.id === existing.debtId) ?? null)
 		: null;
+	// A debt's own entry is never copied: the copy would be a debt movement
+	// with no debt behind it.
+	const source = params.copyOf ? transactions.find((t) => t.id === params.copyOf && !t.debtId) : undefined;
 
 	if (!ready) {
 		return (
@@ -116,8 +122,9 @@ export default function TransactionScreen() {
 		<TransactionForm
 			// Remounting on a different entry is the point: every field is seeded
 			// from `existing` on mount.
-			key={existing?.id ?? "new"}
+			key={existing?.id ?? (source ? `copy-${source.id}` : "new")}
 			existing={existing}
+			seed={existing ? undefined : source}
 			initialType={params.type === "income" ? "income" : "expense"}
 		/>
 	);
@@ -199,7 +206,7 @@ function DebtOwnedEntry({
 							size="lg"
 							fullWidth
 							startIcon={<Ionicons name="open-outline" size={18} color={tc.primaryFg} />}
-							onPress={() => router.replace(`/debt?id=${debt.id}`)}
+							onPress={() => router.replace(`/debt-detail?id=${debt.id}`)}
 						/>
 						<Button
 							label="Orqaga"
@@ -218,9 +225,12 @@ function DebtOwnedEntry({
 
 function TransactionForm({
 	existing,
+	seed,
 	initialType,
 }: {
 	existing?: Transaction;
+	/** An entry a new one is copied from — every field but the date. */
+	seed?: Transaction;
 	initialType: TxType;
 }) {
 	const router = useRouter();
@@ -236,7 +246,6 @@ function TransactionForm({
 		defaultUnit,
 		addTransaction,
 		updateTransaction,
-		deleteTransaction,
 		addTransfer,
 		templates,
 		addTemplate,
@@ -245,31 +254,38 @@ function TransactionForm({
 	} = useLedger();
 	const { hideIncome, splitIncome } = usePreferences();
 
-	const [type, setType] = useState<TxType>(existing?.type ?? initialType);
-	const [amountText, setAmountText] = useState(existing ? String(existing.amount) : "");
-	const [unit, setUnit] = useState(existing?.unit ?? defaultUnit);
-	const [method, setMethod] = useState<PayMethod>(existing?.method ?? DEFAULT_METHOD);
-	const [categoryId, setCategoryId] = useState<string | null>(existing?.categoryId ?? null);
+	// What the fields start from: the entry being edited, or the one copied.
+	const initial = existing ?? seed;
+	const [type, setType] = useState<TxType>(initial?.type ?? initialType);
+	const [amountText, setAmountText] = useState(initial ? String(initial.amount) : "");
+	const [unit, setUnit] = useState(initial?.unit ?? defaultUnit);
+	const [method, setMethod] = useState<PayMethod>(initial?.method ?? DEFAULT_METHOD);
+	const [categoryId, setCategoryId] = useState<string | null>(initial?.categoryId ?? null);
 	const [subcategoryId, setSubcategoryId] = useState<string | null>(
-		existing?.subcategoryId ?? null,
+		initial?.subcategoryId ?? null,
 	);
-	const [description, setDescription] = useState(existing?.description ?? "");
+	const [description, setDescription] = useState(initial?.description ?? "");
 	const [date, setDate] = useState(existing?.date ?? todayISO());
 	// Income side: whether this entry is divided across the wallets. An income
 	// that names a wallet is the opt-out — the whole amount goes there instead.
-	const [splitThis, setSplitThis] = useState(!existing?.walletId);
+	const [splitThis, setSplitThis] = useState(!initial?.walletId);
 	const [incomeWalletId, setIncomeWalletId] = useState<string | null>(
-		type === "income" ? (existing?.walletId ?? null) : null,
+		type === "income" ? (initial?.walletId ?? null) : null,
 	);
 	// Expense side: who in the family it was spent on. Null is everybody.
-	const [memberId, setMemberId] = useState<string | null>(existing?.memberId ?? null);
+	const [memberId, setMemberId] = useState<string | null>(initial?.memberId ?? null);
 	// Expense side: a wallet the user picked over the category's own. Tied to the
 	// category it was picked under, so choosing another category starts over from
-	// that category's wallet instead of carrying the pick across.
+	// that category's wallet instead of carrying the pick across. A copy starts
+	// with its source's wallet, if that wallet still exists.
 	const [pickedWallet, setPickedWallet] = useState<{
 		categoryId: string;
 		walletId: string | null;
-	} | null>(null);
+	} | null>(
+		seed?.type === "expense" && seed.walletId && wallets.some((w) => w.id === seed.walletId)
+			? { categoryId: seed.categoryId, walletId: seed.walletId }
+			: null,
+	);
 	const [coverOpen, setCoverOpen] = useState(false);
 	const [padOpen, setPadOpen] = useState(false);
 	const [templateOpen, setTemplateOpen] = useState(false);
@@ -523,25 +539,6 @@ function TransactionForm({
 		commit();
 	};
 
-	const confirmDelete = () => {
-		if (!existing) return;
-		Alert.alert(
-			"Yozuv o'chirilsinmi?",
-			`${formatAmount(existing.amount, existing.unit)} · ${formatDayLabel(existing.date)}. Buni qaytarib bo'lmaydi.`,
-			[
-				{ text: "Bekor qilish", style: "cancel" },
-				{
-					text: "O'chirish",
-					style: "destructive",
-					onPress: () => {
-						deleteTransaction(existing.id);
-						router.back();
-					},
-				},
-			],
-		);
-	};
-
 	const title = existing
 		? income
 			? "Kirimni tahrirlash"
@@ -572,23 +569,20 @@ function TransactionForm({
 									icon: "swap-vertical-outline",
 									onPress: () => changeType(income ? "expense" : "income"),
 								},
-								existing
-									? {
-											key: "delete",
-											label: "Yozuvni o'chirish",
-											icon: "trash-outline",
-											danger: true,
-											separatorBefore: true,
-											onPress: confirmDelete,
-										}
-									: {
-											key: "clear",
-											label: "Formani tozalash",
-											icon: "refresh-outline",
-											danger: true,
-											separatorBefore: true,
-											onPress: clearForm,
-										},
+								// Deleting an existing entry lives on its detail screen,
+								// which this form is opened from.
+								...(!existing
+									? [
+											{
+												key: "clear",
+												label: "Formani tozalash",
+												icon: "refresh-outline" as const,
+												danger: true,
+												separatorBefore: true,
+												onPress: clearForm,
+											},
+										]
+									: []),
 							]}
 						/>
 					),

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, View } from "react-native";
 import ContactAvatar from "@/components/ContactAvatar";
 import { Text } from "@/components/ui/Text";
@@ -6,7 +7,7 @@ import { useFont } from "@/hooks/useFont";
 import { useGuardedPress } from "@/hooks/useGuardedPress";
 import { useTheme } from "@/hooks/useTheme";
 import { formatDayMonth } from "@/lib/date";
-import { debtStatus, paidShare, remainingAmount } from "@/lib/debts";
+import { DIRECTION_META, debtStatus, paidShare, remainingAmount } from "@/lib/debts";
 import { formatAmount } from "@/lib/money";
 import type { Contact, Debt } from "@/lib/types";
 
@@ -18,6 +19,10 @@ import type { Contact, Debt } from "@/lib/types";
  * the original amount is one tap away on the debt's own screen. A bar shows
  * how much has come back so far, so a debt mostly paid off reads differently
  * from one untouched even though both are still open.
+ *
+ * On a person's own screen the name would repeat on every line, so with
+ * `showContact` off the row leads with which way the money went and is titled
+ * by the debt's note instead.
  */
 export default function DebtRow({
 	debt,
@@ -25,6 +30,7 @@ export default function DebtRow({
 	today,
 	onPress,
 	divider,
+	showContact = true,
 }: {
 	debt: Debt;
 	/** Null once the person has been deleted — the debt still stands. */
@@ -33,6 +39,7 @@ export default function DebtRow({
 	today: string;
 	onPress?: () => void;
 	divider?: boolean;
+	showContact?: boolean;
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
@@ -54,13 +61,18 @@ export default function DebtRow({
 		? debt.payments.reduce((latest, p) => (p.date > latest ? p.date : latest), debt.date)
 		: null;
 
-	const sub = settled
+	const state = settled
 		? `Yopilgan · ${formatDayMonth(closedOn ?? debt.date)}`
 		: status === "overdue" && debt.dueDate
 			? `Muddati o'tgan · ${formatDayMonth(debt.dueDate)}`
 			: debt.dueDate
 				? `Muddat: ${formatDayMonth(debt.dueDate)}`
 				: "Muddat belgilanmagan";
+	const title = showContact
+		? name
+		: debt.description || (given ? "Berilgan qarz" : "Olingan qarz");
+	// Without the name the day the money moved is what tells two loans apart.
+	const sub = showContact ? state : `${formatDayMonth(debt.date)} · ${state}`;
 
 	// Money owed *to* the user reads as something coming back, money owed *by*
 	// them as something going out — the same green/red the ledger uses.
@@ -70,7 +82,7 @@ export default function DebtRow({
 	return (
 		<Pressable
 			accessibilityRole="button"
-			accessibilityLabel={`${name}, ${given ? "berilgan" : "olingan"}, ${
+			accessibilityLabel={`${title}, ${given ? "berilgan" : "olingan"}, ${
 				settled ? "yopilgan" : `qoldiq ${formatAmount(remaining, debt.unit)}`
 			}, ${sub}`}
 			onPress={handlePress}
@@ -79,7 +91,16 @@ export default function DebtRow({
 			<View
 				className={`flex-row items-center gap-3 py-3 ${divider ? "border-t border-border" : ""}`}
 			>
-				<ContactAvatar name={name} id={debt.contactId} mono />
+				{showContact ? (
+					<ContactAvatar name={name} id={debt.contactId} mono />
+				) : (
+					<View
+						className="items-center justify-center bg-muted"
+						style={{ width: 40, height: 40, borderRadius: 20 }}
+					>
+						<Ionicons name={DIRECTION_META[debt.direction].icon} size={20} color={color} />
+					</View>
+				)}
 
 				<View className="flex-1 gap-px">
 					<Text
@@ -87,7 +108,7 @@ export default function DebtRow({
 						style={{ fontSize: tf.base }}
 						numberOfLines={1}
 					>
-						{name}
+						{title}
 					</Text>
 					<Text
 						className="font-semibold"

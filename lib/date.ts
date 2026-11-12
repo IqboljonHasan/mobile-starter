@@ -128,6 +128,17 @@ export function formatDate(iso: string): string {
 		: `${base} ${date.getFullYear()}`;
 }
 
+/**
+ * "13:40" — the time a record was made, but only when it was made on the day
+ * it is dated: an entry back-dated to last week was not entered at that hour,
+ * and saying so would be wrong. Null otherwise.
+ */
+export function entryTime(createdAt: number, date: string): string | null {
+	const made = new Date(createdAt);
+	if (toISODate(made) !== date) return null;
+	return `${`${made.getHours()}`.padStart(2, "0")}:${`${made.getMinutes()}`.padStart(2, "0")}`;
+}
+
 /** "3-oktabr, shanba" — a day spelled out in full, for a screen header. */
 export function formatLongDate(iso: string): string {
 	const date = fromISODate(iso);

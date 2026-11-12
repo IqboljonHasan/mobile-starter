@@ -43,6 +43,6 @@ export function useDebtReminders(): void {
 	// find the debt it names.
 	useEffect(() => {
 		if (!ready) return;
-		return listenForReminderTaps((debtId) => router.push(`/debt?id=${debtId}`));
+		return listenForReminderTaps((debtId) => router.push(`/debt-detail?id=${debtId}`));
 	}, [ready]);
 }
