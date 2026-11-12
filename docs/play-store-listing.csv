@@ -1,6 +1,6 @@
-"Field","uz","en-US","ru-RU"
-"Title","Taqsim — kirim, chiqim, qarz","Taqsim: Budget, Wallets, Debts","Taqsim: кошельки и долги"
-"Short description","Har bir so'mni oldindan rejalang: hamyonlar, kirim-chiqim va qarzlar.","Plan every payday: wallets by your own shares, plus expenses and debts.","Планируйте каждый сум заранее: кошельки, доходы, расходы и долги."
+"Field","uz","en-US"
+"Title","Taqsim — kirim, chiqim, qarz","Taqsim: Budget, Wallets, Debts"
+"Short description","Har bir so'mni oldindan rejalang: hamyonlar, kirim-chiqim va qarzlar.","Plan every payday: wallets by your own shares, plus expenses and debts."
 "Full description","Taqsim — pulingizni oldindan rejalashtirishga yordam beradigan shaxsiy moliya ilovasi. Har bir kirim siz belgilagan ulushlar bo'yicha hamyonlarga avtomatik taqsimlanadi: oila, biznes, ota-ona, xayriya, shaxsiy rivojlanish — yoki o'zingiz yaratgan har qanday hamyon.
 
 HAMYONLAR VA ULUSHLAR
@@ -65,36 +65,4 @@ PRIVACY
 • All your data stays on your phone
 • Back up to a file or to your own Telegram bot
 
-Light and dark themes. The app interface is in Uzbek.","Taqsim — приложение для личных финансов, которое помогает планировать деньги заранее. Каждый доход автоматически распределяется по кошелькам в заданных вами долях: семья, бизнес, родители, благотворительность, саморазвитие — или любой ваш кошелёк.
-
-КОШЕЛЬКИ И ДОЛИ
-• Задайте каждому кошельку процент — доход делится по этим долям
-• Каждый расход оплачивается из конкретного кошелька, остаток всегда виден
-• Не хватает в кошельке? Покройте переводом из другого
-
-ДОХОДЫ И РАСХОДЫ
-• Быстрый ввод суммы встроенной клавиатурой, карта или наличные
-• Категории, подкатегории, быстрый выбор и шаблоны
-• Список за месяц по дням, фильтр по кошельку, категории и поиск
-• Отдельная страница для каждой записи: как она распределилась по кошелькам и как соотносится с последними 6 месяцами
-• Копирование и отправка записи в одно касание
-• Несколько валют
-
-ДОЛГИ
-• Один счёт на каждого человека: сразу видно, кто кому и сколько должен
-• Полная история долгов и выплат с итогом после каждой
-• Частичные погашения, срок возврата и напоминание заранее
-• Добавляйте людей из контактов телефона, отмечайте как друга или родственника
-• Отправка долга или всей истории расчётов в одно касание
-
-АНАЛИТИКА
-• Доходы, расходы и прибыль за месяц, год или всё время
-• Динамика доходов и расходов, разбивка по категориям и кошелькам
-• Просмотр с долгами или без них
-
-КОНФИДЕНЦИАЛЬНОСТЬ
-• Без регистрации, рекламы и слежки
-• Все данные хранятся только на вашем телефоне
-• Резервная копия в файл или в ваш собственный Telegram-бот
-
-Светлая и тёмная темы. Интерфейс приложения на узбекском языке."
+Light and dark themes. The app interface is in Uzbek."
