@@ -1,6 +1,6 @@
 "Field","uz","en-US","ru-RU"
 "Title","Taqsim — kirim, chiqim, qarz","Taqsim: Budget, Wallets, Debts","Taqsim: кошельки и долги"
-"Short description","Daromadni hamyonlarga ulushlab taqsimlang, xarajat va qarzlarni oson yuriting.","Split every income into wallets by your own shares. Track spending and debts.","Распределяйте доход по кошелькам в своих долях и ведите расходы и долги."
+"Short description","Har bir so'mni oldindan rejalang: hamyonlar, kirim-chiqim va qarzlar.","Plan every payday: wallets by your own shares, plus expenses and debts.","Планируйте каждый сум заранее: кошельки, доходы, расходы и долги."
 "Full description","Taqsim — pulingizni oldindan rejalashtirishga yordam beradigan shaxsiy moliya ilovasi. Har bir kirim siz belgilagan ulushlar bo'yicha hamyonlarga avtomatik taqsimlanadi: oila, biznes, ota-ona, xayriya, shaxsiy rivojlanish — yoki o'zingiz yaratgan har qanday hamyon.
 
 HAMYONLAR VA ULUSHLAR
@@ -12,17 +12,21 @@ KIRIM VA CHIQIMLAR
 • Summani maxsus klaviatura bilan tez kiriting, karta yoki naqdni belgilang
 • Kategoriya va subkategoriyalar, tezkor tanlash va shablonlar
 • Oy bo'yicha ro'yxat: kunlarga guruhlangan, hamyon, kategoriya va qidiruv bo'yicha filtr
+• Har bir yozuvning o'z sahifasi: qaysi hamyonga qancha tushgani va shu turdagi yozuvlarning oxirgi 6 oyi bilan solishtirish
+• Yozuvdan bir bosishda nusxa yarating yoki uni ulashing
 • Bir nechta valyuta bilan ishlash
 
 QARZLAR
-• Bergan va olgan qarzlaringizni yuriting, qisman to'lovlarni qayd eting
-• Qaytarish muddati va muddatdan oldin eslatma
+• Har bir odam bilan hisob bitta joyda: kim kimga qancha qarzdorligi bir qarashda ko'rinadi
+• Barcha qarz va to'lovlar tarixi, har biridan keyingi natija bilan
+• Qisman to'lovlar, qaytarish muddati va muddatdan oldin eslatma
 • Kishilarni telefon kontaktlaridan qo'shing, «Do'st» yoki «Qarindosh» deb belgilang
-• Qarz haqida xabarni bir bosishda yuboring
+• Qarz yoki butun hisob-kitobni bir bosishda yuboring
 
-HISOBOT
-• Oy va yil bo'yicha kirim, chiqim va sof qoldiq
-• 12 oylik grafik, kategoriyalar bo'yicha tahlil
+TAHLIL
+• Oy, yil va butun davr bo'yicha kirim, chiqim va foyda
+• Kirim va chiqim dinamikasi, kategoriya va hamyonlar bo'yicha tarkib
+• Qarzlar bilan yoki «Qarzsiz» ko'rish
 
 MAXFIYLIK
 • Ro'yxatdan o'tish shart emas, reklama va kuzatuv yo'q
@@ -40,17 +44,21 @@ INCOME AND EXPENSES
 • Enter amounts fast with a built-in keypad, mark card or cash
 • Categories, subcategories, quick picks and templates
 • Monthly list grouped by day, filter by wallet, category or search
+• A page for every entry: how it was split across wallets, and how it compares with the last 6 months of its kind
+• Copy or share an entry in one tap
 • Multiple currencies
 
 DEBTS
-• Track money you lent and borrowed, record partial repayments
-• Due dates with reminders before they arrive
+• One account per person: see at a glance who owes whom and how much
+• Full history of loans and repayments, with the balance after each one
+• Partial repayments, due dates and reminders before they arrive
 • Add people from your phone contacts, tag them as friend or relative
-• Send a debt summary in one tap
+• Send a debt or the whole history in one tap
 
-REPORTS
-• Monthly and yearly income, expenses and net balance
-• 12-month chart and category breakdown
+ANALYTICS
+• Income, expenses and profit by month, year or all time
+• Income and expense trends, breakdown by category and wallet
+• View with debts or without them
 
 PRIVACY
 • No sign-up, no ads, no tracking
@@ -68,17 +76,21 @@ Light and dark themes. The app interface is in Uzbek.","Taqsim — прилож�
 • Быстрый ввод суммы встроенной клавиатурой, карта или наличные
 • Категории, подкатегории, быстрый выбор и шаблоны
 • Список за месяц по дням, фильтр по кошельку, категории и поиск
+• Отдельная страница для каждой записи: как она распределилась по кошелькам и как соотносится с последними 6 месяцами
+• Копирование и отправка записи в одно касание
 • Несколько валют
 
 ДОЛГИ
-• Учёт выданных и взятых долгов, частичные погашения
-• Срок возврата и напоминание заранее
+• Один счёт на каждого человека: сразу видно, кто кому и сколько должен
+• Полная история долгов и выплат с итогом после каждой
+• Частичные погашения, срок возврата и напоминание заранее
 • Добавляйте людей из контактов телефона, отмечайте как друга или родственника
-• Отправка сообщения о долге в одно касание
+• Отправка долга или всей истории расчётов в одно касание
 
-ОТЧЁТЫ
-• Доходы, расходы и итог за месяц и год
-• График за 12 месяцев и разбивка по категориям
+АНАЛИТИКА
+• Доходы, расходы и прибыль за месяц, год или всё время
+• Динамика доходов и расходов, разбивка по категориям и кошелькам
+• Просмотр с долгами или без них
 
 КОНФИДЕНЦИАЛЬНОСТЬ
 • Без регистрации, рекламы и слежки
