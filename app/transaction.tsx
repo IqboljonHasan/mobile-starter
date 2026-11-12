@@ -930,7 +930,9 @@ function TransactionForm({
 					</View>
 				)}
 
-				{/* Note and date ------------------------------------------------- */}
+				{/* Date and note ------------------------------------------------- */}
+				<DateField label="Sana" required value={date} onChange={setDate} maxDate={todayISO()} />
+
 				<Textarea
 					label="Izoh"
 					rows={4}
@@ -942,8 +944,6 @@ function TransactionForm({
 							: "Masalan: haftalik bozorlik"
 					}
 				/>
-
-				<DateField label="Sana" required value={date} onChange={setDate} maxDate={todayISO()} />
 			</ScrollView>
 			<ScrollShadow visible={formScrolled} />
 
