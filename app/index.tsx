@@ -26,7 +26,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue, softTint } from "@/lib/categoryColors";
 import { currentMonthKey } from "@/lib/date";
 import { outstandingByUnit } from "@/lib/debts";
-import { countedForStats, inMonth, inUnit, ofType, sum } from "@/lib/ledger";
+import { inMonth, inUnit, ofType, sum } from "@/lib/ledger";
 import { floorAmount, formatAmount, maskAmount, unitByCode } from "@/lib/money";
 import { homePalette } from "@/lib/theme";
 import { walletBalances, walletUnitsUsed } from "@/lib/wallets";
@@ -57,7 +57,7 @@ export default function HomeScreen() {
 	const insets = useSafeAreaInsets();
 	const sky = homePalette(isDark);
 	const { ready, transactions, wallets, transfers, debts, defaultUnit } = useLedger();
-	const { hideIncome, toggleHideIncome, includeDebtsInStats, uncollectedLoansAsExpense } = usePreferences();
+	const { hideIncome, toggleHideIncome } = usePreferences();
 	useDoubleBackToExit();
 
 	const [month, setMonth] = useState(currentMonthKey);
@@ -120,15 +120,11 @@ export default function HomeScreen() {
 	// current month, whatever the panel below is showing, since it reads "bu oy".
 	const thisMonthNet = useMemo(() => {
 		const scoped = inMonth(inUnit(transactions, walletUnit), currentMonthKey());
-		const counted = countedForStats(scoped, debts, {
-			includeDebts: includeDebtsInStats,
-			uncollectedLoans: uncollectedLoansAsExpense,
-		});
 		return {
-			count: counted.length,
-			net: sum(ofType(counted, "income")) - sum(ofType(counted, "expense")),
+			count: scoped.length,
+			net: sum(ofType(scoped, "income")) - sum(ofType(scoped, "expense")),
 		};
-	}, [transactions, debts, walletUnit, includeDebtsInStats, uncollectedLoansAsExpense]);
+	}, [transactions, walletUnit]);
 
 	// Debts in the balance's unit when there are any, otherwise in whichever
 	// unit holds the most — never summed across currencies.

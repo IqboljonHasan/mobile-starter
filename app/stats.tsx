@@ -8,7 +8,7 @@ import ScrollShadow from "@/components/ScrollShadow";
 import TransactionRow from "@/components/TransactionRow";
 import TrendChart, { type ChartColumn, type ChartSeries } from "@/components/TrendChart";
 import WalletIcon from "@/components/WalletIcon";
-import { PillTabs } from "@/components/ui";
+import { Chip, PillTabs } from "@/components/ui";
 import { Text } from "@/components/ui/Text";
 import { useLedger } from "@/contexts/LedgerContext";
 import { usePreferences } from "@/contexts/PreferencesContext";
@@ -132,7 +132,6 @@ export default function StatsScreen() {
 	const { ready, transactions, categories, wallets, debts, defaultUnit } = useLedger();
 	const {
 		hideIncome,
-		includeDebtsInStats,
 		uncollectedLoansAsExpense,
 		statsChart,
 		setStatsChart,
@@ -143,6 +142,9 @@ export default function StatsScreen() {
 	} = usePreferences();
 
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
+	// Debt movement is real money in and out, so it counts by default; the
+	// "Qarzsiz" chip takes it out for this visit only.
+	const [withoutDebts, setWithoutDebts] = useState(false);
 	const [span, setSpan] = useState<Span>("month");
 	const [month, setMonth] = useState(() => initialMonth(params.month));
 	const [year, setYear] = useState(() => yearKeyOf(initialMonth(params.month)));
@@ -175,10 +177,10 @@ export default function StatsScreen() {
 	const relevant = useMemo(() => {
 		const scoped = inUnit(transactions, unit);
 		return countedForStats(scoped, debts, {
-			includeDebts: includeDebtsInStats,
+			includeDebts: !withoutDebts,
 			uncollectedLoans: uncollectedLoansAsExpense,
 		});
-	}, [transactions, debts, unit, includeDebtsInStats, uncollectedLoansAsExpense]);
+	}, [transactions, debts, unit, withoutDebts, uncollectedLoansAsExpense]);
 
 	// The period stays inside what the ledger reaches, however the unit or the
 	// debts switch has moved its ends since it was picked.
@@ -453,15 +455,26 @@ export default function StatsScreen() {
 							)}
 						</View>
 					</View>
-					{units.length > 1 && (
-						<PillTabs
-							compact
-							fill
-							items={units.map((code) => ({ key: code, label: code }))}
-							value={unit}
-							onChange={setPickedUnit}
+					<View className="flex-row items-center" style={{ gap: 6 }}>
+						<View className="flex-1">
+							{units.length > 1 && (
+								<PillTabs
+									compact
+									fill
+									items={units.map((code) => ({ key: code, label: code }))}
+									value={unit}
+									onChange={setPickedUnit}
+								/>
+							)}
+						</View>
+						<Chip
+							label="Qarzsiz"
+							icon={withoutDebts ? "checkmark" : undefined}
+							active={withoutDebts}
+							accessibilityLabel="Qarzlarsiz ko'rsatish"
+							onPress={() => setWithoutDebts((on) => !on)}
 						/>
-					)}
+					</View>
 					<View
 						accessible
 						accessibilityLabel={`${periodLabel}: kirim ${money(totals.income, { masked: hideIncome })}, chiqim ${money(totals.expense)}, foyda ${money(net, { signed: true, masked: hideIncome })}`}

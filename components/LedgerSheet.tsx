@@ -36,7 +36,7 @@ import { useStickyHeaderShadow } from "@/hooks/useStickyHeaderShadow";
 import { useTheme } from "@/hooks/useTheme";
 import { categoryColorValue } from "@/lib/categoryColors";
 import { currentMonthKey, formatSectionDay, monthName, shiftMonth } from "@/lib/date";
-import { countedForStats, inMonth, resolveCategory, unitsUsed } from "@/lib/ledger";
+import { excludeDebts, inMonth, resolveCategory, unitsUsed } from "@/lib/ledger";
 import { formatAmount, maskAmount } from "@/lib/money";
 import { foldForSearch, matchesSearch } from "@/lib/search";
 import { homePalette, RADIUS } from "@/lib/theme";
@@ -100,8 +100,8 @@ export default function LedgerSheet({
 	const insets = useSafeAreaInsets();
 	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
-	const { transactions, categories, wallets, members, debts, defaultUnit } = useLedger();
-	const { hideIncome, includeDebtsInStats, uncollectedLoansAsExpense } = usePreferences();
+	const { transactions, categories, wallets, members, defaultUnit } = useLedger();
+	const { hideIncome } = usePreferences();
 
 	const sheet = useRef<BottomSheet>(null);
 	const animatedIndex = useSharedValue(0);
@@ -113,6 +113,7 @@ export default function LedgerSheet({
 	const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 	const [subcategoryFilter, setSubcategoryFilter] = useState<string | null>(null);
 	const [memberFilter, setMemberFilter] = useState<string | null>(null);
+	const [withoutDebts, setWithoutDebts] = useState(false);
 	const [pickedUnit, setPickedUnit] = useState<string | null>(null);
 	const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 	const [searching, setSearching] = useState(false);
@@ -217,6 +218,7 @@ export default function LedgerSheet({
 		setCategoryFilter(null);
 		setSubcategoryFilter(null);
 		setMemberFilter(null);
+		setWithoutDebts(false);
 		setSearching(false);
 		setQuery("");
 	};
@@ -224,6 +226,9 @@ export default function LedgerSheet({
 	/* The month's entries -------------------------------------------------- */
 
 	const monthly = useMemo(() => inMonth(transactions, month), [transactions, month]);
+	// The ledger shows debt movement by default, since it is real money in and
+	// out; the "Qarzsiz" chip hides it, list and totals alike.
+	const scoped = useMemo(() => (withoutDebts ? excludeDebts(monthly) : monthly), [monthly, withoutDebts]);
 
 	// Everything that narrows the list except the side, which the totals show
 	// both of: the wallet (by share), the category, and the search — which
@@ -232,7 +237,7 @@ export default function LedgerSheet({
 	const folded = foldForSearch(query);
 	const narrowed = useMemo(
 		() =>
-			monthly.filter((t) => {
+			scoped.filter((t) => {
 				if (categoryFilter && t.categoryId !== categoryFilter) return false;
 				if (subcategoryFilter && t.subcategoryId !== subcategoryFilter) return false;
 				if (memberFilter && (t.type !== "expense" || memberKeyOf(t, members) !== memberFilter)) return false;
@@ -248,7 +253,7 @@ export default function LedgerSheet({
 					String(t.amount),
 				]);
 			}),
-		[monthly, categoryFilter, subcategoryFilter, memberFilter, walletFilter, folded, categories, members],
+		[scoped, categoryFilter, subcategoryFilter, memberFilter, walletFilter, folded, categories, members],
 	);
 	const visible = useMemo(
 		() => (type === "all" ? narrowed : narrowed.filter((t) => t.type === type)),
@@ -266,34 +271,16 @@ export default function LedgerSheet({
 				? defaultUnit
 				: (units[0] ?? defaultUnit);
 
-	// A stat, so debt categories stay out unless the user asked for them — or
-	// has filtered down to one category, which says exactly what to total.
 	const totals = useMemo(() => {
-		const counted =
-			categoryFilter || subcategoryFilter
-				? narrowed
-				: countedForStats(narrowed, debts, {
-						includeDebts: includeDebtsInStats,
-						uncollectedLoans: uncollectedLoansAsExpense,
-					});
 		let income = 0;
 		let expense = 0;
-		for (const t of counted) {
+		for (const t of narrowed) {
 			if (t.unit !== unit) continue;
 			if (t.type === "income") income += walletShare(t, walletFilter);
 			else expense += walletShare(t, walletFilter);
 		}
 		return { income, expense };
-	}, [
-		narrowed,
-		debts,
-		categoryFilter,
-		subcategoryFilter,
-		includeDebtsInStats,
-		uncollectedLoansAsExpense,
-		unit,
-		walletFilter,
-	]);
+	}, [narrowed, unit, walletFilter]);
 
 	const sections = useMemo(() => {
 		const days = new Map<string, Transaction[]>();
@@ -388,7 +375,11 @@ export default function LedgerSheet({
 		if (parent) setCategoryFilter(parent.id);
 	};
 	const filtering =
-		walletFilter !== null || categoryFilter !== null || subcategoryFilter !== null || memberFilter !== null;
+		walletFilter !== null ||
+		categoryFilter !== null ||
+		subcategoryFilter !== null ||
+		memberFilter !== null ||
+		withoutDebts;
 
 	// How many of the month's entries (on the side shown) each option would
 	// leave in the list, so a pick says what it's worth before it's made.
@@ -779,6 +770,13 @@ export default function LedgerSheet({
 								)}
 							/>
 						)}
+						<Chip
+							label="Qarzsiz"
+							icon={withoutDebts ? "checkmark" : undefined}
+							active={withoutDebts}
+							accessibilityLabel="Qarzlarsiz ko'rsatish"
+							onPress={() => setWithoutDebts((on) => !on)}
+						/>
 						{filtering && (
 							<Pressable
 								accessibilityRole="button"
@@ -788,6 +786,7 @@ export default function LedgerSheet({
 									setCategoryFilter(null);
 									setSubcategoryFilter(null);
 									setMemberFilter(null);
+									setWithoutDebts(false);
 								}}
 								className="items-center justify-center rounded-full bg-muted active:opacity-70"
 								style={{ width: 40, height: 40 }}

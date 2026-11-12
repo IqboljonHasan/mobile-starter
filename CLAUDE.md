@@ -154,9 +154,10 @@ These rules come from explicit product decisions. Do not change them silently. I
 
 ### Stats
 
-- Debt categories are excluded from income and expense totals by default. The `includeDebtsInStats` setting brings them back.
-- With debts excluded, **money lent and not yet collected still counts as an expense**, in the month it was lent, shrinking as collections arrive. The `uncollectedLoansAsExpense` setting is on by default.
-- Every income or expense total on Home, the ledger panel and Tahlil must go through `countedForStats()` in `lib/ledger.ts`. Do not filter debts by hand.
+- **Debts count by default everywhere.** Home's "bu oy" net, the ledger panel (Kirim va chiqimlar) and Tahlil all include debt movement.
+- Tahlil and the ledger panel each have a "Qarzsiz" filter chip, local to the screen and off on every visit, that takes debt categories out.
+- In Tahlil's "Qarzsiz" view, **money lent and not yet collected still counts as an expense**, in the month it was lent, shrinking as collections arrive. The `uncollectedLoansAsExpense` setting is on by default. The ledger's "Qarzsiz" simply hides every debt entry, so its list and totals stay in step.
+- Tahlil totals go through `countedForStats()` in `lib/ledger.ts`. Do not filter debts by hand there.
 
 ### Family members
 

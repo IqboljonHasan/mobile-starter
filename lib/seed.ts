@@ -359,8 +359,8 @@ export const SEED_CATEGORIES: Category[] = [
  * it, collecting on it, repaying it — rather than money actually earned or
  * spent. Kept as a fixed id list rather than matched by name (the user can
  * freely rename a category) so stats can optionally leave them out. See
- * `excludeDebts` in lib/ledger.ts and `includeDebtsInStats` in
- * PreferencesContext.
+ * `excludeDebts` and `countedForStats` in lib/ledger.ts, behind the "Qarzsiz"
+ * chip on Tahlil and the ledger panel.
  */
 export const DEBT_CATEGORY_IDS: ReadonlySet<string> = new Set([
 	"cat_debts", // Qarz olish — borrowing (income)

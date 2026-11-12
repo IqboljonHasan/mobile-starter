@@ -10,7 +10,6 @@ import type { ChartKind, Dimension } from "@/lib/stats";
 import { getSetting, setSetting } from "@/lib/storage";
 
 const KEY_HIDE_INCOME = "hide_income";
-const KEY_INCLUDE_DEBTS = "include_debts_in_stats";
 const KEY_UNCOLLECTED_LOANS = "uncollected_loans_as_expense";
 const KEY_SPLIT_INCOME = "split_income";
 const KEY_STATS_CHART = "stats_chart";
@@ -77,13 +76,9 @@ type PreferencesContextType = {
 	 *  across restarts. */
 	hideIncome: boolean;
 	toggleHideIncome: () => void;
-	/** Whether debt categories (borrowing, lending, collection, repayment)
-	 *  count toward income/expense stats. Off by default — see
-	 *  DEBT_CATEGORY_IDS in lib/seed.ts for which categories these are. */
-	includeDebtsInStats: boolean;
-	setIncludeDebtsInStats: (value: boolean) => void;
-	/** Whether money lent and not yet collected counts as spending while the
-	 *  rest of the debts stay out of the stats. On by default — see
+	/** Whether money lent and not yet collected counts as spending when Tahlil
+	 *  is switched to "Qarzsiz" and the rest of the debts stay out. On by
+	 *  default — see
 	 *  `countedForStats` in lib/ledger.ts. */
 	uncollectedLoansAsExpense: boolean;
 	setUncollectedLoansAsExpense: (value: boolean) => void;
@@ -109,8 +104,6 @@ type PreferencesContextType = {
 const PreferencesContext = createContext<PreferencesContextType>({
 	hideIncome: false,
 	toggleHideIncome: () => {},
-	includeDebtsInStats: false,
-	setIncludeDebtsInStats: () => {},
 	uncollectedLoansAsExpense: true,
 	setUncollectedLoansAsExpense: () => {},
 	splitIncome: true,
@@ -127,7 +120,6 @@ const PreferencesContext = createContext<PreferencesContextType>({
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
 	const [hideIncome, setHideIncomeState] = useState(false);
-	const [includeDebtsInStats, setIncludeDebtsInStatsState] = useState(false);
 	const [uncollectedLoansAsExpense, setUncollectedLoansAsExpenseState] = useState(true);
 	const [splitIncome, setSplitIncomeState] = useState(true);
 	const [statsChart, setStatsChartState] = useState(DEFAULT_STATS_CHART);
@@ -137,9 +129,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		getSetting(KEY_HIDE_INCOME, "0").then((value) => setHideIncomeState(value === "1"));
-		getSetting(KEY_INCLUDE_DEBTS, "0").then((value) =>
-			setIncludeDebtsInStatsState(value === "1"),
-		);
 		getSetting(KEY_UNCOLLECTED_LOANS, "1").then((value) =>
 			setUncollectedLoansAsExpenseState(value !== "0"),
 		);
@@ -164,11 +153,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 			setSetting(KEY_HIDE_INCOME, next ? "1" : "0");
 			return next;
 		});
-	}, []);
-
-	const setIncludeDebtsInStats = useCallback((value: boolean) => {
-		setIncludeDebtsInStatsState(value);
-		setSetting(KEY_INCLUDE_DEBTS, value ? "1" : "0");
 	}, []);
 
 	const setUncollectedLoansAsExpense = useCallback((value: boolean) => {
@@ -206,8 +190,6 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 			value={{
 				hideIncome,
 				toggleHideIncome,
-				includeDebtsInStats,
-				setIncludeDebtsInStats,
 				uncollectedLoansAsExpense,
 				setUncollectedLoansAsExpense,
 				splitIncome,
