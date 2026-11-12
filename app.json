@@ -25,7 +25,7 @@
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
         "backgroundColor": "#FFFFFF"
       },
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.READ_CONTACTS",
         "android.permission.WRITE_CONTACTS"
