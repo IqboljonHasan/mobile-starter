@@ -2,7 +2,9 @@ import { forwardRef } from "react";
 import {
 	Text as RNText,
 	TextInput as RNTextInput,
+	type TextInputInstance,
 	type TextInputProps,
+	type TextInstance,
 	type TextProps,
 } from "react-native";
 import { FONT_FAMILY } from "@/lib/theme";
@@ -16,11 +18,11 @@ import { FONT_FAMILY } from "@/lib/theme";
  * `fontWeight` style, and the natively linked font family (app.json) turns
  * that into the matching Manrope file.
  */
-export const Text = forwardRef<RNText, TextProps>(function Text({ style, ...props }, ref) {
+export const Text = forwardRef<TextInstance, TextProps>(function Text({ style, ...props }, ref) {
 	return <RNText ref={ref} {...props} style={[{ fontFamily: FONT_FAMILY }, style]} />;
 });
 
-export const TextInput = forwardRef<RNTextInput, TextInputProps>(function TextInput(
+export const TextInput = forwardRef<TextInputInstance, TextInputProps>(function TextInput(
 	{ style, ...props },
 	ref,
 ) {

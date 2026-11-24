@@ -1,6 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Fragment, useRef, useState } from "react";
-import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import {
+	Modal,
+	Pressable,
+	StyleSheet,
+	useWindowDimensions,
+	View,
+	type ViewInstance,
+} from "react-native";
 import { IconButton } from "@/components/ui/IconButton";
 import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
@@ -39,7 +46,7 @@ export function HeaderMenu({
 	const { tc, isDark } = useTheme();
 	const { tf } = useFont();
 	const { width } = useWindowDimensions();
-	const anchor = useRef<View>(null);
+	const anchor = useRef<ViewInstance>(null);
 	const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
 
 	const open = () => {

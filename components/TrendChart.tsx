@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, type ScrollViewInstance, View } from "react-native";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 import { Text } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
@@ -74,7 +74,7 @@ export default function TrendChart({
 }) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
-	const scroller = useRef<ScrollView>(null);
+	const scroller = useRef<ScrollViewInstance>(null);
 	const scrollX = useRef(0);
 	const placed = useRef(false);
 	const [width, setWidth] = useState(0);

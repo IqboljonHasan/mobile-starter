@@ -1,10 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ComponentProps, useCallback, useEffect, useRef, useState } from "react";
 import {
-	type CellRendererProps,
 	type NativeScrollEvent,
 	type NativeSyntheticEvent,
+	type SectionListProps,
 	View,
 } from "react-native";
+
+/**
+ * The props a list hands its cell renderer. React Native no longer re-exports
+ * the type, and `@react-native/virtualized-lists` is not a direct dependency, so
+ * it is read off the SectionList prop that takes the component.
+ */
+type CellRendererProps<T> = ComponentProps<
+	NonNullable<SectionListProps<T>["CellRendererComponent"]>
+>;
 
 /**
  * Which fixed edge the content is passing under: none (at the top), the stuck

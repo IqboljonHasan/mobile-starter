@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository. The [README](README.md
 
 ## Project overview
 
-**Taqsim** is an offline-first personal finance tracker for Android and iOS, built with Expo (SDK 57), React Native 0.86, expo-router, NativeWind 5 and `@gorhom/bottom-sheet`. It is built around envelope budgeting: income is split across wallets ("hamyon") by percentage, and each expense is paid from one wallet. It also tracks debts, family members and per-category spending.
+**Taqsim** is an offline-first personal finance tracker for Android and iOS, built with Expo (SDK 58), React Native 0.88, expo-router, NativeWind 5 and `@gorhom/bottom-sheet`. It is built around envelope budgeting: income is split across wallets ("hamyon") by percentage, and each expense is paid from one wallet. It also tracks debts, family members and per-category spending.
 
 - All data lives on the device in AsyncStorage. There is no backend. The only network call is the optional Telegram backup.
 - **All user-facing copy is Uzbek, in Latin script.** New strings must match the existing tone and terminology (Kirim = income, Chiqim = expense, Hamyon = wallet, Qarz = debt, Taqsimlanmagan = unallocated pool, Hamyonsiz = no wallet).

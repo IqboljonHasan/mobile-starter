@@ -8,7 +8,7 @@ import BottomSheet, {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "expo-router";
 import { type ReactNode, type Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { BackHandler, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { BackHandler, Pressable, ScrollView, StyleSheet, View, type ViewInstance } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
 	Extrapolation,
@@ -122,8 +122,8 @@ export default function LedgerSheet({
 	// list steps down for the title row and the footer floats over it from
 	// another part of the tree, so it's measured on screen once the sheet is up;
 	// the starting guess is the same sum done by hand.
-	const listBox = useRef<View>(null);
-	const footerBox = useRef<View>(null);
+	const listBox = useRef<ViewInstance>(null);
+	const footerBox = useRef<ViewInstance>(null);
 	const [listEndSpace, setListEndSpace] = useState(TITLE_HEIGHT + FOOTER_HEIGHT + FOOTER_FADE + 12);
 	const measureListEnd = useCallback(() => {
 		if (animatedIndex.get() < 0.99) return;
@@ -974,7 +974,7 @@ function SheetFooter({
 	onIncome,
 	onExpense,
 }: {
-	boxRef?: Ref<View>;
+	boxRef?: Ref<ViewInstance>;
 	onIncome: () => void;
 	onExpense: () => void;
 }) {
