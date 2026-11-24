@@ -26,10 +26,13 @@ export {
 } from "./Input";
 export { ListRow, type ListRowProps } from "./ListRow";
 export {
+	type AmountCaret,
 	AmountField,
 	type AmountFieldProps,
+	amountInputProps,
 	NumberPad,
 	type NumberPadProps,
+	useAmountCaret,
 } from "./NumberPad";
 export { PickerField } from "./PickerField";
 export { type PillTab, PillTabs, type PillTabsProps } from "./PillTabs";

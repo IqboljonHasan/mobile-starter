@@ -17,6 +17,7 @@ import {
 	FieldLabel,
 	HeaderMenu,
 	NumberPad,
+	useAmountCaret,
 	PickerField,
 	Select,
 	Textarea,
@@ -258,6 +259,7 @@ function TransactionForm({
 	const initial = existing ?? seed;
 	const [type, setType] = useState<TxType>(initial?.type ?? initialType);
 	const [amountText, setAmountText] = useState(initial ? String(initial.amount) : "");
+	const amountCaret = useAmountCaret();
 	const [unit, setUnit] = useState(initial?.unit ?? defaultUnit);
 	const [method, setMethod] = useState<PayMethod>(initial?.method ?? DEFAULT_METHOD);
 	const [categoryId, setCategoryId] = useState<string | null>(initial?.categoryId ?? null);
@@ -609,6 +611,7 @@ function TransactionForm({
 				{/* Amount, how it was paid, and in what -------------------------- */}
 				<AmountCard
 					value={amountText}
+					caret={amountCaret}
 					autoFocus={!existing}
 					onFocus={() => setPadOpen(true)}
 					onBlur={() => setPadOpen(false)}
@@ -945,6 +948,7 @@ function TransactionForm({
 				<NumberPad
 					visible
 					value={amountText}
+					caret={amountCaret}
 					onChange={setAmountText}
 					decimals={unitByCode(unit).decimals}
 				/>

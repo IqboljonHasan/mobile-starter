@@ -9,6 +9,7 @@ import {
 	Button,
 	InputField,
 	NumberPad,
+	useAmountCaret,
 } from "@/components/ui";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
@@ -61,6 +62,7 @@ export default function TransferSheet({
 	const [amountText, setAmountText] = useState(
 		initialAmount ? String(initialAmount) : "",
 	);
+	const amountCaret = useAmountCaret();
 	const [note, setNote] = useState("");
 	const [padOpen, setPadOpen] = useState(false);
 	const [submitted, setSubmitted] = useState(false);
@@ -148,6 +150,7 @@ export default function TransferSheet({
 					label="Summa"
 					required
 					value={amountText}
+					caret={amountCaret}
 					onFocus={() => setPadOpen(true)}
 					onBlur={() => setPadOpen(false)}
 					placeholder="0"
@@ -185,6 +188,7 @@ export default function TransferSheet({
 			<NumberPad
 				visible={padOpen}
 				value={amountText}
+				caret={amountCaret}
 				onChange={setAmountText}
 				decimals={unitByCode(unit).decimals}
 			/>

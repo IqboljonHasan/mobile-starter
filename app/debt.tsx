@@ -15,6 +15,7 @@ import {
 	HeaderMenu,
 	type HeaderMenuItem,
 	NumberPad,
+	useAmountCaret,
 	Textarea,
 	Toggle,
 } from "@/components/ui";
@@ -131,6 +132,7 @@ function DebtForm({
 		existing?.contactId ?? initialContactId,
 	);
 	const [amountText, setAmountText] = useState(existing ? String(existing.amount) : "");
+	const amountCaret = useAmountCaret();
 	const [unit, setUnit] = useState(existing?.unit ?? defaultUnit);
 	const [method, setMethod] = useState<PayMethod>(existing?.method ?? "cash");
 	const [walletId, setWalletId] = useState<string | null>(existing?.walletId ?? null);
@@ -307,6 +309,7 @@ function DebtForm({
 				{/* Amount, how it moved, and in what ----------------------------- */}
 				<AmountCard
 					value={amountText}
+					caret={amountCaret}
 					autoFocus={!existing}
 					onFocus={() => setPadOpen(true)}
 					onBlur={() => setPadOpen(false)}
@@ -449,6 +452,7 @@ function DebtForm({
 				<NumberPad
 					visible
 					value={amountText}
+					caret={amountCaret}
 					onChange={setAmountText}
 					decimals={unitByCode(unit).decimals}
 				/>

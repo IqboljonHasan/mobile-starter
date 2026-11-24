@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, View } from "react-native";
-import { Select } from "@/components/ui";
+import { type AmountCaret, amountInputProps, Select } from "@/components/ui";
 import { Text, TextInput } from "@/components/ui/Text";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
-import { groupAmountText, PAY_METHODS, UNITS, unitByCode } from "@/lib/money";
+import { PAY_METHODS, UNITS, unitByCode } from "@/lib/money";
 import type { PayMethod } from "@/lib/types";
 
 /**
@@ -18,6 +18,7 @@ import type { PayMethod } from "@/lib/types";
  */
 export default function AmountCard({
 	value,
+	caret,
 	onFocus,
 	onBlur,
 	method,
@@ -31,6 +32,8 @@ export default function AmountCard({
 }: {
 	/** The amount text as stored in the form — plain digits, no grouping. */
 	value: string;
+	/** Shared with the form's NumberPad: where the next key lands. */
+	caret: AmountCaret;
 	onFocus: () => void;
 	onBlur: () => void;
 	method: PayMethod;
@@ -107,18 +110,15 @@ export default function AmountCard({
 				<View className="flex-row items-center gap-2 mt-2">
 					<TextInput
 						accessibilityLabel={label}
-						value={groupAmountText(value)}
+						{...amountInputProps(value, caret)}
 						placeholder="0"
 						placeholderTextColor={tc.placeholder}
 						autoFocus={autoFocus}
 						onFocus={onFocus}
 						onBlur={onBlur}
 						// Typed on the in-app pad: the field never raises the keyboard,
-						// and since the pad only appends or deletes at the end, a caret
-						// that could be tapped elsewhere would promise an edit it can't
-						// make.
+						// and the pad edits at the caret, which a tap on the figure moves.
 						showSoftInputOnFocus={false}
-						caretHidden
 						contextMenuHidden
 						className="flex-1 font-extrabold"
 						style={{

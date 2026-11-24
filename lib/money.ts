@@ -202,35 +202,119 @@ export type AmountKey =
 const MAX_WHOLE_DIGITS = 12;
 
 /**
- * The amount text after one key press.
+ * An amount text together with where the caret sits in it. `caret` is an index
+ * into the plain text (0 = before the first character, `text.length` = at the
+ * end), never into the grouped text that is shown — grouping spaces come and go
+ * as digits are typed, so a plain index is the one that stays put.
+ */
+export interface AmountEdit {
+	text: string;
+	caret: number;
+}
+
+/** True when `text` is a shape the form accepts: a bounded whole part and at most `decimals` places. */
+function fitsAmount(text: string, decimals: number): boolean {
+	const dot = text.indexOf(".");
+	if (dot === -1) return text.length <= MAX_WHOLE_DIGITS;
+	return dot <= MAX_WHOLE_DIGITS && text.length - dot - 1 <= decimals;
+}
+
+/**
+ * Tidies the whole part after an edit and moves the caret with it: leading zeros
+ * go ("05" is 5, never 05) and a bare ".5" gets its "0" back. The caret never
+ * falls off the text it was in.
+ */
+function settleAmount(text: string, caret: number): AmountEdit {
+	const dot = text.indexOf(".");
+	const whole = dot === -1 ? text : text.slice(0, dot);
+	const rest = dot === -1 ? "" : text.slice(dot);
+	const trimmed = whole.length > 1 ? whole.replace(/^0+(?=\d)/, "") : whole;
+	const dropped = whole.length - trimmed.length;
+	let next = trimmed + rest;
+	let at = Math.max(0, caret - dropped);
+	if (trimmed === "" && rest) {
+		next = `0${rest}`;
+		at += 1;
+	}
+	return { text: next, caret: Math.min(at, next.length) };
+}
+
+/**
+ * The amount and caret after one key press, edited at the caret rather than only
+ * at the end.
  *
  * The text stays in the plain shape parseAmount reads — digits and at most one
  * ".", no grouping — so a key that would make it malformed is simply ignored
  * rather than producing something the form then has to reject. `decimals` is
  * the unit's: a so'm amount has nowhere to put a point, and a dollar amount
- * stops at cents.
+ * stops at cents. A key that changes nothing returns the very same edit, so
+ * callers can tell by identity or by comparing the text.
  */
-export function pressAmountKey(text: string, key: AmountKey, decimals: number): string {
+export function pressAmountKey(
+	edit: AmountEdit,
+	key: AmountKey,
+	decimals: number,
+): AmountEdit {
+	const text = edit.text;
+	const caret = Math.min(Math.max(edit.caret, 0), text.length);
+
 	switch (key) {
 		case "clear":
-			return "";
-		case "back":
-			return text.slice(0, -1);
+			return { text: "", caret: 0 };
+		case "back": {
+			if (caret === 0) return edit;
+			const next = settleAmount(text.slice(0, caret - 1) + text.slice(caret), caret - 1);
+			// Deleting the "." joins the places onto the whole part, which can
+			// outgrow what a whole part may hold.
+			return fitsAmount(next.text, decimals) ? next : edit;
+		}
 		case "000": {
-			let next = text;
+			let next = edit;
 			for (let i = 0; i < 3; i++) next = pressAmountKey(next, "0", decimals);
 			return next;
 		}
-		case ".":
-			if (decimals === 0 || text.includes(".")) return text;
-			return `${text || "0"}.`;
+		case ".": {
+			if (decimals === 0 || text.includes(".")) return edit;
+			// Everything right of the point becomes places, so a point dropped
+			// into the middle of a long number has to leave a legal tail.
+			const next = settleAmount(`${text.slice(0, caret)}.${text.slice(caret)}`, caret + 1);
+			return fitsAmount(next.text, decimals) ? next : edit;
+		}
 	}
 
-	const dot = text.indexOf(".");
-	if (dot !== -1) return text.length - dot - 1 < decimals ? text + key : text;
-	// A leading zero is replaced, never prefixed: "0" then "5" is 5, not 05.
-	if (text === "0") return key;
-	return text.length < MAX_WHOLE_DIGITS ? text + key : text;
+	const next = settleAmount(text.slice(0, caret) + key + text.slice(caret), caret + 1);
+	return fitsAmount(next.text, decimals) ? next : edit;
+}
+
+/** True for the characters groupAmountText inserts — the spaces between thousands. */
+const isGrouping = (char: string) => /\s/.test(char);
+
+/**
+ * Where a plain-text caret lands in the grouped text that is on screen: the
+ * same position, shifted right by every grouping space before it.
+ */
+export function caretToGrouped(text: string, caret: number): number {
+	const grouped = groupAmountText(text);
+	let plain = 0;
+	for (let i = 0; i < grouped.length; i++) {
+		if (plain === caret) return i;
+		if (!isGrouping(grouped[i])) plain++;
+	}
+	return grouped.length;
+}
+
+/**
+ * The reverse of caretToGrouped, for a caret the user placed by tapping the
+ * grouped text. A tap that lands beside a grouping space counts as the digit
+ * on its left, so the caret never rests "inside" a space.
+ */
+export function caretFromGrouped(text: string, groupedCaret: number): number {
+	const grouped = groupAmountText(text);
+	let plain = 0;
+	for (let i = 0; i < Math.min(groupedCaret, grouped.length); i++) {
+		if (!isGrouping(grouped[i])) plain++;
+	}
+	return plain;
 }
 
 /** "1500000.5" → "1 500 000.5" — amount text as it's shown while being typed. */

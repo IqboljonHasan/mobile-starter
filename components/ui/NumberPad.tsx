@@ -1,12 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { BackHandler, Keyboard, Pressable, View } from "react-native";
 import { Text } from "@/components/ui/Text";
 import Animated, { SlideInDown } from "react-native-reanimated";
 import { useFont } from "@/hooks/useFont";
 import { useTheme } from "@/hooks/useTheme";
-import { type AmountKey, groupAmountText, pressAmountKey } from "@/lib/money";
+import {
+	type AmountKey,
+	caretFromGrouped,
+	caretToGrouped,
+	groupAmountText,
+	pressAmountKey,
+} from "@/lib/money";
 import { InputField, type InputFieldProps } from "./Input";
 import "../../global.css";
 
@@ -20,6 +26,42 @@ const ROWS: AmountKey[][] = [
 const KEY_HEIGHT = 52;
 const GAP = 8;
 
+/**
+ * Where the caret sits in an amount, shared by the field and the pad so a tap in
+ * the field decides where the next key lands.
+ */
+export interface AmountCaret {
+	/**
+	 * The caret as an index into the plain amount `text`. It is only trusted for
+	 * the text it was set against: when the form replaces the amount itself (a
+	 * template, a reset) the caret goes back to the end, where a fresh figure
+	 * is typed.
+	 */
+	at: (text: string) => number;
+	set: (position: number, text: string) => void;
+}
+
+/**
+ * Holds the caret for one amount. Create it next to the amount's state and hand
+ * it to both the AmountField (or AmountCard) and the NumberPad.
+ */
+export function useAmountCaret(): AmountCaret {
+	const [state, setState] = useState<{ position: number; text: string } | null>(null);
+
+	const at = useCallback(
+		(text: string) =>
+			state && state.text === text ? Math.min(state.position, text.length) : text.length,
+		[state],
+	);
+	const set = useCallback((position: number, text: string) => {
+		setState((prev) =>
+			prev && prev.position === position && prev.text === text ? prev : { position, text },
+		);
+	}, []);
+
+	return useMemo(() => ({ at, set }), [at, set]);
+}
+
 export interface NumberPadProps {
 	visible: boolean;
 	/** The amount text as stored in the form — plain digits, no grouping. */
@@ -27,6 +69,8 @@ export interface NumberPadProps {
 	onChange: (next: string) => void;
 	/** The unit's decimal places. A unit used whole (so'm) disables the "." key. */
 	decimals: number;
+	/** The same caret the field was given: keys act where it sits. */
+	caret: AmountCaret;
 }
 
 /**
@@ -40,8 +84,11 @@ export interface NumberPadProps {
  * It pairs with AmountField: `visible` should simply follow that field's focus.
  * That's also how ✓ closes it — it blurs the field, the same way
  * Keyboard.dismiss() puts the system keyboard away.
+ *
+ * Keys act at the caret, not just at the end, so a digit can be inserted or
+ * deleted anywhere in the figure; tapping the field moves the caret.
  */
-export function NumberPad({ visible, value, onChange, decimals }: NumberPadProps) {
+export function NumberPad({ visible, value, onChange, decimals, caret }: NumberPadProps) {
 	const { tc } = useTheme();
 	const { tf } = useFont();
 
@@ -61,8 +108,11 @@ export function NumberPad({ visible, value, onChange, decimals }: NumberPadProps
 
 	const press = (key: AmountKey) => {
 		Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-		const next = pressAmountKey(value, key, decimals);
-		if (next !== value) onChange(next);
+		const next = pressAmountKey({ text: value, caret: caret.at(value) }, key, decimals);
+		// The caret is stored against the new text in the same batch as the text
+		// itself, so the field never renders one without the other.
+		caret.set(next.caret, next.text);
+		if (next.text !== value) onChange(next.text);
 	};
 
 	return (
@@ -164,11 +214,32 @@ function Key({
 
 export type AmountFieldProps = Omit<
 	InputFieldProps,
-	"value" | "onChangeText" | "keyboardType" | "inputMode" | "renderInput"
+	"value" | "onChangeText" | "keyboardType" | "inputMode" | "renderInput" | "selection"
 > & {
 	/** The amount text as stored in the form — shown grouped, "1 500 000". */
 	value: string;
+	/** The same caret the pad was given. */
+	caret: AmountCaret;
 };
+
+/**
+ * The `value`/`selection`/`onSelectionChange` triple that makes a TextInput show
+ * a plain amount grouped while keeping the caret in plain-text terms. Used by
+ * AmountField and AmountCard so both behave the same.
+ */
+export function amountInputProps(value: string, caret: AmountCaret) {
+	const grouped = groupAmountText(value);
+	const position = caretToGrouped(value, caret.at(value));
+	return {
+		value: grouped,
+		// Always controlled and always collapsed: the pad edits at one point,
+		// so a dragged selection range would promise more than it can do.
+		selection: { start: position, end: position },
+		onSelectionChange: (event: { nativeEvent: { selection: { end: number } } }) => {
+			caret.set(caretFromGrouped(value, event.nativeEvent.selection.end), value);
+		},
+	};
+}
 
 /**
  * A money amount field, typed with NumberPad rather than the system keyboard.
@@ -178,17 +249,15 @@ export type AmountFieldProps = Omit<
  * tapped (which closes the pad), and on Android has the scroll view keep it in
  * sight as the pad docks below. Input arrives only through the pad, hence no
  * `onChangeText`: anything typed on a hardware keyboard is put back by the
- * controlled `value`.
+ * controlled `value`. Tapping the text places the caret, and the pad then
+ * inserts and deletes there.
  */
-export function AmountField({ value, ...props }: AmountFieldProps) {
+export function AmountField({ value, caret, ...props }: AmountFieldProps) {
 	return (
 		<InputField
 			{...props}
-			value={groupAmountText(value)}
+			{...amountInputProps(value, caret)}
 			showSoftInputOnFocus={false}
-			// The pad only ever appends or deletes at the end, so a caret that
-			// could be tapped anywhere else would promise an edit it can't make.
-			caretHidden
 			contextMenuHidden
 		/>
 	);

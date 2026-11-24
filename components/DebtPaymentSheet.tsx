@@ -9,6 +9,7 @@ import {
 	DateField,
 	InputField,
 	NumberPad,
+	useAmountCaret,
 	SegmentedControl,
 } from "@/components/ui";
 import { useLedger } from "@/contexts/LedgerContext";
@@ -71,6 +72,7 @@ export default function DebtPaymentSheet({
 	const [amountText, setAmountText] = useState(
 		existing ? String(existing.amount) : cap > 0 ? String(cap) : "",
 	);
+	const amountCaret = useAmountCaret();
 	const [date, setDate] = useState(existing?.date ?? todayISO());
 	const [method, setMethod] = useState<PayMethod>(existing?.method ?? debt.method);
 	const [walletId, setWalletId] = useState<string | null>(
@@ -132,6 +134,7 @@ export default function DebtPaymentSheet({
 						label="Summa"
 						required
 						value={amountText}
+						caret={amountCaret}
 						onFocus={() => setPadOpen(true)}
 						onBlur={() => setPadOpen(false)}
 						placeholder="0"
@@ -229,6 +232,7 @@ export default function DebtPaymentSheet({
 			<NumberPad
 				visible={padOpen}
 				value={amountText}
+				caret={amountCaret}
 				onChange={setAmountText}
 				decimals={unitByCode(debt.unit).decimals}
 			/>
